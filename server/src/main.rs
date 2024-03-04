@@ -6,11 +6,16 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/04 10:23:57 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/04 16:10:45 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+mod connections;
+
+use std::fs::File;
+
 use structopt::StructOpt;
+use connections::{get_data, init_socket};
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -43,6 +48,8 @@ fn main() {
     if args.team_name.is_empty() {
         args.team_name.push("Blue team".into());
     }
-
-    dbg!(args);
+	
+	let con_data = init_socket(args.port);
+	let mut open_connections: Vec<File> = vec![];
+	get_data(&con_data, &mut open_connections);
 }
