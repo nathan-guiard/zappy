@@ -6,11 +6,19 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/04 16:44:16 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/04 19:29:47 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::{collections::HashMap, error::Error, fs::File, mem};
+use std::{
+	collections::HashMap,
+	error::Error,
+	fs::File,
+	mem,
+	os::fd::FromRawFd,
+	thread,
+	time::Duration
+};
 
 use libc::*;
 
@@ -62,27 +70,29 @@ pub fn get_data(con_data: &ServerConnection, open_connections: &mut Vec<File>)
 
 	// Check for new connections (maybe another function)
 	loop {
-		let mut size: socklen_t = std::mem::size_of::<sockaddr_in>() as socklen_t;
-		let addr: *mut sockaddr = unsafe { mem::transmute_copy(&con_data.soc_addr) };
 		let new_connection = unsafe {
 			accept(con_data.socket_fd,
-				addr,
-				&mut size)
+				std::ptr::null_mut(),
+				std::ptr::null_mut())
 		};
-		if let Some(errno) = get_errno() {
-			if errno == EWOULDBLOCK || errno == EAGAIN {
-				println!("No (more) incoming connections");
-			} else if errno == 0 {
-				println!("accept() succeeded");
-				todo!();
+		if new_connection == -1 {
+			if let Some(errno) = get_errno() {
+				dbg!(errno);
+				if errno == EWOULDBLOCK || errno == EAGAIN {
+					println!("No (more) incoming connections");
+				} else {
+					println!("Error: {errno}");
+					// Return some kind of error
+					todo!();
+				}
 			} else {
-				println!("Error: {errno}");
-				// Return some kind of error
+				// Handle connection
+				println!("No errno location !?");
 				todo!();
 			}
 		} else {
-			// Handle connection
-			println!("No errno location !?");
+			println!("Connection!");
+			unsafe { File::from_raw_fd(new_connection) };
 			todo!();
 		}
 	}
