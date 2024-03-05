@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/05 15:20:24 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/05 15:37:45 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,13 +24,12 @@ pub struct ServerConnection {
 }
 
 impl ServerConnection {
-	pub fn init_socket(port: u16) -> ServerConnection {
+	pub fn init_socket(port: u16) -> Result<ServerConnection, Error> {
 		let mut result: ServerConnection;
 		result = unsafe { std::mem::zeroed() };
 		result.socket_fd = unsafe { socket(AF_INET, SOCK_STREAM, 0) };
 		if result.socket_fd < 0 {
-			// Return some kind of error
-			todo!();
+			return Err(Error::last_os_error())
 		}
 	
 		result.soc_addr.sin_addr.s_addr = INADDR_ANY.to_be();
@@ -38,26 +37,26 @@ impl ServerConnection {
 		result.soc_addr.sin_family = AF_INET as u16;
 	
 		if unsafe { fcntl(result.socket_fd, F_SETFL, O_NONBLOCK) }	< 0 {
+			let error = Error::last_os_error();
 			unsafe { libc::close(result.socket_fd) };
-			// Return some kind of error;
-			todo!();
+			return Err(error);
 		}
 	
 		if unsafe { bind(result.socket_fd,
 			&result.soc_addr as *const _ as *const _,
 			std::mem::size_of_val(&result.soc_addr) as u32) } != 0 {
-			unsafe { libc::close(result.socket_fd) };
-			// Return some kind of error
-			todo!();
+				let error = Error::last_os_error();
+				unsafe { libc::close(result.socket_fd) };
+				return Err(error);
 		}
 	
 		if unsafe { listen(result.socket_fd, 32) } != 0 {
+			let error = Error::last_os_error();
 			unsafe { libc::close(result.socket_fd) };
-			// Return some kind of error
-			todo!();
+			return Err(error);
 		}
 	
-		return result;
+		return Ok(result);
 	}
 	
 	pub fn get_new_connections(&self, watcher: &mut Watcher)

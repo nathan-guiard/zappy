@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/05 15:19:16 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/05 15:34:57 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,10 +56,9 @@ fn main() -> Result<(), std::io::Error> {
 	dbg!(&args);
 	let tick_speed = Duration::from_secs_f64(1 as f64 / args.time as f64);
 	dbg!(tick_speed);
-	let con_data = ServerConnection::init_socket(args.port);
+	let con_data = ServerConnection::init_socket(args.port)?;
 	let mut watcher = Watcher::new()?;
 
-	
 	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
 
 	loop {
