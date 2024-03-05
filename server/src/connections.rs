@@ -6,26 +6,21 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/04 19:29:47 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/05 12:06:55 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::{
-	collections::HashMap,
-	error::Error,
-	fs::File,
-	mem,
-	os::fd::FromRawFd,
-	thread,
-	time::Duration
-};
+use std::io::Error;
 
+use epoll::Events;
 use libc::*;
+
+use crate::watcher::Watcher;
 
 #[derive(Clone, Copy)]
 pub struct ServerConnection {
 	soc_addr: sockaddr_in,
-	socket_fd: i32,
+	pub socket_fd: i32,
 }
 
 pub fn init_socket(port: u16) -> ServerConnection {
@@ -64,10 +59,8 @@ pub fn init_socket(port: u16) -> ServerConnection {
 	return result;
 }
 
-pub fn get_data(con_data: &ServerConnection, open_connections: &mut Vec<File>)
-	-> HashMap<File, String> {
-	let mut result: HashMap<File, String> = HashMap::new();
-
+pub fn get_new_connections(con_data: &ServerConnection, watcher: &mut Watcher)
+	-> Result<(), Error> {
 	// Check for new connections (maybe another function)
 	loop {
 		let new_connection = unsafe {
@@ -76,44 +69,19 @@ pub fn get_data(con_data: &ServerConnection, open_connections: &mut Vec<File>)
 				std::ptr::null_mut())
 		};
 		if new_connection == -1 {
-			if let Some(errno) = get_errno() {
-				dbg!(errno);
+			let last_error = Error::last_os_error();
+			if let Some(errno) = last_error.raw_os_error() {
 				if errno == EWOULDBLOCK || errno == EAGAIN {
 					println!("No (more) incoming connections");
-				} else {
-					println!("Error: {errno}");
-					// Return some kind of error
-					todo!();
+					return Ok(());
 				}
-			} else {
-				// Handle connection
-				println!("No errno location !?");
-				todo!();
 			}
-		} else {
-			println!("Connection!");
-			unsafe { File::from_raw_fd(new_connection) };
-			todo!();
+			return Err(last_error);
 		}
-	}
-
-	for _ in  0..open_connections.len() {
-
-		// Get the data
-		loop {
-			break;
-		}
-	}
-
-	return result;
-}
-
-fn get_errno() -> Option<i32> {
-	let location = unsafe { __errno_location() };
-	if location.is_null() {
-		None
-	} else {
-		Some(unsafe { *location } )
+		println!("Connection!");
+		watcher.add(new_connection, Events::EPOLLIN)?;
+		todo!();
+		return Ok(());
 	}
 }
 

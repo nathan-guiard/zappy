@@ -7,6 +7,6 @@ authors = ["nguiard", "sloquet"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+epoll = "4.3.3"
 libc = "0.2.153"
-mio = { version = "0.8.11", features = ["net", "os-poll"] }
 structopt = "0.3.26"
