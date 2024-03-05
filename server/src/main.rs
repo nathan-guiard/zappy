@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/05 15:07:01 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/05 15:19:16 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,8 +84,7 @@ fn main() -> Result<(), std::io::Error> {
 			} else if event.events == EPOLLIN as u32 {
 				let lines = get_data(event.data as i32)?;
 				println!("{:?}", lines);
-			} else if event.events == EPOLLRDHUP as u32 {
-				println!("DECONNECTION!");
+			} else if event.events & (EPOLLRDHUP as u32) != 0 {
 				con_data.deconnection(event.data as i32, &mut watcher)?;
 			}
 		}

@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/05 15:07:12 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/05 15:20:24 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,13 +79,14 @@ impl ServerConnection {
 			}
 			println!("Connection!");
 			unsafe { fcntl(new_connection, F_SETFL, O_NONBLOCK) };
-			watcher.add(new_connection, Events::EPOLLIN)?;
+			watcher.add(new_connection, Events::EPOLLIN | Events::EPOLLRDHUP)?;
 			return Ok(());
 		}
 	}
 
 	pub fn deconnection(&self, fd: i32, watcher: &mut Watcher)
 		-> Result<(), Error> {
+		println!("Deconnection!");
 		watcher.delete(fd)?;
 		epoll::close(fd)?;
 		Ok(())
