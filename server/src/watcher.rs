@@ -6,13 +6,14 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 10:00:27 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/05 12:15:02 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/05 13:08:54 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 use std::{io::Error, os::fd::RawFd};
 
 use epoll::{ControlOptions::*, Event, Events};
+use libc::{EPOLL_CLOEXEC, F_GETFL, F_SETFD, F_SETFL};
 
 #[derive(Debug)]
 pub struct Watcher {
@@ -47,15 +48,22 @@ impl Watcher {
 		if self.watched == 0 {
 			return Ok(Vec::new());
 		}
-		let mut events: Vec<Event> = Vec::with_capacity(self.watched);
-		epoll::wait(self.epoll_fd, 0, &mut events)?;
-		Ok(events)
+		let mut events: Vec<Event> = vec![Event::new(Events::empty(), 0); self.watched];
+		if epoll::wait(self.epoll_fd, 0, &mut events)? > 0 {
+			return Ok(events);
+		}
+		Ok(Vec::new())
 	}
 
 	pub fn new() -> Result<Self, Error> {
-		Ok(Watcher {
-			epoll_fd: epoll::create(false)?,
-			watched: 0,
-		})
+		match epoll::create(true) {
+			Ok(epoll_fd) => {
+				Ok(Watcher {
+					epoll_fd,
+					watched: 0,
+				})
+			}
+			Err(err) => Err(err)
+		}
 	}
 }

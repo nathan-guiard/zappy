@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/05 12:02:43 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/05 13:09:09 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,6 +56,8 @@ fn main() -> Result<(), std::io::Error> {
 
 	let con_data = init_socket(args.port);
 	let mut watcher = Watcher::new()?;
+
+	
 	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
 
 	loop {
@@ -75,6 +77,8 @@ fn main() -> Result<(), std::io::Error> {
 			if event.data == con_data.socket_fd as u64 &&
 				event.events == EPOLLIN as u32 {
 				get_new_connections(&con_data, &mut watcher)?;
+			} else {
+				todo!();
 			}
 		}
 
