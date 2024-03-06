@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/06 12:14:55 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/06 15:31:21 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,8 @@ mod connections;
 mod watcher;
 mod game;
 
-use std::time::Duration;
+use std::io::{Error, ErrorKind};
+use std::time::{Duration, Instant};
 use epoll::Events;
 use libc::{EPOLLIN, EPOLLRDHUP};
 use rand::Rng;
@@ -31,11 +32,11 @@ struct Args {
 	port: u16,
 
 	/// The map width
-	#[structopt(short, default_value = "180")]
+	#[structopt(short, default_value = "65")]
 	x: u8,
 
 	/// The map height
-	#[structopt(short, default_value = "100")]
+	#[structopt(short, default_value = "25")]
 	y: u8,
 
 	/// The team name(s)
@@ -55,8 +56,16 @@ struct Args {
 	seed: usize,
 }
 
-fn main() -> Result<(), std::io::Error> {
+fn main() -> Result<(), Error> {
 	let mut args = Args::from_args();
+	if args.x > 150 || args.y > 120 {
+		return Err(Error::new(ErrorKind::InvalidInput,
+			"Map too big, max size is X:150, Y:120"));
+	}
+	if args.x < 30 || args.y < 25 {
+		return Err(Error::new(ErrorKind::InvalidInput,
+			"Map too big, max size is X:30, Y:25"));
+	}
 	if args.team_name.is_empty() {
 		args.team_name.push("Blue team".into());
 	}
@@ -66,7 +75,9 @@ fn main() -> Result<(), std::io::Error> {
 	let tick_speed = Duration::from_secs_f64(1 as f64 / args.time as f64);
 	dbg!(&args);
 	dbg!(tick_speed);
+	let before_map = Instant::now();
 	let mut map = GameMap::new(args.x, args.y, args.seed);
+	println!("Time to create the map: {:?}", Instant::now() - before_map);
 	println!("{}", map);
 	let con_data = ServerConnection::init_socket(args.port)?;
 	let mut watcher = Watcher::new()?;

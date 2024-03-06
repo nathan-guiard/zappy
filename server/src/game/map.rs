@@ -6,16 +6,14 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/06 12:41:23 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/06 15:34:24 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::{default, panic::Location, fmt::Display};
+use std::{cmp::{self, max, min}, fmt::Display};
 
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use GameCellContent::*;
-use shuffle::{irs::Irs, shuffler::Shuffler};
-
 const DEVIDE_U32_TO_U8: u32 = 16843009;
 
 /// Indexes in the "max" tab
@@ -28,14 +26,14 @@ const THYSTAME_INDEX: usize = 5;
 const FOOD_INDEX: usize = 6;
 
 ///	Colors
-const THYSTAME_COLOR: &str = "\x1b[100;95m";
-const SIBUR_COLOR: &str = "\x1b[100;31m";
-const MENDIANE_COLOR: &str = "\x1b[100;32m";
-const PHIRAS_COLOR: &str = "\x1b[100;96m";
-const DERAUMERE_COLOR: &str = "\x1b[100;35m";
-const LINEMATE_COLOR: &str = "\x1b[100;90m";
-const FOOD_COLOR: &str = "\x1b[42;97m";
-const PLAYER_COLOR: &str = "\x1b[107;30m";
+const THYSTAME_COLOR: &str = "\x1b[1;100;95m";
+const PHIRAS_COLOR: &str = "\x1b[1;100;94m";
+const MENDIANE_COLOR: &str = "\x1b[1;100;32m";
+const SIBUR_COLOR: &str = "\x1b[1;100;31m";
+const DERAUMERE_COLOR: &str = "\x1b[1;100;35m";
+const LINEMATE_COLOR: &str = "\x1b[1;100;90m";
+const FOOD_COLOR: &str = "\x1b[0;42;97m";
+const PLAYER_COLOR: &str = "\x1b[0;107;30m";
 const WHITE: &str = "\x1b[0m";
 const RESET: &str = "\x1b[0m";
 
@@ -159,7 +157,6 @@ impl Display for GameCell {
 			9 => "9",
 			_ => "+",
 		};
-		dbg!(mvp.amount());
 		write!(f, "{color}{amout_str}")
 	}
 }
@@ -296,7 +293,11 @@ impl GameMap {
 			}
 		}
 
-		Self::place_ressources(&mut cells, &mut rng, x, y, 4);
+		Self::place_ressources(&mut cells,
+			&mut rng,
+			x,
+			y,
+			24);
 
 		GameMap {
 			cells,
@@ -307,8 +308,12 @@ impl GameMap {
 		}
 	}
 
-	fn place_ressources(cells: &mut Vec<Vec<GameCell>>, rng: &mut StdRng,
-		x: u8, y: u8, max_players: u8) {
+	fn place_ressources(
+		cells: &mut Vec<Vec<GameCell>>,
+		rng: &mut StdRng,
+		x: u8,
+		y: u8,
+		nb_of_team: u8) {
 		let mut interest_points = vec![
 			GamePosition::default();
 			(rng.next_u32() % 4 + 2) as usize
@@ -328,74 +333,337 @@ impl GameMap {
 		}
 
 		let mut max: Vec<GameCellContent> = vec![
-			Linemate(9 * max_players as u16 + 55),
-			Deraumere(8 * max_players as u16 + 45),
-			Sibur(10 * max_players as u16 + 35),
-			Mendiane(5 * max_players as u16 + 25),
-			Phiras(6 * max_players as u16 + 15),
-			Thystame(max_players as u16 + 5),
-			Food(600 * max_players as u16 + 500),
+			Linemate(9 * nb_of_team as u16 * 6 + 55),
+			Deraumere(8 * nb_of_team as u16 * 6 + 45),
+			Sibur(10 * nb_of_team as u16 * 6 + 35),
+			Mendiane(5 * nb_of_team as u16 * 6 + 25),
+			Phiras(6 * nb_of_team as u16 * 6 + 15),
+			Thystame(nb_of_team as u16 * 6 + 5),
+			Food(min(u16::MAX as u32,
+				25 * min((x as u32 + y as u32) / 15, 1) *
+				nb_of_team as u32 * 6 + 5000) as u16),
 		];
 
+		dbg!(&max);
+
+		// panic!();
+
 		fn everything_placed(max: &Vec<GameCellContent>) -> bool {
-			return !(max[THYSTAME_INDEX].amount() > 0);
 			for i in 0..max.len() {
 				if max[i].amount() > 0 {
 					return false;
 				}
 			};
-			// true
+			true
 		}
 
-		for vecx in 0..cells.len() {
-			for vecy in 0..cells[0].len() {
-				let current_cell = &mut cells
-					[move_to_pos(x, vecx as u8, start.x as i16)]
-					[move_to_pos(y, vecy as u8, start.y as i16)];
-				Self::place_single_ressource(&interest_points,
-					rng,
-					current_cell,
-					&mut max[THYSTAME_INDEX]);
+		while !everything_placed(&max) {
+			for vecx in 0..cells.len() {
+				for vecy in 0..cells[0].len() {
+					let current_cell = &mut cells
+						[move_to_pos(x, vecx as u8, start.x as i16)]
+						[move_to_pos(y, vecy as u8, start.y as i16)];
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[THYSTAME_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[PHIRAS_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[MENDIANE_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[SIBUR_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[DERAUMERE_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[LINEMATE_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[FOOD_INDEX],
+						&GamePosition { x, y },
+					);
+				}
 			}
 		}
+
 	}
 
 	fn place_single_ressource(
 		interest_points: &Vec<GamePosition>,
 		rng: &mut StdRng,
 		current_cell: &mut GameCell,
-		to_place: &mut GameCellContent
+		to_place: &mut GameCellContent,
+		max_position: &GamePosition
 	) {
 		match to_place {
-			Linemate(_) => (),// Self::place_linemate(interest_points, to_place, rng, current_cell),
-			Deraumere(_) => (),// Self::place_deraumere(interest_points, to_place, rng, current_cell),
-			Sibur(_) => (),// Self::place_sibur(interest_points, to_place, rng, current_cell),
-			Mendiane(_) => (),// Self::place_mendiane(interest_points, to_place, rng, current_cell),
-			Phiras(_) => (),// Self::place_phiras(interest_points, to_place, rng, current_cell),
-			Thystame(_) => Self::place_thystame(interest_points, to_place, rng, current_cell),
+			Linemate(_) => Self::place_linemate(interest_points, to_place, max_position, rng, current_cell),
+			Deraumere(_) => Self::place_deraumere(interest_points, to_place, max_position, rng, current_cell),
+			Sibur(_) => Self::place_sibur(interest_points, to_place, max_position, rng, current_cell),
+			Mendiane(_) => Self::place_mendiane(interest_points, to_place, max_position, rng, current_cell),
+			Phiras(_) => Self::place_phiras(interest_points, to_place, max_position, rng, current_cell),
+			Thystame(_) => Self::place_thystame(interest_points, to_place, max_position, rng, current_cell),
 			Player(_) => (),
-			Food(_) => (),// Self::place_food(interest_points, to_place, rng, current_cell),
+			Food(_) => Self::place_food(interest_points, to_place, max_position, rng, current_cell),
 		}
 	}
 
 	fn place_thystame(
 			interest_points: &Vec<GamePosition>,
 			to_place: &mut GameCellContent,
+			max_position: &GamePosition,
 			rng: &mut StdRng,
 			current_cell: &mut GameCell
 		) {
-			let mut nb_to_place = ((rand_u8(rng) % 32) == 1) as u16;
-			if nb_to_place > to_place.amount() {
-				nb_to_place = to_place.amount()
-			}
-			if current_cell.content.contains(&Thystame(0)) &&
-				nb_to_place > 0 {
-				to_place.remove(nb_to_place);
-				current_cell.add_content(Thystame(nb_to_place));
-				println!("Added {} Thystame in {:?}", nb_to_place, &current_cell.position);
+		let mut nb_to_place = ((rng.next_u32() % 32) == 1) as u16;
+		if nb_to_place > to_place.amount() {
+			nb_to_place = to_place.amount()
+		}
+		let start_interest_point_index = rng.next_u32();
+		if current_cell.content.contains(&Thystame(0)) &&
+			nb_to_place > 0 {
+			for i in 0..interest_points.len() {
+				if Self::is_in_range_of_interest_point(
+					&current_cell.position,
+					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
+					max_position,
+					0,
+					1) {
+						to_place.remove(nb_to_place);
+						current_cell.add_content(Thystame(nb_to_place));
+						// println!("Added {} Thystame in {:?}", nb_to_place, &current_cell.position);
+				}
 			}
 		}
+	}
 
+	fn place_phiras(
+		interest_points: &Vec<GamePosition>,
+		to_place: &mut GameCellContent,
+		max_position: &GamePosition,
+		rng: &mut StdRng,
+		current_cell: &mut GameCell
+	) {
+		let mut nb_to_place = ((rng.next_u32() % 24) == 1) as u16;
+		if nb_to_place > to_place.amount() {
+			nb_to_place = to_place.amount()
+		}
+		let start_interest_point_index = rng.next_u32();
+		if current_cell.content.contains(&Phiras(0)) &&
+			nb_to_place > 0 {
+			for i in 0..interest_points.len() {
+				if Self::is_in_range_of_interest_point(
+					&current_cell.position,
+					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
+					max_position,
+					1,
+					2) {
+						to_place.remove(nb_to_place);
+						current_cell.add_content(Phiras(nb_to_place));
+						// println!("Added {} Phiras in {:?}", nb_to_place, &current_cell.position);
+				}
+			}
+		}
+	}
+
+	fn place_mendiane(
+		interest_points: &Vec<GamePosition>,
+		to_place: &mut GameCellContent,
+		max_position: &GamePosition,
+		rng: &mut StdRng,
+		current_cell: &mut GameCell
+	) {
+		let mut nb_to_place = ((rng.next_u32() % 24) == 1) as u16;
+		if nb_to_place > to_place.amount() {
+			nb_to_place = to_place.amount()
+		}
+		let start_interest_point_index = rng.next_u32();
+		if current_cell.content.contains(&Mendiane(0)) &&
+			nb_to_place > 0 {
+			for i in 0..interest_points.len() {
+				if Self::is_in_range_of_interest_point(
+					&current_cell.position,
+					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
+					max_position,
+					3,
+					6) {
+						to_place.remove(nb_to_place);
+						current_cell.add_content(Mendiane(nb_to_place));
+						// println!("Added {} Mendiane in {:?}", nb_to_place, &current_cell.position);
+				}
+			}
+		}
+	}
+
+	fn place_sibur(
+		interest_points: &Vec<GamePosition>,
+		to_place: &mut GameCellContent,
+		max_position: &GamePosition,
+		rng: &mut StdRng,
+		current_cell: &mut GameCell
+	) {
+		let mut nb_to_place = ((rng.next_u32() % 24) == 1) as u16;
+		if nb_to_place > to_place.amount() {
+			nb_to_place = to_place.amount()
+		}
+		let start_interest_point_index = rng.next_u32();
+		if current_cell.content.contains(&Sibur(0)) &&
+			nb_to_place > 0 {
+			for i in 0..interest_points.len() {
+				if Self::is_in_range_of_interest_point(
+					&current_cell.position,
+					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
+					max_position,
+					6,
+					8) {
+						to_place.remove(nb_to_place);
+						current_cell.add_content(Sibur(nb_to_place));
+						// println!("Added {} Sibur in {:?}", nb_to_place, &current_cell.position);
+				}
+			}
+		}
+	}
+
+	fn place_deraumere(
+		interest_points: &Vec<GamePosition>,
+		to_place: &mut GameCellContent,
+		max_position: &GamePosition,
+		rng: &mut StdRng,
+		current_cell: &mut GameCell
+	) {
+		let mut nb_to_place = ((rng.next_u32() % 24) == 1) as u16;
+		if nb_to_place > to_place.amount() {
+			nb_to_place = to_place.amount()
+		}
+		let start_interest_point_index = rng.next_u32();
+		if current_cell.content.contains(&Deraumere(0)) &&
+			nb_to_place > 0 {
+			for i in 0..interest_points.len() {
+				if Self::is_in_range_of_interest_point(
+					&current_cell.position,
+					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
+					max_position,
+					7,
+					9) {
+						to_place.remove(nb_to_place);
+						current_cell.add_content(Deraumere(nb_to_place));
+						// println!("Added {} Deraumere in {:?}", nb_to_place, &current_cell.position);
+				}
+			}
+		}
+	}
+
+	fn place_linemate(
+		interest_points: &Vec<GamePosition>,
+		to_place: &mut GameCellContent,
+		max_position: &GamePosition,
+		rng: &mut StdRng,
+		current_cell: &mut GameCell
+	) {
+		let mut nb_to_place = ((rng.next_u32() % 24) == 1) as u16;
+		if nb_to_place > to_place.amount() {
+			nb_to_place = to_place.amount()
+		}
+		let start_interest_point_index = rng.next_u32();
+		if current_cell.content.contains(&Deraumere(0)) &&
+			nb_to_place > 0 {
+			for i in 0..interest_points.len() {
+				if Self::is_in_range_of_interest_point(
+					&current_cell.position,
+					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
+					max_position,
+					8,
+					10) {
+						to_place.remove(nb_to_place);
+						current_cell.add_content(Deraumere(nb_to_place));
+						// println!("Added {} Deraumere in {:?}", nb_to_place, &current_cell.position);
+				}
+			}
+		}
+	}
+
+	fn place_food(
+		interest_points: &Vec<GamePosition>,
+		to_place: &mut GameCellContent,
+		max_position: &GamePosition,
+		rng: &mut StdRng,
+		current_cell: &mut GameCell
+	) {
+		let mut nb_to_place = ((rng.next_u32() % 10) == 1) as u16;
+		if nb_to_place > to_place.amount() {
+			nb_to_place = to_place.amount()
+		}
+		let start_interest_point_index = rng.next_u32();
+		if current_cell.content.contains(&Food(0)) &&
+			nb_to_place > 0 {
+			for i in 0..interest_points.len() {
+				if Self::is_in_range_of_interest_point(
+					&current_cell.position,
+					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
+					max_position,
+					7,
+					75) {
+						to_place.remove(nb_to_place);
+						current_cell.add_content(Food(nb_to_place * 4));
+						// println!("Added {} Food in {:?}", nb_to_place, &current_cell.position);
+				}
+				break;
+			}
+		}
+	}
+
+	fn is_in_range_of_interest_point(
+		my_position: &GamePosition,
+		interest_point: &GamePosition,
+		max_position: &GamePosition,
+		min: u8,
+		max: u8)
+		-> bool {
+		let distance = Self::distance(interest_point, my_position, max_position);
+		if distance >= min as u16 && distance <= max as u16 {
+			return true;
+		}
+		false
+	}
+
+	fn distance(
+		current: &GamePosition,
+		other: &GamePosition,
+		max_position: &GamePosition,
+	) -> u16 {
+		let dist_x = min(
+			(current.x as i16 - other.x as i16).abs(),
+			current.x as i16 + (max_position.x as i16 - other.x as i16),
+		);
+		let dist_y = min(
+			(current.y as i16 - other.y as i16).abs(),
+			current.y as i16 + (max_position.y as i16 - other.y as i16),
+		);
+
+		(dist_x + dist_y) as u16
+	}
 }
 
 fn rand_u8(rng: &mut StdRng) -> u8 {
