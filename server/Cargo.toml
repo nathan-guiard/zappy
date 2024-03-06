@@ -9,4 +9,6 @@ authors = ["nguiard", "sloquet"]
 [dependencies]
 epoll = "4.3.3"
 libc = "0.2.153"
+rand = "0.8.5"
+shuffle = "0.1.7"
 structopt = "0.3.26"
