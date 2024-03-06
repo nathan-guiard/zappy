@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/06 15:31:21 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/06 16:49:45 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,8 +83,6 @@ fn main() -> Result<(), Error> {
 	let mut watcher = Watcher::new()?;
 
 	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
-
-	return Ok(()); // While im testing the map
 	
 	loop {
 		println!("---");
