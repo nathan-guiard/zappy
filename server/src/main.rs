@@ -6,21 +6,25 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/05 15:34:57 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/06 15:31:21 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 mod connections;
 mod watcher;
+mod game;
 
-use std::time::Duration;
+use std::io::{Error, ErrorKind};
+use std::time::{Duration, Instant};
 use epoll::Events;
 use libc::{EPOLLIN, EPOLLRDHUP};
+use rand::Rng;
 use structopt::StructOpt;
 
 use connections::get_data;
 use watcher::Watcher;
 use crate::connections::ServerConnection;
+use crate::game::map::GameMap;
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -28,12 +32,12 @@ struct Args {
 	port: u16,
 
 	/// The map width
-	#[structopt(short, default_value = "180")]
-	x: u16,
+	#[structopt(short, default_value = "65")]
+	x: u8,
 
 	/// The map height
-	#[structopt(short, default_value = "100")]
-	y: u16,
+	#[structopt(short, default_value = "25")]
+	y: u8,
 
 	/// The team name(s)
 	#[structopt(short = "n", long)]
@@ -46,21 +50,42 @@ struct Args {
 	/// The time unit divider, every step of the server will go at 1/t second
 	#[structopt(short, long, default_value = "16")]
 	time: u8,
+
+	/// The seed that will be used to generate the map, 0 means randomly
+	#[structopt(short, long, default_value = "0")]
+	seed: usize,
 }
 
-fn main() -> Result<(), std::io::Error> {
+fn main() -> Result<(), Error> {
 	let mut args = Args::from_args();
+	if args.x > 150 || args.y > 120 {
+		return Err(Error::new(ErrorKind::InvalidInput,
+			"Map too big, max size is X:150, Y:120"));
+	}
+	if args.x < 30 || args.y < 25 {
+		return Err(Error::new(ErrorKind::InvalidInput,
+			"Map too big, max size is X:30, Y:25"));
+	}
 	if args.team_name.is_empty() {
 		args.team_name.push("Blue team".into());
 	}
-	dbg!(&args);
+	if args.seed == 0 {
+		args.seed = rand::thread_rng().gen();
+	}
 	let tick_speed = Duration::from_secs_f64(1 as f64 / args.time as f64);
+	dbg!(&args);
 	dbg!(tick_speed);
+	let before_map = Instant::now();
+	let mut map = GameMap::new(args.x, args.y, args.seed);
+	println!("Time to create the map: {:?}", Instant::now() - before_map);
+	println!("{}", map);
 	let con_data = ServerConnection::init_socket(args.port)?;
 	let mut watcher = Watcher::new()?;
 
 	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
 
+	return Ok(()); // While im testing the map
+	
 	loop {
 		println!("---");
 		let new_events = match watcher.update() {
