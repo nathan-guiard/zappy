@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/05 15:37:45 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/06 18:09:12 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@ use std::{fs::File, io::{BufRead, BufReader, Error, ErrorKind, Read}, os::fd::Fr
 use epoll::Events;
 use libc::*;
 
-use crate::watcher::Watcher;
+use crate::{game::map::GameMap, watcher::Watcher};
 
 #[derive(Clone, Copy)]
 pub struct ServerConnection {
@@ -59,7 +59,7 @@ impl ServerConnection {
 		return Ok(result);
 	}
 	
-	pub fn get_new_connections(&self, watcher: &mut Watcher)
+	pub fn get_new_connections(&self, watcher: &mut Watcher, map: &GameMap)
 		-> Result<(), Error> {
 		loop {
 			let new_connection = unsafe {
@@ -79,6 +79,7 @@ impl ServerConnection {
 			println!("Connection!");
 			unsafe { fcntl(new_connection, F_SETFL, O_NONBLOCK) };
 			watcher.add(new_connection, Events::EPOLLIN | Events::EPOLLRDHUP)?;
+			map.send_map(new_connection);
 			return Ok(());
 		}
 	}

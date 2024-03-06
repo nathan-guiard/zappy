@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/06 16:49:45 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/06 18:09:48 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,6 +79,7 @@ fn main() -> Result<(), Error> {
 	let mut map = GameMap::new(args.x, args.y, args.seed);
 	println!("Time to create the map: {:?}", Instant::now() - before_map);
 	println!("{}", map);
+	// return Ok(());
 	let con_data = ServerConnection::init_socket(args.port)?;
 	let mut watcher = Watcher::new()?;
 
@@ -102,7 +103,7 @@ fn main() -> Result<(), Error> {
 		for event in new_events {
 			if event.data == con_data.socket_fd as u64 &&
 				event.events == EPOLLIN as u32 {
-				con_data.get_new_connections(&mut watcher)?;
+				con_data.get_new_connections(&mut watcher, &map)?;
 			} else if event.events == EPOLLIN as u32 {
 				let lines = get_data(event.data as i32)?;
 				println!("{:?}", lines);

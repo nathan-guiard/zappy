@@ -6,12 +6,14 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/06 16:44:56 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/06 18:09:36 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::{cmp::{self, max, min}, fmt::Display};
+use std::{cmp::{self, max, min}, fmt::Display, fs::File};
 
+use libc::send;
+use serde::Serialize;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use GameCellContent::*;
 const DEVIDE_U32_TO_U8: u32 = 16843009;
@@ -38,7 +40,7 @@ const PLAYER_COLOR: &str = "\x1b[0;107;30m";
 const WHITE: &str = "\x1b[0m";
 const RESET: &str = "\x1b[0m";
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub enum GameCellContent {
 	Linemate(u16),
 	Deraumere(u16),
@@ -120,13 +122,13 @@ impl GameCellContent {
 	}
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Copy)]
+#[derive(Debug, Clone, Default, PartialEq, Copy, Serialize)]
 pub struct GamePosition {
 	x: u8,
 	y: u8,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct GameCell {
 	position: GamePosition,
 	content: Vec<GameCellContent>
@@ -210,6 +212,18 @@ impl GameCell {
 		};
 		true
 	}
+
+	pub fn purify(&mut self) {
+		let mut new_content: Vec<GameCellContent> = vec![];
+		
+		for x in &self.content {
+			if x.amount() > 0 {
+				new_content.push(*x);
+			}
+		}
+
+		self.content = new_content;
+	}
 	
 	pub fn mvp(&self) -> GameCellContent {
 		let mut linemate_amout: u16 = 0;
@@ -259,7 +273,7 @@ impl GameCell {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct GameMap {
 	max_position: GamePosition,
 	cells: Vec<Vec<GameCell>>,
@@ -702,6 +716,47 @@ impl GameMap {
 		);
 
 		(dist_x + dist_y) as u16
+	}
+	
+	pub fn send_map(&self, send_to: i32) {
+		let mut new_cells = self.cells.clone();
+		let mut cells_to_send: Vec<Vec<SendCell>> = vec![vec![
+			SendCell {
+				p: GamePosition {
+					x: 0,
+					y: 0
+				},
+				c: vec![],
+			}; self.max_position.y as usize
+		]; self.max_position.x as usize];
+
+		for x in 0..new_cells.len() {
+			for y in 0..new_cells[0].len() {
+				new_cells[x][y].purify();
+				cells_to_send[x][y].from(&new_cells[x][y]);
+			}
+		}
+
+		let data = serde_json::to_string(&cells_to_send).unwrap();
+
+		println!("Size of json: {}", data.len());
+
+		unsafe { send(send_to, data.as_bytes().as_ptr() as _, data.len(), 0) };
+	}
+}
+
+#[derive(Clone, Serialize)]
+struct SendCell {
+	p: GamePosition,
+	c: Vec<GameCellContent>
+}
+
+impl SendCell {
+	pub fn from(&mut self, from: &GameCell) {
+		let mut purified = from.clone();
+		purified.purify();
+		self.p = purified.position;
+		self.c = purified.content;
 	}
 }
 
