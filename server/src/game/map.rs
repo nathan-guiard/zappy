@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/06 15:58:31 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/06 16:44:56 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ const MENDIANE_INDEX: usize = 3;
 const PHIRAS_INDEX: usize = 4;
 const THYSTAME_INDEX: usize = 5;
 const FOOD_INDEX: usize = 6;
+const PLAYER_INDEX: usize = 7;
 
 ///	Colors
 const THYSTAME_COLOR: &str = "\x1b[1;100;95m";
@@ -297,7 +298,7 @@ impl GameMap {
 			&mut rng,
 			x,
 			y,
-			24);
+			4);
 
 		GameMap {
 			cells,
@@ -343,6 +344,7 @@ impl GameMap {
 				interest_points.len() as u32 *
 				25 * min((x as u32 + y as u32) / 15, 1) *
 				nb_of_team as u32 * 6 + 5000) as u16),
+			Player(nb_of_team.into()),
 		];
 
 		dbg!(&max);
@@ -406,6 +408,12 @@ impl GameMap {
 						&mut max[FOOD_INDEX],
 						&GamePosition { x, y },
 					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[PLAYER_INDEX],
+						&GamePosition { x, y },
+					);
 				}
 			}
 		}
@@ -426,7 +434,7 @@ impl GameMap {
 			Mendiane(_) => Self::place_mendiane(interest_points, to_place, max_position, rng, current_cell),
 			Phiras(_) => Self::place_phiras(interest_points, to_place, max_position, rng, current_cell),
 			Thystame(_) => Self::place_thystame(interest_points, to_place, max_position, rng, current_cell),
-			Player(_) => (),
+			Player(_) => Self::place_player(interest_points, to_place, max_position, rng, current_cell),
 			Food(_) => Self::place_food(interest_points, to_place, max_position, rng, current_cell),
 		}
 	}
@@ -629,6 +637,36 @@ impl GameMap {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Food(nb_to_place));
 						// println!("Added {} Food in {:?}", nb_to_place, &current_cell.position);
+				}
+				break;
+			}
+		}
+	}
+
+	fn place_player(
+		interest_points: &Vec<GamePosition>,
+		to_place: &mut GameCellContent,
+		max_position: &GamePosition,
+		rng: &mut StdRng,
+		current_cell: &mut GameCell
+	) {
+		let mut nb_to_place = ((rng.next_u32() % 150) == 1) as u16;
+		if nb_to_place > to_place.amount() {
+			nb_to_place = to_place.amount()
+		}
+		let start_interest_point_index = rng.next_u32();
+		if current_cell.content.contains(&Player(0)) &&
+			nb_to_place > 0 {
+			for i in 0..interest_points.len() {
+				if Self::is_in_range_of_interest_point(
+					&current_cell.position,
+					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
+					max_position,
+					7,
+					15) {
+						to_place.remove(nb_to_place);
+						current_cell.add_content(Player(nb_to_place));
+						// println!("Added {} Player in {:?}", nb_to_place, &current_cell.position);
 				}
 				break;
 			}
