@@ -6,14 +6,13 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 10:00:27 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/05 15:07:19 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/07 10:08:35 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 use std::{io::Error, os::fd::RawFd};
 
 use epoll::{ControlOptions::*, Event, Events};
-use libc::{EPOLL_CLOEXEC, F_GETFL, F_SETFD, F_SETFL};
 
 #[derive(Debug)]
 pub struct Watcher {

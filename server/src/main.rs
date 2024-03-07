@@ -6,13 +6,14 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/06 18:09:48 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/07 10:11:53 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 mod connections;
 mod watcher;
 mod game;
+mod communication;
 
 use std::io::{Error, ErrorKind};
 use std::time::{Duration, Instant};
@@ -21,10 +22,10 @@ use libc::{EPOLLIN, EPOLLRDHUP};
 use rand::Rng;
 use structopt::StructOpt;
 
-use connections::get_data;
 use watcher::Watcher;
-use crate::connections::ServerConnection;
-use crate::game::map::GameMap;
+use connections::ServerConnection;
+use game::map::GameMap;
+use communication::{get_all_data, process_data};
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -58,6 +59,67 @@ struct Args {
 
 fn main() -> Result<(), Error> {
 	let mut args = Args::from_args();
+	args_check(&mut args)?;
+	let tick_speed = Duration::from_secs_f64(1 as f64 / args.time as f64);
+	let mut map = GameMap::new(args.x, args.y, args.seed);
+	println!("{}", map);
+	// return Ok(());
+	let con_data = ServerConnection::init_socket(args.port)?;
+	let mut watcher = Watcher::new()?;
+
+	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
+
+	
+	let mut before = Instant::now();
+	let mut exec_time = Duration::default();
+	let mut last_sleep = Duration::default();
+	loop {
+		let new_events = match watcher.update() {
+			Ok(events) => events,
+			Err(e) => {
+				eprintln!("Error trying to update: {e}");
+				return Err(e);
+			}
+		};
+		
+		if new_events.is_empty() {
+			time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep);
+			std::thread::sleep(last_sleep);
+			before = Instant::now();
+			continue;
+		}
+		
+		let mut ready_to_read: Vec<i32> = vec![];
+		
+		for event in new_events {
+			if event.data == con_data.socket_fd as u64 &&
+			event.events == EPOLLIN as u32 {
+				con_data.get_new_connections(&mut watcher)?;
+			} else if event.events == EPOLLIN as u32 {
+				ready_to_read.push(event.data as i32);
+			} else if event.events & (EPOLLRDHUP as u32) != 0 {
+				con_data.deconnection(event.data as i32, &mut watcher)?;
+			}
+		}
+		
+		let data = get_all_data(&ready_to_read)?;
+		process_data(&data, &map);
+		
+		dbg!(data);
+		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep);
+		std::thread::sleep(last_sleep);
+		before = Instant::now();
+	}
+}
+
+fn time_check(tick_speed: &Duration, exec_time: &mut Duration,
+	before: &mut Instant, last_sleep: &mut Duration) {
+	*exec_time = Instant::now().checked_duration_since(*before).unwrap_or_default();
+	*last_sleep = tick_speed.checked_sub(*exec_time).unwrap_or_default();
+	println!("\x1b[3;2;90m---\x1b[0m\nexec: {:?}", exec_time);
+}
+
+fn args_check(args: &mut Args) -> Result<(), Error> {
 	if args.x > 150 || args.y > 120 {
 		return Err(Error::new(ErrorKind::InvalidInput,
 			"Map too big, max size is X:150, Y:120"));
@@ -72,47 +134,5 @@ fn main() -> Result<(), Error> {
 	if args.seed == 0 {
 		args.seed = rand::thread_rng().gen();
 	}
-	let tick_speed = Duration::from_secs_f64(1 as f64 / args.time as f64);
-	dbg!(&args);
-	dbg!(tick_speed);
-	let before_map = Instant::now();
-	let mut map = GameMap::new(args.x, args.y, args.seed);
-	println!("Time to create the map: {:?}", Instant::now() - before_map);
-	println!("{}", map);
-	// return Ok(());
-	let con_data = ServerConnection::init_socket(args.port)?;
-	let mut watcher = Watcher::new()?;
-
-	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
-	
-	loop {
-		println!("---");
-		let new_events = match watcher.update() {
-			Ok(events) => events,
-			Err(e) => {
-				eprintln!("Error trying to update: {e}");
-				return Err(e);
-			}
-		};
-
-		if new_events.len() == 0 {
-			std::thread::sleep(tick_speed);
-			continue;
-		}
-
-		for event in new_events {
-			if event.data == con_data.socket_fd as u64 &&
-				event.events == EPOLLIN as u32 {
-				con_data.get_new_connections(&mut watcher, &map)?;
-			} else if event.events == EPOLLIN as u32 {
-				let lines = get_data(event.data as i32)?;
-				println!("{:?}", lines);
-			} else if event.events & (EPOLLRDHUP as u32) != 0 {
-				con_data.deconnection(event.data as i32, &mut watcher)?;
-			}
-		}
-
-		// END OF LOOP
-		std::thread::sleep(tick_speed);
-	}
+	Ok(())
 }

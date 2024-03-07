@@ -6,11 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/06 18:09:36 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/07 10:17:58 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::{cmp::{self, max, min}, fmt::Display, fs::File};
+use std::{cmp::min, fmt::Display, time::Instant};
 
 use libc::send;
 use serde::Serialize;
@@ -28,7 +28,7 @@ const THYSTAME_INDEX: usize = 5;
 const FOOD_INDEX: usize = 6;
 const PLAYER_INDEX: usize = 7;
 
-///	Colors
+/// Colors
 const THYSTAME_COLOR: &str = "\x1b[1;100;95m";
 const PHIRAS_COLOR: &str = "\x1b[1;100;94m";
 const MENDIANE_COLOR: &str = "\x1b[1;100;32m";
@@ -298,6 +298,7 @@ impl GameMap {
 	pub fn new(x: u8, y: u8, seed: usize) -> Self {
 		let mut cells = vec![vec![GameCell::empty(); y.into()]; x.into()];
 		let mut rng = StdRng::seed_from_u64(seed as u64);
+		let before_map = Instant::now();
 
 		for vec_x in 0..cells.len() {
 			for vec_y in 0..cells[0].len() {
@@ -314,6 +315,7 @@ impl GameMap {
 			y,
 			4);
 
+		println!("Time to create the map: {:?}", Instant::now() - before_map);
 		GameMap {
 			cells,
 			max_position: GamePosition {
@@ -324,7 +326,7 @@ impl GameMap {
 	}
 
 	fn place_ressources(
-		cells: &mut Vec<Vec<GameCell>>,
+		cells: &mut [Vec<GameCell>],
 		rng: &mut StdRng,
 		x: u8,
 		y: u8,
@@ -366,8 +368,8 @@ impl GameMap {
 		// panic!();
 
 		fn everything_placed(max: &Vec<GameCellContent>) -> bool {
-			for i in 0..max.len() {
-				if max[i].amount() > 0 {
+			for item in max {
+				if item.amount() > 0 {
 					return false;
 				}
 			};
@@ -435,7 +437,7 @@ impl GameMap {
 	}
 
 	fn place_single_ressource(
-		interest_points: &Vec<GamePosition>,
+		interest_points: &[GamePosition],
 		rng: &mut StdRng,
 		current_cell: &mut GameCell,
 		to_place: &mut GameCellContent,
@@ -454,7 +456,7 @@ impl GameMap {
 	}
 
 	fn place_thystame(
-			interest_points: &Vec<GamePosition>,
+			interest_points: &[GamePosition],
 			to_place: &mut GameCellContent,
 			max_position: &GamePosition,
 			rng: &mut StdRng,
@@ -477,13 +479,14 @@ impl GameMap {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Thystame(nb_to_place));
 						// println!("Added {} Thystame in {:?}", nb_to_place, &current_cell.position);
+						break;
 				}
 			}
 		}
 	}
 
 	fn place_phiras(
-		interest_points: &Vec<GamePosition>,
+		interest_points: &[GamePosition],
 		to_place: &mut GameCellContent,
 		max_position: &GamePosition,
 		rng: &mut StdRng,
@@ -506,13 +509,14 @@ impl GameMap {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Phiras(nb_to_place));
 						// println!("Added {} Phiras in {:?}", nb_to_place, &current_cell.position);
+						break;
 				}
 			}
 		}
 	}
 
 	fn place_mendiane(
-		interest_points: &Vec<GamePosition>,
+		interest_points: &[GamePosition],
 		to_place: &mut GameCellContent,
 		max_position: &GamePosition,
 		rng: &mut StdRng,
@@ -535,13 +539,14 @@ impl GameMap {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Mendiane(nb_to_place));
 						// println!("Added {} Mendiane in {:?}", nb_to_place, &current_cell.position);
+						break;
 				}
 			}
 		}
 	}
 
 	fn place_sibur(
-		interest_points: &Vec<GamePosition>,
+		interest_points: &[GamePosition],
 		to_place: &mut GameCellContent,
 		max_position: &GamePosition,
 		rng: &mut StdRng,
@@ -564,13 +569,14 @@ impl GameMap {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Sibur(nb_to_place));
 						// println!("Added {} Sibur in {:?}", nb_to_place, &current_cell.position);
+						break;
 				}
 			}
 		}
 	}
 
 	fn place_deraumere(
-		interest_points: &Vec<GamePosition>,
+		interest_points: &[GamePosition],
 		to_place: &mut GameCellContent,
 		max_position: &GamePosition,
 		rng: &mut StdRng,
@@ -593,13 +599,14 @@ impl GameMap {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Deraumere(nb_to_place));
 						// println!("Added {} Deraumere in {:?}", nb_to_place, &current_cell.position);
+						break;
 				}
 			}
 		}
 	}
 
 	fn place_linemate(
-		interest_points: &Vec<GamePosition>,
+		interest_points: &[GamePosition],
 		to_place: &mut GameCellContent,
 		max_position: &GamePosition,
 		rng: &mut StdRng,
@@ -622,13 +629,14 @@ impl GameMap {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Deraumere(nb_to_place));
 						// println!("Added {} Deraumere in {:?}", nb_to_place, &current_cell.position);
+						break;
 				}
 			}
 		}
 	}
 
 	fn place_food(
-		interest_points: &Vec<GamePosition>,
+		interest_points: &[GamePosition],
 		to_place: &mut GameCellContent,
 		max_position: &GamePosition,
 		rng: &mut StdRng,
@@ -651,14 +659,14 @@ impl GameMap {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Food(nb_to_place));
 						// println!("Added {} Food in {:?}", nb_to_place, &current_cell.position);
+						break;
 				}
-				break;
 			}
 		}
 	}
 
 	fn place_player(
-		interest_points: &Vec<GamePosition>,
+		interest_points: &[GamePosition],
 		to_place: &mut GameCellContent,
 		max_position: &GamePosition,
 		rng: &mut StdRng,
@@ -681,8 +689,8 @@ impl GameMap {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Player(nb_to_place));
 						// println!("Added {} Player in {:?}", nb_to_place, &current_cell.position);
+						break;
 				}
-				break;
 			}
 		}
 	}
@@ -737,7 +745,7 @@ impl GameMap {
 			}
 		}
 
-		let data = serde_json::to_string(&cells_to_send).unwrap();
+		let data = serde_json::to_string(&cells_to_send).unwrap() + "\n";
 
 		println!("Size of json: {}", data.len());
 
