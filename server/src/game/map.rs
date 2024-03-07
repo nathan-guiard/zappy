@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/07 10:47:20 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/07 11:21:23 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -339,14 +339,12 @@ impl GameMap {
 			x: rand_u8(rng) % x,
 			y: rand_u8(rng) % y,
 		};
-		dbg!(start);
 
 		for point_number in 0..interest_points.len() {
 			interest_points[point_number] = GamePosition {
 				x: rand_u8(rng) % x,
 				y: rand_u8(rng) % y,
 			};
-			println!("{:?}", &interest_points[point_number]);
 		}
 
 		let mut max: Vec<GameCellContent> = vec![
@@ -362,10 +360,6 @@ impl GameMap {
 				nb_of_team as u32 * 6 + 5000) as u16),
 			Player(nb_of_team.into()),
 		];
-
-		dbg!(&max);
-
-		// panic!();
 
 		fn everything_placed(max: &Vec<GameCellContent>) -> bool {
 			for item in max {

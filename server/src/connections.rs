@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/07 10:17:42 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/07 11:13:16 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@ use std::io::Error;
 use epoll::Events;
 use libc::*;
 
+use colored::Colorize;
 use crate::watcher::Watcher;
 
 #[derive(Clone, Copy)]
@@ -29,6 +30,7 @@ impl ServerConnection {
 		result = unsafe { std::mem::zeroed() };
 		result.socket_fd = unsafe { socket(AF_INET, SOCK_STREAM, 0) };
 		if result.socket_fd < 0 {
+			eprintln!("{}", "Could not create a socket".red().bold());
 			return Err(Error::last_os_error())
 		}
 	
@@ -39,6 +41,7 @@ impl ServerConnection {
 		if unsafe { fcntl(result.socket_fd, F_SETFL, O_NONBLOCK) }	< 0 {
 			let error = Error::last_os_error();
 			unsafe { libc::close(result.socket_fd) };
+			eprintln!("{}", "Could not set socket fd to non-blocking".red().bold());
 			return Err(error);
 		}
 	
@@ -47,12 +50,15 @@ impl ServerConnection {
 			std::mem::size_of_val(&result.soc_addr) as u32) } != 0 {
 				let error = Error::last_os_error();
 				unsafe { libc::close(result.socket_fd) };
+				eprintln!("{} {port}", "Could not set socket to port".red().bold());
+				eprintln!("{}", "Hint: Try another port".yellow());
 				return Err(error);
 		}
 	
 		if unsafe { listen(result.socket_fd, 32) } != 0 {
 			let error = Error::last_os_error();
 			unsafe { libc::close(result.socket_fd) };
+			eprintln!("{}", "listen() failed".red().bold());
 			return Err(error);
 		}
 	
@@ -73,6 +79,7 @@ impl ServerConnection {
 					return Ok(());
 				}
 			}
+			eprintln!("{}", "accept() failed".red().bold());
 			return Err(last_error);
 		}
 		println!("Connection!");

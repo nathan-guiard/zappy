@@ -6,13 +6,14 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 10:00:27 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/07 10:08:35 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/07 11:07:23 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 use std::{io::Error, os::fd::RawFd};
 
 use epoll::{ControlOptions::*, Event, Events};
+use colored::Colorize;
 
 #[derive(Debug)]
 pub struct Watcher {
@@ -23,7 +24,7 @@ pub struct Watcher {
 impl Drop for Watcher {
 	fn drop(&mut self) {
 		if let Err(e) = epoll::close(self.epoll_fd) {
-			eprintln!("Could not close {}: {e}", self.epoll_fd);
+			eprintln!("{} {}: {e}", "Could not close".red().bold(), self.epoll_fd);
 		}
 	}
 }
@@ -62,7 +63,10 @@ impl Watcher {
 					watched: 0,
 				})
 			}
-			Err(err) => Err(err)
+			Err(err) => {
+				eprintln!("{}", "Error creating an epoll instance".red().bold(),);
+				Err(err)
+			}
 		}
 	}
 }

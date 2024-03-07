@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 05:53:29 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/07 10:12:05 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/07 10:59:45 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@ use std::{collections::HashMap, io::Error};
 use libc::{c_void, EWOULDBLOCK};
 
 use crate::game::map::GameMap;
+use colored::Colorize;
 
 pub fn process_data(data: &HashMap<i32, Vec<String>>, game_map: &GameMap) {
 	for (fd, lines) in data {
@@ -56,6 +57,7 @@ pub fn get_data_from_fd(fd: i32) -> Result<Vec<String>, Error> {
 						if e == EWOULDBLOCK {
 							break;
 						}
+						eprintln!("{}", "Could not read data from client".red().bold());
 						return Err(last_error);
 					}
 				}

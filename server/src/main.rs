@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/07 10:11:53 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/07 11:23:34 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@ mod communication;
 
 use std::io::{Error, ErrorKind};
 use std::time::{Duration, Instant};
+use colored::Colorize;
 use epoll::Events;
 use libc::{EPOLLIN, EPOLLRDHUP};
 use rand::Rng;
@@ -58,26 +59,30 @@ struct Args {
 }
 
 fn main() -> Result<(), Error> {
+	// Argument
 	let mut args = Args::from_args();
 	args_check(&mut args)?;
 	let tick_speed = Duration::from_secs_f64(1 as f64 / args.time as f64);
-	let mut map = GameMap::new(args.x, args.y, args.seed);
-	println!("{}", map);
-	// return Ok(());
+
+	// Connetion
 	let con_data = ServerConnection::init_socket(args.port)?;
 	let mut watcher = Watcher::new()?;
-
 	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
 
-	
+	// Map
+	let mut map = GameMap::new(args.x, args.y, args.seed);
+	println!("{}", map);
+
+	// Timing
 	let mut before = Instant::now();
 	let mut exec_time = Duration::default();
 	let mut last_sleep = Duration::default();
+
 	loop {
 		let new_events = match watcher.update() {
 			Ok(events) => events,
 			Err(e) => {
-				eprintln!("Error trying to update: {e}");
+				eprintln!("{}: {e}", "Error trying to update".red().bold());
 				return Err(e);
 			}
 		};
@@ -105,7 +110,6 @@ fn main() -> Result<(), Error> {
 		let data = get_all_data(&ready_to_read)?;
 		process_data(&data, &map);
 		
-		dbg!(data);
 		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep);
 		std::thread::sleep(last_sleep);
 		before = Instant::now();
@@ -134,5 +138,10 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 	if args.seed == 0 {
 		args.seed = rand::thread_rng().gen();
 	}
+	println!("Server port: {}", args.port);
+	println!("Map dimentions: X:{} Y:{}", args.x, args.y);
+	println!("Seed: {}", args.seed);
+	println!("Tick rate: {}s", 1 as f64 / args.time as f64);
+	println!("---");
 	Ok(())
 }
