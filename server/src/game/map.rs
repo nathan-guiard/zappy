@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/07 10:17:58 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/07 10:47:20 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -478,7 +478,6 @@ impl GameMap {
 					1) {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Thystame(nb_to_place));
-						// println!("Added {} Thystame in {:?}", nb_to_place, &current_cell.position);
 						break;
 				}
 			}
@@ -505,10 +504,9 @@ impl GameMap {
 					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
 					max_position,
 					1,
-					2) {
+					3) {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Phiras(nb_to_place));
-						// println!("Added {} Phiras in {:?}", nb_to_place, &current_cell.position);
 						break;
 				}
 			}
@@ -535,10 +533,9 @@ impl GameMap {
 					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
 					max_position,
 					3,
-					6) {
+					7) {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Mendiane(nb_to_place));
-						// println!("Added {} Mendiane in {:?}", nb_to_place, &current_cell.position);
 						break;
 				}
 			}
@@ -564,11 +561,10 @@ impl GameMap {
 					&current_cell.position,
 					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
 					max_position,
-					6,
-					8) {
+					7,
+					10) {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Sibur(nb_to_place));
-						// println!("Added {} Sibur in {:?}", nb_to_place, &current_cell.position);
 						break;
 				}
 			}
@@ -594,11 +590,10 @@ impl GameMap {
 					&current_cell.position,
 					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
 					max_position,
-					7,
-					9) {
+					8,
+					12) {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Deraumere(nb_to_place));
-						// println!("Added {} Deraumere in {:?}", nb_to_place, &current_cell.position);
 						break;
 				}
 			}
@@ -624,11 +619,10 @@ impl GameMap {
 					&current_cell.position,
 					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
 					max_position,
-					8,
-					10) {
+					9,
+					14) {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Deraumere(nb_to_place));
-						// println!("Added {} Deraumere in {:?}", nb_to_place, &current_cell.position);
 						break;
 				}
 			}
@@ -654,11 +648,10 @@ impl GameMap {
 					&current_cell.position,
 					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
 					max_position,
-					7,
+					10,
 					35) {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Food(nb_to_place));
-						// println!("Added {} Food in {:?}", nb_to_place, &current_cell.position);
 						break;
 				}
 			}
@@ -684,11 +677,10 @@ impl GameMap {
 					&current_cell.position,
 					&interest_points[(start_interest_point_index as usize + i) % interest_points.len()],
 					max_position,
-					7,
-					15) {
+					15,
+					25) {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Player(nb_to_place));
-						// println!("Added {} Player in {:?}", nb_to_place, &current_cell.position);
 						break;
 				}
 			}
