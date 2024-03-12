@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/12 15:48:10 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/12 16:46:00 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -115,6 +115,10 @@ fn main() -> Result<(), Error> {
 		
 		let data = get_all_data(&ready_to_read)?;
 		process_data(&data, &map, &mut players);
+		
+		for player in &mut players {
+			player.execute_queue(&map);
+		}
 		
 		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep);
 		std::thread::sleep(last_sleep);

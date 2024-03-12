@@ -6,11 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/12 15:50:37 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/12 16:46:23 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use super::{map::{GameCellContent, GamePosition}, TURNS_TO_DIE};
+use super::{map::{GameCellContent, GameMap, GamePosition}, TURNS_TO_DIE};
 use PlayerFood::*;
 use PlayerState::*;
 use PlayerDirection::*;
@@ -77,6 +77,17 @@ impl Player {
 			self.command_queue.append(&mut new);
 		}
 		dbg!(&self.command_queue);
+	}
+
+	pub fn execute_queue(&mut self, map: &GameMap) {
+		if self.command_queue.is_empty() {
+			return;
+		}
+		let action = self.command_queue.first().unwrap().to_ascii_lowercase();
+		self.command_queue.remove(0);
+		if action.starts_with("map") {
+			map.send_map(self.fd)
+		}
 	}
 	
 	pub fn loose_food(&mut self) {
