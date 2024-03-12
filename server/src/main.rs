@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/12 16:46:00 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/12 17:59:31 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,16 +19,14 @@ use std::io::{Error, ErrorKind};
 use std::time::{Duration, Instant};
 use colored::Colorize;
 use epoll::Events;
+use game::Game;
 use libc::{EPOLLIN, EPOLLRDHUP};
 use rand::Rng;
 use structopt::StructOpt;
 
 use watcher::Watcher;
 use connections::ServerConnection;
-use game::map::GameMap;
 use communication::{get_all_data, process_data};
-
-use crate::game::player::{self, Player};
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -66,16 +64,13 @@ fn main() -> Result<(), Error> {
 	args_check(&mut args)?;
 	let tick_speed = Duration::from_secs_f64(1 as f64 / args.time as f64);
 
-	// Connetion
+	// Connection
 	let con_data = ServerConnection::init_socket(args.port)?;
 	let mut watcher = Watcher::new()?;
 	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
 
-	// Map
-	let mut map = GameMap::new(args.x, args.y, args.seed);
-	println!("{}", map);
-
-	let mut players: Vec<Player> = vec![];
+	// All the game
+	let mut game = Game::new(args.x, args.y, args.team_name.len() as u8, args.seed);
 
 	// Timing
 	let mut before = Instant::now();
@@ -104,7 +99,7 @@ fn main() -> Result<(), Error> {
 			if event.data == con_data.socket_fd as u64 &&
 			event.events == EPOLLIN as u32 {
 				if let Some(new_player) = con_data.get_new_connections(&mut watcher)? {
-					players.push(new_player);
+					game.players.push(new_player);
 				}
 			} else if event.events == EPOLLIN as u32 {
 				ready_to_read.push(event.data as i32);
@@ -114,10 +109,10 @@ fn main() -> Result<(), Error> {
 		}
 		
 		let data = get_all_data(&ready_to_read)?;
-		process_data(&data, &map, &mut players);
+		process_data(&data, &game.map, &mut game.players);
 		
-		for player in &mut players {
-			player.execute_queue(&map);
+		for player in &mut game.players {
+			player.execute_queue(&game.map);
 		}
 		
 		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep);
@@ -143,7 +138,17 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 			"Map too big, max size is X:30, Y:25"));
 	}
 	if args.team_name.is_empty() {
-		args.team_name.push("".into());
+		args.team_name.push("ekip".into());
+	}
+	if args.team_name.len() > 4 {
+		return Err(Error::new(ErrorKind::InvalidInput,
+			"Cannot have more than 4 teams"));
+	}
+	for team_name in &args.team_name {
+		if team_name == "graphic_client" {
+			return Err(Error::new(ErrorKind::InvalidInput,
+				"None of the teams can be named 'graphic_client'"));
+		}
 	}
 	if args.seed == 0 {
 		args.seed = rand::thread_rng().gen();

@@ -1,5 +1,7 @@
 - [x] Player command queue
+- [x] Create a "Game" class, with the player and map inside
+- [ ] Special auth for graphic_interface
 - [ ] Player auth
-- [ ] Create a "Game" class, with the player[, teams] and map inside
 - [ ] Inventory command
+- [ ] Team class ?
 - [ ] Movement commands for player
