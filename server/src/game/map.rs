@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/07 11:21:23 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/07 16:05:07 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -124,14 +124,14 @@ impl GameCellContent {
 
 #[derive(Debug, Clone, Default, PartialEq, Copy, Serialize)]
 pub struct GamePosition {
-	x: u8,
-	y: u8,
+	pub x: u8,
+	pub y: u8,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct GameCell {
-	position: GamePosition,
-	content: Vec<GameCellContent>
+	pub position: GamePosition,
+	pub content: Vec<GameCellContent>
 }
 
 impl Display for GameCell {
@@ -427,7 +427,6 @@ impl GameMap {
 				}
 			}
 		}
-
 	}
 
 	fn place_single_ressource(

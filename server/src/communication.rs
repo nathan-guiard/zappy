@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 05:53:29 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/07 10:59:45 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/12 16:01:29 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,18 +14,14 @@ use std::{collections::HashMap, io::Error};
 
 use libc::{c_void, EWOULDBLOCK};
 
-use crate::game::map::GameMap;
+use crate::game::{map::GameMap, player::{get_player_from_fd, Player}};
 use colored::Colorize;
 
-pub fn process_data(data: &HashMap<i32, Vec<String>>, game_map: &GameMap) {
+pub fn process_data(data: &HashMap<i32, Vec<String>>, game_map: &GameMap,
+	players: &mut Vec<Player>) {
 	for (fd, lines) in data {
-		for line in lines {
-			if line.is_empty() {
-				continue;
-			}
-			if line.to_lowercase().starts_with("map") {
-				game_map.send_map(*fd);
-			}
+		if let Some(player) = get_player_from_fd(players, *fd) {
+			player.push_to_queue(lines.clone());
 		}
 	}
 }
@@ -65,6 +61,28 @@ pub fn get_data_from_fd(fd: i32) -> Result<Vec<String>, Error> {
 			}
 		}
 	}
-	let lines: Vec<String> = line.split('\n').map(|l| l.to_string()).collect();
+	let lines: Vec<String> = split_keep_newline(line);
+	dbg!(&lines);
 	Ok(lines)
+}
+
+pub fn split_keep_newline(to_split: String) -> Vec<String> {
+	let mut result: Vec<String> = Vec::new();
+    let mut current_string = String::new();
+
+    for c in to_split.chars() {
+        if c == '\n' {
+            current_string.push(c);
+            result.push(current_string.clone());
+            current_string.clear();
+        } else {
+            current_string.push(c);
+        }
+    }
+
+    if !current_string.is_empty() {
+        result.push(current_string);
+    }
+	
+	result
 }

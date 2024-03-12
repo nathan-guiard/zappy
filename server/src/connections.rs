@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/07 11:13:16 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/12 15:04:01 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@ use epoll::Events;
 use libc::*;
 
 use colored::Colorize;
-use crate::watcher::Watcher;
+use crate::{game::player::Player, watcher::Watcher};
 
 #[derive(Clone, Copy)]
 pub struct ServerConnection {
@@ -66,7 +66,7 @@ impl ServerConnection {
 	}
 	
 	pub fn get_new_connections(&self, watcher: &mut Watcher)
-		-> Result<(), Error> {
+		-> Result<Option<Player>, Error> {
 		let new_connection = unsafe {
 			accept(self.socket_fd,
 				std::ptr::null_mut(),
@@ -76,7 +76,7 @@ impl ServerConnection {
 			let last_error = Error::last_os_error();
 			if let Some(errno) = last_error.raw_os_error() {
 				if errno == EWOULDBLOCK || errno == EAGAIN {
-					return Ok(());
+					return Ok(None);
 				}
 			}
 			eprintln!("{}", "accept() failed".red().bold());
@@ -85,9 +85,11 @@ impl ServerConnection {
 		println!("Connection!");
 		unsafe { fcntl(new_connection, F_SETFL, O_NONBLOCK) };
 		watcher.add(new_connection, Events::EPOLLIN | Events::EPOLLRDHUP)?;
-		Ok(())
+		unsafe { send(new_connection, "BIENVENUE\n".as_bytes().as_ptr() as _, 10, 0) };
+		Ok(Some(Player::new(new_connection)))
 	}
 
+	// TODO: remove or change the Player with the associated FD
 	pub fn deconnection(&self, fd: i32, watcher: &mut Watcher)
 		-> Result<(), Error> {
 		println!("Deconnection!");

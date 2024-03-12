@@ -1,0 +1,5 @@
+- [x] Player command queue
+- [ ] Player auth
+- [ ] Create a "Game" class, with the player[, teams] and map inside
+- [ ] Inventory command
+- [ ] Movement commands for player

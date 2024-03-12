@@ -6,8 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/05 17:26:06 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/07 16:25:44 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 pub mod map;
+pub mod player;
+
+const TURNS_TO_DIE: u16 = 150;

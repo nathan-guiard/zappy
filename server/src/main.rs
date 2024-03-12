@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/07 11:23:34 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/12 15:48:10 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,6 +27,8 @@ use watcher::Watcher;
 use connections::ServerConnection;
 use game::map::GameMap;
 use communication::{get_all_data, process_data};
+
+use crate::game::player::{self, Player};
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -73,6 +75,8 @@ fn main() -> Result<(), Error> {
 	let mut map = GameMap::new(args.x, args.y, args.seed);
 	println!("{}", map);
 
+	let mut players: Vec<Player> = vec![];
+
 	// Timing
 	let mut before = Instant::now();
 	let mut exec_time = Duration::default();
@@ -99,7 +103,9 @@ fn main() -> Result<(), Error> {
 		for event in new_events {
 			if event.data == con_data.socket_fd as u64 &&
 			event.events == EPOLLIN as u32 {
-				con_data.get_new_connections(&mut watcher)?;
+				if let Some(new_player) = con_data.get_new_connections(&mut watcher)? {
+					players.push(new_player);
+				}
 			} else if event.events == EPOLLIN as u32 {
 				ready_to_read.push(event.data as i32);
 			} else if event.events & (EPOLLRDHUP as u32) != 0 {
@@ -108,7 +114,7 @@ fn main() -> Result<(), Error> {
 		}
 		
 		let data = get_all_data(&ready_to_read)?;
-		process_data(&data, &map);
+		process_data(&data, &map, &mut players);
 		
 		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep);
 		std::thread::sleep(last_sleep);
@@ -133,7 +139,7 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 			"Map too big, max size is X:30, Y:25"));
 	}
 	if args.team_name.is_empty() {
-		args.team_name.push("Blue team".into());
+		args.team_name.push("".into());
 	}
 	if args.seed == 0 {
 		args.seed = rand::thread_rng().gen();
