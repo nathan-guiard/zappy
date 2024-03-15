@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/12 18:02:08 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 10:20:54 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,8 @@ use libc::send;
 use serde::Serialize;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use GameCellContent::*;
+
+use crate::communication::send_to;
 const DEVIDE_U32_TO_U8: u32 = 16843009;
 
 /// Indexes in the "max" tab
@@ -275,8 +277,8 @@ impl GameCell {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct GameMap {
-	max_position: GamePosition,
-	cells: Vec<Vec<GameCell>>,
+	pub max_position: GamePosition,
+	pub cells: Vec<Vec<GameCell>>,
 }
 
 impl Display for GameMap {
@@ -707,7 +709,7 @@ impl GameMap {
 		(dist_x + dist_y) as u16
 	}
 	
-	pub fn send_map(&self, send_to: i32) {
+	pub fn send_map(&self, fd: i32) {
 		let mut new_cells = self.cells.clone();
 		let mut cells_to_send: Vec<Vec<SendCell>> = vec![vec![
 			SendCell {
@@ -730,7 +732,7 @@ impl GameMap {
 
 		println!("Size of json: {}", data.len());
 
-		unsafe { send(send_to, data.as_bytes().as_ptr() as _, data.len(), 0) };
+		send_to(fd, data.as_str());
 	}
 }
 

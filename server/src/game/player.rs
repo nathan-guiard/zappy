@@ -6,9 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 09:32:30 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 10:21:23 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+use crate::communication::send_to;
 
 use super::{map::{GameCellContent, GameMap, GamePosition}, TURNS_TO_DIE};
 use PlayerFood::*;
@@ -82,19 +84,32 @@ impl Player {
 	/// Executes the queue of a player
 	/// 
 	/// Returns true if the Player has to be turned into a GraphicInterface
-	pub fn execute_queue(&mut self, map: &GameMap,
-		already_has_graphic_interface: bool) -> bool {
+	pub fn execute_queue(&mut self, map: &GameMap, teams: &[String],
+		has_gui: bool) -> bool {
 		if self.command_queue.is_empty() {
 			return false;
 		}
 		let action = self.command_queue.first().unwrap().to_ascii_lowercase();
 		self.command_queue.remove(0);
+		if self.team_check(map, teams, action, has_gui) {
+			return true;
+		}
+		false
+	}
+	
+	fn team_check(&mut self, map: &GameMap, teams: &[String], team: String, has_gui: bool) -> bool {
 		if self.team.is_empty() {
-			let team = action.to_string();
 			dbg!(&team);
 			if team.to_ascii_lowercase() == "graphic_client\n" &&
-				!already_has_graphic_interface {
+				!has_gui {
 				return true;
+			}
+			dbg!(&teams);
+			if teams.contains(&team[0..&team.len() - 1].to_string()) {
+				self.team = team;
+				send_to(self.fd, format!("1\n{} {}\n", map.max_position.x, map.max_position.y).as_str());
+			} else {
+				send_to(self.fd, "This team does not exist\n");
 			}
 		}
 		false
