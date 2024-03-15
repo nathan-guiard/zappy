@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/12 16:46:23 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 09:32:30 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,7 +70,7 @@ impl Player {
 			return;
 		}
 		if let Some(last) = self.command_queue.last_mut() {
-			if !last.ends_with("\n") {
+			if !last.ends_with('\n') {
 				last.push_str(new.first_mut().unwrap().clone().as_str());
 				new.remove(0);
 			}
@@ -79,15 +79,25 @@ impl Player {
 		dbg!(&self.command_queue);
 	}
 
-	pub fn execute_queue(&mut self, map: &GameMap) {
+	/// Executes the queue of a player
+	/// 
+	/// Returns true if the Player has to be turned into a GraphicInterface
+	pub fn execute_queue(&mut self, map: &GameMap,
+		already_has_graphic_interface: bool) -> bool {
 		if self.command_queue.is_empty() {
-			return;
+			return false;
 		}
 		let action = self.command_queue.first().unwrap().to_ascii_lowercase();
 		self.command_queue.remove(0);
-		if action.starts_with("map") {
-			map.send_map(self.fd)
+		if self.team.is_empty() {
+			let team = action.to_string();
+			dbg!(&team);
+			if team.to_ascii_lowercase() == "graphic_client\n" &&
+				!already_has_graphic_interface {
+				return true;
+			}
 		}
+		false
 	}
 	
 	pub fn loose_food(&mut self) {
@@ -110,7 +120,7 @@ impl Player {
 		}
 	}
 
-	pub fn start_casting(&mut self, action: &String) {
+	pub fn start_casting(&mut self, action: &str) {
 		if self.state == Idle {
 			match action.to_uppercase().as_str() {
 				"AVANCE" => self.state = Casting(0, AVANCE_TIME),
@@ -159,7 +169,7 @@ impl PlayerAction {
 	}
 
 	pub fn from(line: String) -> Result<Self, String> {
-		let first_word: String = line.split_ascii_whitespace().collect();
+		let first_word: String = line.split_ascii_whitespace().collect(); //pas sur
 		
 		match first_word.to_ascii_lowercase().as_str() {
 			"avance" => Ok(Self { kind: PlayerActionKind::Avance }),
@@ -231,10 +241,5 @@ pub enum PlayerState {
 }
 
 pub fn get_player_from_fd(players: &mut Vec<Player>, fd: i32) -> Option<&mut Player> {
-	for player in players {
-		if player.fd == fd {
-			return Some(player);
-		}
-	}
-	None
+	players.iter_mut().find(|p| p.fd == fd)
 }

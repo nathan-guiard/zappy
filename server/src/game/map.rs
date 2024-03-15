@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/07 16:05:07 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/12 18:02:08 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -273,7 +273,7 @@ impl GameCell {
 	}
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct GameMap {
 	max_position: GamePosition,
 	cells: Vec<Vec<GameCell>>,
@@ -295,7 +295,7 @@ impl Display for GameMap {
 }
 
 impl GameMap {
-	pub fn new(x: u8, y: u8, seed: usize) -> Self {
+	pub fn new(x: u8, y: u8, teams: u8, seed: usize) -> Self {
 		let mut cells = vec![vec![GameCell::empty(); y.into()]; x.into()];
 		let mut rng = StdRng::seed_from_u64(seed as u64);
 		let before_map = Instant::now();
@@ -309,11 +309,7 @@ impl GameMap {
 			}
 		}
 
-		Self::place_ressources(&mut cells,
-			&mut rng,
-			x,
-			y,
-			4);
+		Self::place_ressources(&mut cells, &mut rng, x, y, teams);
 
 		println!("Time to create the map: {:?}", Instant::now() - before_map);
 		GameMap {

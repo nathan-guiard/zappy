@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/12 15:04:01 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/12 18:28:02 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,10 +91,10 @@ impl ServerConnection {
 
 	// TODO: remove or change the Player with the associated FD
 	pub fn deconnection(&self, fd: i32, watcher: &mut Watcher)
-		-> Result<(), Error> {
+		-> Result<i32, Error> {
 		println!("Deconnection!");
 		watcher.delete(fd)?;
 		epoll::close(fd)?;
-		Ok(())
+		Ok(fd)
 	}
 }
