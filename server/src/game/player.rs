@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 13:40:32 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 13:45:11 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,7 +116,9 @@ impl Player {
 	}
 	
 	pub fn loose_food(&mut self) {
-		if self.team.is_empty() { // Not ready yet
+		if self.team.is_empty() ||
+			self.state == Dead ||
+			self.state == LevelMax {
 			return;
 		}
 		match self.food {
@@ -129,8 +131,7 @@ impl Player {
 			},
 			TurnsWithout(x) => {
 				if x >= TURNS_TO_DIE {
-					// self.die()
-					todo!();
+					self.state = Dead;
 				} else {
 					self.food = TurnsWithout(x + 1);
 				}

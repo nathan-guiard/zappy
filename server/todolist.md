@@ -3,7 +3,7 @@
 - [x] Special auth for gui
 - [x] Player auth
 - [x] Updates on the map for the gui
-- [ ] Player.die tmp impl
+- [x] Player.die tmp impl
 - [ ] Inventory command
 - [ ] Team class ?
 - [ ] Movement commands for player
