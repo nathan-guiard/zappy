@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 10:20:54 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 13:33:38 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -215,6 +215,7 @@ impl GameCell {
 		true
 	}
 
+	/// Removes the empty contents
 	pub fn purify(&mut self) {
 		let mut new_content: Vec<GameCellContent> = vec![];
 		
@@ -272,6 +273,23 @@ impl GameCell {
 			return Linemate(linemate_amout);
 		}
 		Food(food_amout)
+	}
+
+	pub fn diff(&self, new: &Self) -> Option<SendCell> {
+		if self != new {
+			return Some(SendCell::from(new))
+		}
+		None
+	}
+}
+
+impl PartialEq for GameCell {
+	fn eq(&self, other: &Self) -> bool {
+		if self.content == other.content
+			&& self.position == other.position {
+			return true;
+		}
+		false
 	}
 }
 
@@ -724,11 +742,11 @@ impl GameMap {
 		for x in 0..new_cells.len() {
 			for y in 0..new_cells[0].len() {
 				new_cells[x][y].purify();
-				cells_to_send[x][y].from(&new_cells[x][y]);
+				cells_to_send[x][y] = SendCell::from(&new_cells[x][y]);
 			}
 		}
 
-		let data = serde_json::to_string(&cells_to_send).unwrap() + "\n";
+		let data = serde_json::to_string(&cells_to_send).unwrap() + "\n"; // \n sus
 
 		println!("Size of json: {}", data.len());
 
@@ -737,17 +755,19 @@ impl GameMap {
 }
 
 #[derive(Clone, Serialize)]
-struct SendCell {
+pub struct SendCell {
 	p: GamePosition,
 	c: Vec<GameCellContent>
 }
 
 impl SendCell {
-	pub fn from(&mut self, from: &GameCell) {
+	pub fn from(from: &GameCell) -> SendCell {
 		let mut purified = from.clone();
 		purified.purify();
-		self.p = purified.position;
-		self.c = purified.content;
+		SendCell {
+			p: purified.position,
+			c: purified.content,
+		}
 	}
 }
 
