@@ -6,42 +6,68 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 09:43:22 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 13:06:00 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 pub mod map;
 pub mod player;
-pub mod graphic_client;
+pub mod gui;
 
-use self::{map::GameMap, player::Player, graphic_client::GraphicClient};
+use self::{map::GameMap, player::Player, gui::GraphicClient};
 
 const TURNS_TO_DIE: u16 = 150;
 
+#[derive(Debug)]
 pub struct Game {
 	pub players: Vec<Player>,
 	pub map: GameMap,
-	last_map: GameMap, // needed for updates to graphic interface
-	pub graphic_interface: Option<GraphicClient>
+	pub last_map: Option<GameMap>, // needed for updates to gui
+	pub gui: Option<GraphicClient>,
+	pub teams: Vec<String>,
 }
 
 impl Game {
-	pub fn new(x: u8, y: u8, teams: u8, seed: usize) -> Self {
-		let map = GameMap::new(x, y, teams, seed);
+	pub fn new(x: u8, y: u8, teams: Vec<String>, seed: usize) -> Self {
+		let map = GameMap::new(x, y, teams.len() as u8, seed);
 		Game {
 			players: vec![],
 			map: map.clone(),
-			last_map: map.clone(),
-			graphic_interface: None,
+			last_map: None,
+			gui: None,
+			teams,
 		}
 	}
 }
 
 impl Game {
-	pub fn try_remove_graphic_interface(&mut self, fd: i32) {
-		match &self.graphic_interface {
-			Some(gc) => if fd == gc.fd { self.graphic_interface = None },
+	pub fn try_remove_gui(&mut self, fd: i32) {
+		match &self.gui {
+			Some(gc) => if fd == gc.fd { self.gui = None },
 			None => {},
+		}
+	}
+
+	/// Logic of the game, what occurs every tick
+	pub fn execute(&mut self) {
+		let mut to_remove = None;
+		let mut players_to_remove = Vec::new();
+		
+		for player in self.players.iter_mut() {
+			if player.execute_queue(&self.map, &self.teams, self.gui.is_some()) {
+				to_remove = Some(player.fd);
+			}
+		}
+		
+		if let Some(fd) = to_remove {
+			players_to_remove.push(fd);
+			self.players.retain(|p| players_to_remove.contains(&p.fd));
+			self.gui = Some(GraphicClient::new(to_remove.unwrap()));
+			self.map.send_map(self.gui.as_ref().unwrap().fd);
+		}
+		
+		for player in &mut self.players {
+			player.loose_food();
 		}
 	}
 }

@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/12 18:28:02 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 09:58:24 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@ use epoll::Events;
 use libc::*;
 
 use colored::Colorize;
-use crate::{game::player::Player, watcher::Watcher};
+use crate::{communication::send_to, game::player::Player, watcher::Watcher};
 
 #[derive(Clone, Copy)]
 pub struct ServerConnection {
@@ -85,7 +85,7 @@ impl ServerConnection {
 		println!("Connection!");
 		unsafe { fcntl(new_connection, F_SETFL, O_NONBLOCK) };
 		watcher.add(new_connection, Events::EPOLLIN | Events::EPOLLRDHUP)?;
-		unsafe { send(new_connection, "BIENVENUE\n".as_bytes().as_ptr() as _, 10, 0) };
+		send_to(new_connection, "BIENVENUE\n");
 		Ok(Some(Player::new(new_connection)))
 	}
 

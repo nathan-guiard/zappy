@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 09:40:31 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 12:59:28 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,18 +14,20 @@ mod connections;
 mod watcher;
 mod game;
 mod communication;
+mod update_gui;
 
 use std::io::{Error, ErrorKind};
 use std::time::{Duration, Instant};
 use colored::Colorize;
 use epoll::Events;
-use game::graphic_client::GraphicClient;
+use game::gui::GraphicClient;
 use game::player::Player;
 use game::Game;
 use libc::{EPOLLIN, EPOLLRDHUP};
 use rand::Rng;
 use structopt::StructOpt;
 
+use update_gui::update_gui;
 use watcher::Watcher;
 use connections::ServerConnection;
 use communication::{get_all_data, process_data};
@@ -72,7 +74,7 @@ fn main() -> Result<(), Error> {
 	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
 
 	// All the game
-	let mut game = Game::new(args.x, args.y, args.team_name.len() as u8, args.seed);
+	let mut game = Game::new(args.x, args.y, args.team_name, args.seed);
 
 	// Timing
 	let mut before = Instant::now();
@@ -88,13 +90,6 @@ fn main() -> Result<(), Error> {
 			}
 		};
 		
-		if new_events.is_empty() {
-			time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep);
-			std::thread::sleep(last_sleep);
-			before = Instant::now();
-			continue;
-		}
-		
 		let mut ready_to_read: Vec<i32> = vec![];
 		
 		for event in new_events {
@@ -106,7 +101,7 @@ fn main() -> Result<(), Error> {
 			} else if event.events == EPOLLIN as u32 {
 				ready_to_read.push(event.data as i32);
 			} else if event.events & (EPOLLRDHUP as u32) != 0 {
-				game.try_remove_graphic_interface(
+				game.try_remove_gui(
 					con_data.deconnection(event.data as i32, &mut watcher)?
 				);
 			}
@@ -115,29 +110,13 @@ fn main() -> Result<(), Error> {
 		let data = get_all_data(&ready_to_read)?;
 		process_data(&data, &mut game.players);
 		
-		execute(&mut game);
+		game.execute();
+		update_gui(&game);
+		game.last_map = Some(game.map.clone());
 		
 		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep);
 		std::thread::sleep(last_sleep);
 		before = Instant::now();
-	}
-}
-
-fn execute(game: &mut Game) {
-	let mut to_remove = None;
-	let mut players_to_remove = Vec::new();
-
-	for player in game.players.iter_mut() {
-		if player.execute_queue(&game.map, game.graphic_interface.is_some()) {
-			to_remove = Some(player.fd);
-		}
-	}
-
-	if let Some(fd) = to_remove {
-		players_to_remove.push(fd);
-		game.players.retain(|p| players_to_remove.contains(&p.fd));
-		game.graphic_interface = Some(GraphicClient::new(to_remove.unwrap()));
-		game.map.send_map(game.graphic_interface.as_ref().unwrap().fd);
 	}
 }
 
@@ -148,8 +127,11 @@ fn time_check(tick_speed: &Duration, exec_time: &mut Duration,
 	println!("\x1b[3;2;90m---\x1b[0m\nexec: {:?}", exec_time);
 }
 
-
 fn args_check(args: &mut Args) -> Result<(), Error> {
+	if args.time > 128 {
+		return Err(Error::new(ErrorKind::InvalidInput,
+			"Time cannot be more than 128"));
+	}
 	if args.x > 150 || args.y > 120 {
 		return Err(Error::new(ErrorKind::InvalidInput,
 			"Map too big, max size is X:150, Y:120"));
@@ -166,9 +148,9 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 			"Cannot have more than 4 teams"));
 	}
 	for team_name in &args.team_name {
-		if team_name == "graphic_client" {
+		if team_name == "gui" {
 			return Err(Error::new(ErrorKind::InvalidInput,
-				"None of the teams can be named 'graphic_client'"));
+				"None of the teams can be named 'gui'"));
 		}
 	}
 	if args.seed == 0 {

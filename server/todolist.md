@@ -1,8 +1,9 @@
 - [x] Player command queue
 - [x] Create a "Game" class, with the player and map inside
-- [x] Special auth for graphic_client
-- [ ] Updates on the map for the graphic client
-- [ ] Player auth
+- [x] Special auth for gui
+- [x] Player auth
+- [x] Updates on the map for the gui
+- [ ] Player.die tmp impl
 - [ ] Inventory command
 - [ ] Team class ?
 - [ ] Movement commands for player

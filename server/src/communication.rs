@@ -6,13 +6,13 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 05:53:29 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/12 18:23:14 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 09:57:51 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 use std::{collections::HashMap, io::Error};
 
-use libc::{c_void, EWOULDBLOCK};
+use libc::{c_void, send, EWOULDBLOCK};
 
 use crate::game::{map::GameMap, player::{get_player_from_fd, Player}};
 use colored::Colorize;
@@ -84,4 +84,8 @@ pub fn split_keep_newline(to_split: String) -> Vec<String> {
     }
 	
 	result
+}
+
+pub fn send_to(fd: i32, data: &str) {
+	unsafe { send(fd, data.as_bytes().as_ptr() as _, data.len(), 0) };
 }

@@ -6,11 +6,14 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 09:32:30 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 13:40:32 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+use crate::communication::send_to;
+
 use super::{map::{GameCellContent, GameMap, GamePosition}, TURNS_TO_DIE};
+use serde::Serialize;
 use PlayerFood::*;
 use PlayerState::*;
 use PlayerDirection::*;
@@ -29,6 +32,7 @@ const INCANTATION_TIME: u16 = 300;
 const FORK_TIME: u16 = 42;
 const CONNECT_TIME: u16 = 0;
 
+#[derive(Debug, Clone)]
 pub struct Player {
 	pub fd: i32,
 	pub command_queue: Vec<String>,
@@ -81,26 +85,40 @@ impl Player {
 
 	/// Executes the queue of a player
 	/// 
-	/// Returns true if the Player has to be turned into a GraphicInterface
-	pub fn execute_queue(&mut self, map: &GameMap,
-		already_has_graphic_interface: bool) -> bool {
+	/// Returns true if the Player has to be turned into a GraphicClient
+	pub fn execute_queue(&mut self, map: &GameMap, teams: &[String],
+		has_gui: bool) -> bool {
 		if self.command_queue.is_empty() {
 			return false;
 		}
 		let action = self.command_queue.first().unwrap().to_ascii_lowercase();
 		self.command_queue.remove(0);
+		if self.team_check(map, teams, action, has_gui) {
+			return true;
+		}
+		false
+	}
+	
+	fn team_check(&mut self, map: &GameMap, teams: &[String], team: String, has_gui: bool) -> bool {
 		if self.team.is_empty() {
-			let team = action.to_string();
-			dbg!(&team);
-			if team.to_ascii_lowercase() == "graphic_client\n" &&
-				!already_has_graphic_interface {
+			if team.to_ascii_lowercase() == "gui\n" &&
+				!has_gui {
 				return true;
+			}
+			if teams.contains(&team[0..&team.len() - 1].to_string()) {
+				self.team = team;
+				send_to(self.fd, format!("1\n{} {}\n", map.max_position.x, map.max_position.y).as_str());
+			} else {
+				send_to(self.fd, "This team does not exist\n");
 			}
 		}
 		false
 	}
 	
 	pub fn loose_food(&mut self) {
+		if self.team.is_empty() { // Not ready yet
+			return;
+		}
 		match self.food {
 			HasSome(x) => {
 				if x == 0 {
@@ -154,9 +172,9 @@ impl Player {
 			_ => false
 		}
 	}
-	
 }
 
+#[derive(Debug, Clone)]
 pub struct PlayerAction {
 	kind: PlayerActionKind,
 }
@@ -203,6 +221,7 @@ impl PlayerAction {
 	}
 }
 
+#[derive(Serialize, Debug, Clone)]
 pub enum PlayerActionKind {
 	Avance,
 	Gauche,
@@ -219,11 +238,13 @@ pub enum PlayerActionKind {
 	NoAction,
 }
 
+#[derive(Debug, Serialize, Clone)]
 pub enum PlayerFood {
 	HasSome(u16),
 	TurnsWithout(u16),
 }
 
+#[derive(Debug, Serialize, Clone)]
 pub enum PlayerDirection {
 	North,
 	South,
@@ -231,13 +252,48 @@ pub enum PlayerDirection {
 	West,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Clone)]
 pub enum PlayerState {
 	Idle,
 	Dead,
 	/// (current time, remaining time)
 	Casting(u16, u16),
 	LevelMax,
+}
+
+#[derive(Serialize)]
+pub struct SendPlayer {
+	position: GamePosition,
+	direction: PlayerDirection,
+	team: String,
+	action: PlayerActionKind,
+	inventory: Vec<GameCellContent>,
+	state: PlayerState,
+	level: u8,
+	food: PlayerFood,
+}
+
+impl From<Player> for SendPlayer {
+	fn from(player: Player) -> Self {
+		let mut inventory: Vec<GameCellContent> = vec![];
+		
+		for content in player.inventory {
+			if content.amount() > 0 {
+				inventory.push(content);
+			}
+		}
+
+		Self {
+			position: player.position,
+			direction: player.direction,
+			team: player.team,
+			action: player.action.kind,
+			inventory,
+			state: player.state,
+			level: player.level,
+			food: player.food,
+		}
+	}
 }
 
 pub fn get_player_from_fd(players: &mut Vec<Player>, fd: i32) -> Option<&mut Player> {

@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/12 18:02:08 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 13:33:38 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,8 @@ use libc::send;
 use serde::Serialize;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use GameCellContent::*;
+
+use crate::communication::send_to;
 const DEVIDE_U32_TO_U8: u32 = 16843009;
 
 /// Indexes in the "max" tab
@@ -213,6 +215,7 @@ impl GameCell {
 		true
 	}
 
+	/// Removes the empty contents
 	pub fn purify(&mut self) {
 		let mut new_content: Vec<GameCellContent> = vec![];
 		
@@ -271,12 +274,29 @@ impl GameCell {
 		}
 		Food(food_amout)
 	}
+
+	pub fn diff(&self, new: &Self) -> Option<SendCell> {
+		if self != new {
+			return Some(SendCell::from(new))
+		}
+		None
+	}
+}
+
+impl PartialEq for GameCell {
+	fn eq(&self, other: &Self) -> bool {
+		if self.content == other.content
+			&& self.position == other.position {
+			return true;
+		}
+		false
+	}
 }
 
 #[derive(Debug, Serialize, Clone)]
 pub struct GameMap {
-	max_position: GamePosition,
-	cells: Vec<Vec<GameCell>>,
+	pub max_position: GamePosition,
+	pub cells: Vec<Vec<GameCell>>,
 }
 
 impl Display for GameMap {
@@ -707,7 +727,7 @@ impl GameMap {
 		(dist_x + dist_y) as u16
 	}
 	
-	pub fn send_map(&self, send_to: i32) {
+	pub fn send_map(&self, fd: i32) {
 		let mut new_cells = self.cells.clone();
 		let mut cells_to_send: Vec<Vec<SendCell>> = vec![vec![
 			SendCell {
@@ -722,30 +742,32 @@ impl GameMap {
 		for x in 0..new_cells.len() {
 			for y in 0..new_cells[0].len() {
 				new_cells[x][y].purify();
-				cells_to_send[x][y].from(&new_cells[x][y]);
+				cells_to_send[x][y] = SendCell::from(&new_cells[x][y]);
 			}
 		}
 
-		let data = serde_json::to_string(&cells_to_send).unwrap() + "\n";
+		let data = serde_json::to_string(&cells_to_send).unwrap() + "\n"; // \n sus
 
 		println!("Size of json: {}", data.len());
 
-		unsafe { send(send_to, data.as_bytes().as_ptr() as _, data.len(), 0) };
+		send_to(fd, data.as_str());
 	}
 }
 
 #[derive(Clone, Serialize)]
-struct SendCell {
+pub struct SendCell {
 	p: GamePosition,
 	c: Vec<GameCellContent>
 }
 
 impl SendCell {
-	pub fn from(&mut self, from: &GameCell) {
+	pub fn from(from: &GameCell) -> SendCell {
 		let mut purified = from.clone();
 		purified.purify();
-		self.p = purified.position;
-		self.c = purified.content;
+		SendCell {
+			p: purified.position,
+			c: purified.content,
+		}
 	}
 }
 
