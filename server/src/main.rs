@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/12 17:59:31 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 09:40:31 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,8 @@ use std::io::{Error, ErrorKind};
 use std::time::{Duration, Instant};
 use colored::Colorize;
 use epoll::Events;
+use game::graphic_client::GraphicClient;
+use game::player::Player;
 use game::Game;
 use libc::{EPOLLIN, EPOLLRDHUP};
 use rand::Rng;
@@ -104,20 +106,38 @@ fn main() -> Result<(), Error> {
 			} else if event.events == EPOLLIN as u32 {
 				ready_to_read.push(event.data as i32);
 			} else if event.events & (EPOLLRDHUP as u32) != 0 {
-				con_data.deconnection(event.data as i32, &mut watcher)?;
+				game.try_remove_graphic_interface(
+					con_data.deconnection(event.data as i32, &mut watcher)?
+				);
 			}
 		}
 		
 		let data = get_all_data(&ready_to_read)?;
-		process_data(&data, &game.map, &mut game.players);
+		process_data(&data, &mut game.players);
 		
-		for player in &mut game.players {
-			player.execute_queue(&game.map);
-		}
+		execute(&mut game);
 		
 		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep);
 		std::thread::sleep(last_sleep);
 		before = Instant::now();
+	}
+}
+
+fn execute(game: &mut Game) {
+	let mut to_remove = None;
+	let mut players_to_remove = Vec::new();
+
+	for player in game.players.iter_mut() {
+		if player.execute_queue(&game.map, game.graphic_interface.is_some()) {
+			to_remove = Some(player.fd);
+		}
+	}
+
+	if let Some(fd) = to_remove {
+		players_to_remove.push(fd);
+		game.players.retain(|p| players_to_remove.contains(&p.fd));
+		game.graphic_interface = Some(GraphicClient::new(to_remove.unwrap()));
+		game.map.send_map(game.graphic_interface.as_ref().unwrap().fd);
 	}
 }
 
@@ -127,6 +147,7 @@ fn time_check(tick_speed: &Duration, exec_time: &mut Duration,
 	*last_sleep = tick_speed.checked_sub(*exec_time).unwrap_or_default();
 	println!("\x1b[3;2;90m---\x1b[0m\nexec: {:?}", exec_time);
 }
+
 
 fn args_check(args: &mut Args) -> Result<(), Error> {
 	if args.x > 150 || args.y > 120 {

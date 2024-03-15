@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/12 17:58:45 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/12 18:02:08 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -309,11 +309,7 @@ impl GameMap {
 			}
 		}
 
-		Self::place_ressources(&mut cells,
-			&mut rng,
-			x,
-			y,
-			teams);
+		Self::place_ressources(&mut cells, &mut rng, x, y, teams);
 
 		println!("Time to create the map: {:?}", Instant::now() - before_map);
 		GameMap {
