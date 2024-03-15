@@ -6,13 +6,12 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 13:33:38 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 17:31:21 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 use std::{cmp::min, fmt::Display, time::Instant};
 
-use libc::send;
 use serde::Serialize;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use GameCellContent::*;

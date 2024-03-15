@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 12:59:28 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 17:30:04 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ struct Args {
 	x: u8,
 
 	/// The map height
-	#[structopt(short, default_value = "25")]
+	#[structopt(short, default_value = "35")]
 	y: u8,
 
 	/// The team name(s)
@@ -66,7 +66,7 @@ fn main() -> Result<(), Error> {
 	// Argument
 	let mut args = Args::from_args();
 	args_check(&mut args)?;
-	let tick_speed = Duration::from_secs_f64(1 as f64 / args.time as f64);
+	let tick_speed = Duration::from_secs_f64(1_f64 / args.time as f64);
 
 	// Connection
 	let con_data = ServerConnection::init_socket(args.port)?;
@@ -124,7 +124,7 @@ fn time_check(tick_speed: &Duration, exec_time: &mut Duration,
 	before: &mut Instant, last_sleep: &mut Duration) {
 	*exec_time = Instant::now().checked_duration_since(*before).unwrap_or_default();
 	*last_sleep = tick_speed.checked_sub(*exec_time).unwrap_or_default();
-	println!("\x1b[3;2;90m---\x1b[0m\nexec: {:?}", exec_time);
+	println!("\x1b[3;2;90m---\x1b[0m exec: {:?}", exec_time);
 }
 
 fn args_check(args: &mut Args) -> Result<(), Error> {
@@ -159,7 +159,7 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 	println!("Server port: {}", args.port);
 	println!("Map dimentions: X:{} Y:{}", args.x, args.y);
 	println!("Seed: {}", args.seed);
-	println!("Tick rate: {}s", 1 as f64 / args.time as f64);
+	println!("Tick rate: {}s", 1_f64 / args.time as f64);
 	println!("---");
 	Ok(())
 }
