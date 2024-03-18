@@ -6,18 +6,19 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 13:33:38 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/18 18:10:05 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 use std::{cmp::min, fmt::Display, time::Instant};
 
-use libc::send;
 use serde::Serialize;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use GameCellContent::*;
 
 use crate::communication::send_to;
+
+use super::player::PlayerDirection;
 const DEVIDE_U32_TO_U8: u32 = 16843009;
 
 /// Indexes in the "max" tab
@@ -446,21 +447,21 @@ impl GameMap {
 	}
 
 	fn place_single_ressource(
-		interest_points: &[GamePosition],
+		ipts: &[GamePosition],
 		rng: &mut StdRng,
-		current_cell: &mut GameCell,
+		curr: &mut GameCell,
 		to_place: &mut GameCellContent,
-		max_position: &GamePosition
+		max_pos: &GamePosition
 	) {
 		match to_place {
-			Linemate(_) => Self::place_linemate(interest_points, to_place, max_position, rng, current_cell),
-			Deraumere(_) => Self::place_deraumere(interest_points, to_place, max_position, rng, current_cell),
-			Sibur(_) => Self::place_sibur(interest_points, to_place, max_position, rng, current_cell),
-			Mendiane(_) => Self::place_mendiane(interest_points, to_place, max_position, rng, current_cell),
-			Phiras(_) => Self::place_phiras(interest_points, to_place, max_position, rng, current_cell),
-			Thystame(_) => Self::place_thystame(interest_points, to_place, max_position, rng, current_cell),
-			Player(_) => Self::place_player(interest_points, to_place, max_position, rng, current_cell),
-			Food(_) => Self::place_food(interest_points, to_place, max_position, rng, current_cell),
+			Linemate(_) => Self::place_linemate(ipts, to_place, max_pos, rng, curr),
+			Deraumere(_) => Self::place_deraumere(ipts, to_place, max_pos, rng, curr),
+			Sibur(_) => Self::place_sibur(ipts, to_place, max_pos, rng, curr),
+			Mendiane(_) => Self::place_mendiane(ipts, to_place, max_pos, rng, curr),
+			Phiras(_) => Self::place_phiras(ipts, to_place, max_pos, rng, curr),
+			Thystame(_) => Self::place_thystame(ipts, to_place, max_pos, rng, curr),
+			Player(_) => Self::place_player(ipts, to_place, max_pos, rng, curr),
+			Food(_) => Self::place_food(ipts, to_place, max_pos, rng, curr),
 		}
 	}
 
@@ -726,6 +727,55 @@ impl GameMap {
 
 		(dist_x + dist_y) as u16
 	}
+
+	pub fn voir_data(&self,
+		pos: GamePosition,
+		direction: PlayerDirection,
+		level: u8) -> String {
+		let mut interest: Vec<GameCell> = vec![];
+	
+		match direction {
+			PlayerDirection::North => {
+				for y in 0..=level as i16 {
+					for x in (y * -1)..=y {
+						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
+									[move_to_pos(self.max_position.y, pos.y, y * -1)]
+									.clone())
+					}
+				}
+			}
+			PlayerDirection::South => {
+				for y in 0..=level as i16 {
+					for x in (y * -1)..=y {
+						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
+									[move_to_pos(self.max_position.y, pos.y, y)]
+									.clone())
+					}
+				}
+			}
+			PlayerDirection::West => {
+				for x in 0..=level as i16 {
+					for y in (x * -1)..=x {
+						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x * -1)]
+									[move_to_pos(self.max_position.y, pos.y, y)]
+									.clone())
+					}
+				}
+			}
+			PlayerDirection::East => {
+				for x in 0..=level as i16 {
+					for y in (x * -1)..=x {
+						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
+									[move_to_pos(self.max_position.y, pos.y, y)]
+									.clone())
+					}
+				}
+			}
+		}
+		
+		let variable = interest.into_iter().map(|cell| SendCell::from(cell)).collect::<Vec<SendCell>>(); // map doesnt work
+		serde_json::to_string(&variable).unwrap()
+	}
 	
 	pub fn send_map(&self, fd: i32) {
 		let mut new_cells = self.cells.clone();
@@ -746,7 +796,7 @@ impl GameMap {
 			}
 		}
 
-		let data = serde_json::to_string(&cells_to_send).unwrap() + "\n"; // \n sus
+		let data = serde_json::to_string(&cells_to_send).unwrap();
 
 		println!("Size of json: {}", data.len());
 
@@ -760,9 +810,19 @@ pub struct SendCell {
 	c: Vec<GameCellContent>
 }
 
-impl SendCell {
-	pub fn from(from: &GameCell) -> SendCell {
-		let mut purified = from.clone();
+impl From<GameCell> for SendCell {
+	fn from(mut value: GameCell) -> Self {
+		value.purify();
+		SendCell {
+			p: value.position,
+			c: value.content,
+		}
+	}
+}
+
+impl From<&GameCell> for SendCell {
+	fn from(value: &GameCell) -> Self {
+		let mut purified = value.clone();
 		purified.purify();
 		SendCell {
 			p: purified.position,
@@ -781,5 +841,5 @@ fn rand_u8(rng: &mut StdRng) -> u8 {
 /// pos: current position<br/>
 /// movement: The amount to move, negative to go the other way
 pub fn move_to_pos(pos_max: u8, pos: u8, movement: i16) -> usize {
-	((pos as i16 + movement) % pos_max as i16) as usize
+	(pos as i16 + movement).rem_euclid(pos_max as i16) as usize
 }

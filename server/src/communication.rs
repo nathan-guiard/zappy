@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 05:53:29 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 09:57:51 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/15 17:31:32 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,10 +14,10 @@ use std::{collections::HashMap, io::Error};
 
 use libc::{c_void, send, EWOULDBLOCK};
 
-use crate::game::{map::GameMap, player::{get_player_from_fd, Player}};
+use crate::game::player::{get_player_from_fd, Player};
 use colored::Colorize;
 
-pub fn process_data(data: &HashMap<i32, Vec<String>>, players: &mut Vec<Player>) {
+pub fn process_data(data: &HashMap<i32, Vec<String>>, players: &mut [Player]) {
 	for (fd, lines) in data {
 		if let Some(player) = get_player_from_fd(players, *fd) {
 			player.push_to_queue(lines.clone());

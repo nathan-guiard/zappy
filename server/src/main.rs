@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 12:59:28 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/18 17:15:58 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,8 +20,6 @@ use std::io::{Error, ErrorKind};
 use std::time::{Duration, Instant};
 use colored::Colorize;
 use epoll::Events;
-use game::gui::GraphicClient;
-use game::player::Player;
 use game::Game;
 use libc::{EPOLLIN, EPOLLRDHUP};
 use rand::Rng;
@@ -42,7 +40,7 @@ struct Args {
 	x: u8,
 
 	/// The map height
-	#[structopt(short, default_value = "25")]
+	#[structopt(short, default_value = "35")]
 	y: u8,
 
 	/// The team name(s)
@@ -66,7 +64,7 @@ fn main() -> Result<(), Error> {
 	// Argument
 	let mut args = Args::from_args();
 	args_check(&mut args)?;
-	let tick_speed = Duration::from_secs_f64(1 as f64 / args.time as f64);
+	let tick_speed = Duration::from_secs_f64(1_f64 / args.time as f64);
 
 	// Connection
 	let con_data = ServerConnection::init_socket(args.port)?;
@@ -75,11 +73,13 @@ fn main() -> Result<(), Error> {
 
 	// All the game
 	let mut game = Game::new(args.x, args.y, args.team_name, args.seed);
+	print!("{}", game.map);
 
 	// Timing
 	let mut before = Instant::now();
 	let mut exec_time = Duration::default();
 	let mut last_sleep = Duration::default();
+	let mut turn_nb: usize = 0;
 
 	loop {
 		let new_events = match watcher.update() {
@@ -114,17 +114,18 @@ fn main() -> Result<(), Error> {
 		update_gui(&game);
 		game.last_map = Some(game.map.clone());
 		
-		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep);
+		turn_nb += 1;
+		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep, turn_nb);
 		std::thread::sleep(last_sleep);
 		before = Instant::now();
 	}
 }
 
 fn time_check(tick_speed: &Duration, exec_time: &mut Duration,
-	before: &mut Instant, last_sleep: &mut Duration) {
+	before: &mut Instant, last_sleep: &mut Duration, turn_nb: usize) {
 	*exec_time = Instant::now().checked_duration_since(*before).unwrap_or_default();
 	*last_sleep = tick_speed.checked_sub(*exec_time).unwrap_or_default();
-	println!("\x1b[3;2;90m---\x1b[0m\nexec: {:?}", exec_time);
+	println!("\x1b[3;2;90m---\x1b[0m turn {} | exec: {:?}", turn_nb, exec_time);
 }
 
 fn args_check(args: &mut Args) -> Result<(), Error> {
@@ -159,7 +160,7 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 	println!("Server port: {}", args.port);
 	println!("Map dimentions: X:{} Y:{}", args.x, args.y);
 	println!("Seed: {}", args.seed);
-	println!("Tick rate: {}s", 1 as f64 / args.time as f64);
+	println!("Tick rate: {}s", 1_f64 / args.time as f64);
 	println!("---");
 	Ok(())
 }

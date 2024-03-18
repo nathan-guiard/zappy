@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 13:06:00 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/18 17:45:48 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,6 +54,7 @@ impl Game {
 		let mut players_to_remove = Vec::new();
 		
 		for player in self.players.iter_mut() {
+			player.execute_casting(&mut self.map);
 			if player.execute_queue(&self.map, &self.teams, self.gui.is_some()) {
 				to_remove = Some(player.fd);
 			}
@@ -68,6 +69,7 @@ impl Game {
 		
 		for player in &mut self.players {
 			player.loose_food();
+			player.increment_casting();
 		}
 	}
 }

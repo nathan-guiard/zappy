@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 13:40:32 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/18 17:40:18 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,30 +83,82 @@ impl Player {
 		dbg!(&self.command_queue);
 	}
 
+	pub fn execute_casting(&mut self, map: &mut GameMap) -> bool {
+		match self.state {
+			Idle | Dead | LevelMax => { println!("Nothing is casting") },
+			Casting(into, max) => {
+				println!("Was casting {:?}, {}/{}", self.action.kind, into, max);
+				if into >= max {
+					match self.action.kind {
+						NoAction => {},
+						Avance => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_avance(),
+						Gauche => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_gauche(),
+						Droite => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_droite(),
+						Voir => self.exec_voir(&map),
+						Inventaire => self.exec_inventaire(),
+						Prend => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_prend(),
+						Pose => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_pose(),
+						Expulse => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_expulse(),
+						Broadcast => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_broadcast(),
+						Incantation => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_incantation(),
+						Fork => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_fork(),
+						Connect => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_connect(),
+					}
+					self.state = Idle;
+				}
+			}
+		}
+		true
+	}
+	
+	fn exec_voir(&self, map: &GameMap) {
+		send_to(self.fd, &map.voir_data(self.position, self.direction.clone(), self.level))
+	}
+	
+	fn exec_inventaire(&self) {
+		send_to(self.fd, serde_json::to_string(&self.inventory).unwrap().as_str());
+	}
+
 	/// Executes the queue of a player
+	/// 
+	/// Has to be executed after a call to `execute_casting()`
 	/// 
 	/// Returns true if the Player has to be turned into a GraphicClient
 	pub fn execute_queue(&mut self, map: &GameMap, teams: &[String],
 		has_gui: bool) -> bool {
-		if self.command_queue.is_empty() {
+		if self.command_queue.is_empty() ||
+			self.state != Idle {
 			return false;
 		}
 		let action = self.command_queue.first().unwrap().to_ascii_lowercase();
 		self.command_queue.remove(0);
-		if self.team_check(map, teams, action, has_gui) {
-			return true;
+		if self.team.is_empty() {
+			if self.team_check(map, teams, &action, has_gui) {
+				return true;
+			}
+		} else {
+			println!("Avant from()");
+			match PlayerAction::from(action) {
+				Ok(player_action) => {
+					self.action = player_action.clone();
+					self.start_casting(&player_action.kind);
+				}
+				Err(e) => {
+					send_to(self.fd, e.as_str());
+					self.execute_queue(map, teams, has_gui); // sus
+				}
+			}	
 		}
 		false
 	}
 	
-	fn team_check(&mut self, map: &GameMap, teams: &[String], team: String, has_gui: bool) -> bool {
+	fn team_check(&mut self, map: &GameMap, teams: &[String], team: &str, has_gui: bool) -> bool {
 		if self.team.is_empty() {
-			if team.to_ascii_lowercase() == "gui\n" &&
-				!has_gui {
+			if team.to_ascii_lowercase() == "gui\n" && !has_gui {
 				return true;
 			}
 			if teams.contains(&team[0..&team.len() - 1].to_string()) {
-				self.team = team;
+				self.team = String::from(team);
 				send_to(self.fd, format!("1\n{} {}\n", map.max_position.x, map.max_position.y).as_str());
 			} else {
 				send_to(self.fd, "This team does not exist\n");
@@ -116,7 +168,9 @@ impl Player {
 	}
 	
 	pub fn loose_food(&mut self) {
-		if self.team.is_empty() { // Not ready yet
+		if self.team.is_empty() ||
+			self.state == Dead ||
+			self.state == LevelMax {
 			return;
 		}
 		match self.food {
@@ -129,8 +183,8 @@ impl Player {
 			},
 			TurnsWithout(x) => {
 				if x >= TURNS_TO_DIE {
-					// self.die()
-					todo!();
+					self.state = Dead;
+					send_to(self.fd, "You died\n");
 				} else {
 					self.food = TurnsWithout(x + 1);
 				}
@@ -138,21 +192,21 @@ impl Player {
 		}
 	}
 
-	pub fn start_casting(&mut self, action: &str) {
+	pub fn start_casting(&mut self, action: &PlayerActionKind) {
 		if self.state == Idle {
-			match action.to_uppercase().as_str() {
-				"AVANCE" => self.state = Casting(0, AVANCE_TIME),
-				"GAUCHE" => self.state = Casting(0, GAUCHE_TIME),
-				"DROITE" => self.state = Casting(0, DROITE_TIME),
-				"VOIR" => self.state = Casting(0, VOIR_TIME),
-				"INVENTAIRE" => self.state = Casting(0, INVENTAIRE_TIME),
-				"PREND" => self.state = Casting(0, PREND_TIME),
-				"POSE" => self.state = Casting(0, POSE_TIME),
-				"EXPULSE" => self.state = Casting(0, EXPULSE_TIME),
-				"BROADCAST" => self.state = Casting(0, BROADCAST_TIME),
-				"INCANTATION" => self.state = Casting(0, INCANTATION_TIME),
-				"FORK" => self.state = Casting(0, FORK_TIME),
-				"CONNECT" => self.state = Casting(0, CONNECT_TIME),
+			match action {
+				Avance => self.state = Casting(0, AVANCE_TIME),
+				Gauche => self.state = Casting(0, GAUCHE_TIME),
+				Droite => self.state = Casting(0, DROITE_TIME),
+				Voir => self.state = Casting(0, VOIR_TIME),
+				Inventaire => self.state = Casting(0, INVENTAIRE_TIME),
+				Prend => self.state = Casting(0, PREND_TIME),
+				Pose => self.state = Casting(0, POSE_TIME),
+				Expulse => self.state = Casting(0, EXPULSE_TIME),
+				Broadcast => self.state = Casting(0, BROADCAST_TIME),
+				Incantation => self.state = Casting(0, INCANTATION_TIME),
+				Fork => self.state = Casting(0, FORK_TIME),
+				Connect => self.state = Casting(0, CONNECT_TIME),
 				_ => {},
 			}
 		}
@@ -161,7 +215,7 @@ impl Player {
 	pub fn increment_casting(&mut self) -> bool {
 		match self.state {
 			Casting(current, max) => {
-				if current + 1 == max {
+				if current == max {
 					self.state = Idle;
 					true
 				} else {
@@ -171,6 +225,12 @@ impl Player {
  			},
 			_ => false
 		}
+	}
+}
+
+impl Drop for Player {
+	fn drop(&mut self) {
+		unsafe { libc::close(self.fd) };
 	}
 }
 
@@ -187,22 +247,24 @@ impl PlayerAction {
 	}
 
 	pub fn from(line: String) -> Result<Self, String> {
-		let first_word: String = line.split_ascii_whitespace().collect(); //pas sur
-		
-		match first_word.to_ascii_lowercase().as_str() {
-			"avance" => Ok(Self { kind: PlayerActionKind::Avance }),
-			"gauche" => Ok(Self { kind: PlayerActionKind::Gauche }),
-			"droite" => Ok(Self { kind: PlayerActionKind::Droite }),
-			"broadcast" => Ok(Self { kind: PlayerActionKind::Broadcast }),
-			"voir" => Ok(Self { kind: PlayerActionKind::Voir }),
-			"prend" => Ok(Self { kind: PlayerActionKind::Prend }),
-			"pose" => Ok(Self { kind: PlayerActionKind::Pose }),
-			"expulse" => Ok(Self { kind: PlayerActionKind::Expulse }),
-			"fork" => Ok(Self { kind: PlayerActionKind::Fork }),
-			"incantation" => Ok(Self { kind: PlayerActionKind::Incantation }),
-			"connect" => Ok(Self { kind: PlayerActionKind::Connect }),
-			_ => Err(String::from("Unrecognised action"))
+		if let Some(first_word) = line.split_ascii_whitespace().next() {
+			return match first_word.to_ascii_lowercase().as_str() {
+				"avance" => Ok(Self { kind: PlayerActionKind::Avance }),
+				"gauche" => Ok(Self { kind: PlayerActionKind::Gauche }),
+				"droite" => Ok(Self { kind: PlayerActionKind::Droite }),
+				"broadcast" => Ok(Self { kind: PlayerActionKind::Broadcast }),
+				"voir" => Ok(Self { kind: PlayerActionKind::Voir }),
+				"prend" => Ok(Self { kind: PlayerActionKind::Prend }),
+				"inventaire" => Ok(Self { kind: PlayerActionKind::Inventaire }),
+				"pose" => Ok(Self { kind: PlayerActionKind::Pose }),
+				"expulse" => Ok(Self { kind: PlayerActionKind::Expulse }),
+				"fork" => Ok(Self { kind: PlayerActionKind::Fork }),
+				"incantation" => Ok(Self { kind: PlayerActionKind::Incantation }),
+				"connect" => Ok(Self { kind: PlayerActionKind::Connect }),
+				_ => Err(String::from("Unrecognised action"))
+			};
 		}
+		Err(String::from("Empty line"))
 	}
 	
 	pub fn get_time(&self) -> u16 {
@@ -277,7 +339,7 @@ impl From<Player> for SendPlayer {
 	fn from(player: Player) -> Self {
 		let mut inventory: Vec<GameCellContent> = vec![];
 		
-		for content in player.inventory {
+		for content in player.inventory.clone() {
 			if content.amount() > 0 {
 				inventory.push(content);
 			}
@@ -285,17 +347,17 @@ impl From<Player> for SendPlayer {
 
 		Self {
 			position: player.position,
-			direction: player.direction,
-			team: player.team,
-			action: player.action.kind,
+			direction: player.direction.clone(),
+			team: player.team.clone(),
+			action: player.action.kind.clone(),
 			inventory,
-			state: player.state,
+			state: player.state.clone(),
 			level: player.level,
-			food: player.food,
+			food: player.food.clone(),
 		}
 	}
 }
 
-pub fn get_player_from_fd(players: &mut Vec<Player>, fd: i32) -> Option<&mut Player> {
+pub fn get_player_from_fd(players: &mut [Player], fd: i32) -> Option<&mut Player> {
 	players.iter_mut().find(|p| p.fd == fd)
 }

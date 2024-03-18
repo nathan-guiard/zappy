@@ -3,7 +3,11 @@
 - [x] Special auth for gui
 - [x] Player auth
 - [x] Updates on the map for the gui
-- [ ] Player.die tmp impl
-- [ ] Inventory command
+- [x] Player.die tmp impl
+- [x] Inventory command
+- [x] Drop trait for player to close the FD
+- [x] Voir command
+- [ ] Avance / Droite / Gauche command
 - [ ] Team class ?
 - [ ] Movement commands for player
+- [ ] Save changed cells for the gui refresh
