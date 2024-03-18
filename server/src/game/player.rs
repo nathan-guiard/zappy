@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/18 17:28:53 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/18 17:40:18 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -228,6 +228,12 @@ impl Player {
 	}
 }
 
+impl Drop for Player {
+	fn drop(&mut self) {
+		unsafe { libc::close(self.fd) };
+	}
+}
+
 #[derive(Debug, Clone)]
 pub struct PlayerAction {
 	kind: PlayerActionKind,
@@ -333,7 +339,7 @@ impl From<Player> for SendPlayer {
 	fn from(player: Player) -> Self {
 		let mut inventory: Vec<GameCellContent> = vec![];
 		
-		for content in player.inventory {
+		for content in player.inventory.clone() {
 			if content.amount() > 0 {
 				inventory.push(content);
 			}
@@ -341,13 +347,13 @@ impl From<Player> for SendPlayer {
 
 		Self {
 			position: player.position,
-			direction: player.direction,
-			team: player.team,
-			action: player.action.kind,
+			direction: player.direction.clone(),
+			team: player.team.clone(),
+			action: player.action.kind.clone(),
 			inventory,
-			state: player.state,
+			state: player.state.clone(),
 			level: player.level,
-			food: player.food,
+			food: player.food.clone(),
 		}
 	}
 }

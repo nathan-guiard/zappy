@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 09:58:24 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/18 17:47:03 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@ use libc::*;
 use colored::Colorize;
 use crate::{communication::send_to, game::player::Player, watcher::Watcher};
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct ServerConnection {
 	soc_addr: sockaddr_in,
 	pub socket_fd: i32,
@@ -96,5 +96,11 @@ impl ServerConnection {
 		watcher.delete(fd)?;
 		epoll::close(fd)?;
 		Ok(fd)
+	}
+}
+
+impl Drop for ServerConnection {
+	fn drop(&mut self) {
+		unsafe { libc::close(self.socket_fd) };
 	}
 }
