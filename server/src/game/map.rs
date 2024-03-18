@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/18 17:29:04 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/18 18:10:05 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -447,21 +447,21 @@ impl GameMap {
 	}
 
 	fn place_single_ressource(
-		interest_points: &[GamePosition],
+		ipts: &[GamePosition],
 		rng: &mut StdRng,
-		current_cell: &mut GameCell,
+		curr: &mut GameCell,
 		to_place: &mut GameCellContent,
-		max_position: &GamePosition
+		max_pos: &GamePosition
 	) {
 		match to_place {
-			Linemate(_) => Self::place_linemate(interest_points, to_place, max_position, rng, current_cell),
-			Deraumere(_) => Self::place_deraumere(interest_points, to_place, max_position, rng, current_cell),
-			Sibur(_) => Self::place_sibur(interest_points, to_place, max_position, rng, current_cell),
-			Mendiane(_) => Self::place_mendiane(interest_points, to_place, max_position, rng, current_cell),
-			Phiras(_) => Self::place_phiras(interest_points, to_place, max_position, rng, current_cell),
-			Thystame(_) => Self::place_thystame(interest_points, to_place, max_position, rng, current_cell),
-			Player(_) => Self::place_player(interest_points, to_place, max_position, rng, current_cell),
-			Food(_) => Self::place_food(interest_points, to_place, max_position, rng, current_cell),
+			Linemate(_) => Self::place_linemate(ipts, to_place, max_pos, rng, curr),
+			Deraumere(_) => Self::place_deraumere(ipts, to_place, max_pos, rng, curr),
+			Sibur(_) => Self::place_sibur(ipts, to_place, max_pos, rng, curr),
+			Mendiane(_) => Self::place_mendiane(ipts, to_place, max_pos, rng, curr),
+			Phiras(_) => Self::place_phiras(ipts, to_place, max_pos, rng, curr),
+			Thystame(_) => Self::place_thystame(ipts, to_place, max_pos, rng, curr),
+			Player(_) => Self::place_player(ipts, to_place, max_pos, rng, curr),
+			Food(_) => Self::place_food(ipts, to_place, max_pos, rng, curr),
 		}
 	}
 
