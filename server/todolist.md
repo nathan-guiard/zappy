@@ -4,6 +4,9 @@
 - [x] Player auth
 - [x] Updates on the map for the gui
 - [x] Player.die tmp impl
-- [ ] Inventory command
+- [x] Inventory command
+- [ ] Drop trait for player to close the FD
+- [x] Voir command
+- [ ] Avance / Droite / Gauche command
 - [ ] Team class ?
 - [ ] Movement commands for player

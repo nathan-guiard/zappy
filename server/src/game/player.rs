@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 18:08:59 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/18 17:28:53 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -85,30 +85,34 @@ impl Player {
 
 	pub fn execute_casting(&mut self, map: &mut GameMap) -> bool {
 		match self.state {
-			Idle | Dead | LevelMax => {},
+			Idle | Dead | LevelMax => { println!("Nothing is casting") },
 			Casting(into, max) => {
 				println!("Was casting {:?}, {}/{}", self.action.kind, into, max);
 				if into >= max {
 					match self.action.kind {
 						NoAction => {},
-						Avance => { send_to(self.fd, "Action not coded yet")}, // self.exec_avance(),
-						Gauche => { send_to(self.fd, "Action not coded yet")}, // self.exec_gauche(),
-						Droite => { send_to(self.fd, "Action not coded yet")}, // self.exec_droite(),
-						Voir => { send_to(self.fd, "Action not coded yet")}, // self.exec_voir(),
+						Avance => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_avance(),
+						Gauche => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_gauche(),
+						Droite => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_droite(),
+						Voir => self.exec_voir(&map),
 						Inventaire => self.exec_inventaire(),
-						Prend => { send_to(self.fd, "Action not coded yet")}, // self.exec_prend(),
-						Pose => { send_to(self.fd, "Action not coded yet")}, // self.exec_pose(),
-						Expulse => { send_to(self.fd, "Action not coded yet")}, // self.exec_expulse(),
-						Broadcast => { send_to(self.fd, "Action not coded yet")}, // self.exec_broadcast(),
-						Incantation => { send_to(self.fd, "Action not coded yet")}, // self.exec_incantation(),
-						Fork => { send_to(self.fd, "Action not coded yet")}, // self.exec_fork(),
-						Connect => { send_to(self.fd, "Action not coded yet")}, // self.exec_connect(),
+						Prend => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_prend(),
+						Pose => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_pose(),
+						Expulse => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_expulse(),
+						Broadcast => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_broadcast(),
+						Incantation => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_incantation(),
+						Fork => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_fork(),
+						Connect => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_connect(),
 					}
 					self.state = Idle;
 				}
 			}
 		}
 		true
+	}
+	
+	fn exec_voir(&self, map: &GameMap) {
+		send_to(self.fd, &map.voir_data(self.position, self.direction.clone(), self.level))
 	}
 	
 	fn exec_inventaire(&self) {
@@ -180,6 +184,7 @@ impl Player {
 			TurnsWithout(x) => {
 				if x >= TURNS_TO_DIE {
 					self.state = Dead;
+					send_to(self.fd, "You died\n");
 				} else {
 					self.food = TurnsWithout(x + 1);
 				}

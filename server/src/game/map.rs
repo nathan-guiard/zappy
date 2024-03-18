@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 17:31:21 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/18 17:29:04 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,8 @@ use rand::{rngs::StdRng, RngCore, SeedableRng};
 use GameCellContent::*;
 
 use crate::communication::send_to;
+
+use super::player::PlayerDirection;
 const DEVIDE_U32_TO_U8: u32 = 16843009;
 
 /// Indexes in the "max" tab
@@ -725,6 +727,55 @@ impl GameMap {
 
 		(dist_x + dist_y) as u16
 	}
+
+	pub fn voir_data(&self,
+		pos: GamePosition,
+		direction: PlayerDirection,
+		level: u8) -> String {
+		let mut interest: Vec<GameCell> = vec![];
+	
+		match direction {
+			PlayerDirection::North => {
+				for y in 0..=level as i16 {
+					for x in (y * -1)..=y {
+						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
+									[move_to_pos(self.max_position.y, pos.y, y * -1)]
+									.clone())
+					}
+				}
+			}
+			PlayerDirection::South => {
+				for y in 0..=level as i16 {
+					for x in (y * -1)..=y {
+						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
+									[move_to_pos(self.max_position.y, pos.y, y)]
+									.clone())
+					}
+				}
+			}
+			PlayerDirection::West => {
+				for x in 0..=level as i16 {
+					for y in (x * -1)..=x {
+						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x * -1)]
+									[move_to_pos(self.max_position.y, pos.y, y)]
+									.clone())
+					}
+				}
+			}
+			PlayerDirection::East => {
+				for x in 0..=level as i16 {
+					for y in (x * -1)..=x {
+						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
+									[move_to_pos(self.max_position.y, pos.y, y)]
+									.clone())
+					}
+				}
+			}
+		}
+		
+		let variable = interest.into_iter().map(|cell| SendCell::from(cell)).collect::<Vec<SendCell>>(); // map doesnt work
+		serde_json::to_string(&variable).unwrap()
+	}
 	
 	pub fn send_map(&self, fd: i32) {
 		let mut new_cells = self.cells.clone();
@@ -745,7 +796,7 @@ impl GameMap {
 			}
 		}
 
-		let data = serde_json::to_string(&cells_to_send).unwrap() + "\n"; // \n sus
+		let data = serde_json::to_string(&cells_to_send).unwrap();
 
 		println!("Size of json: {}", data.len());
 
@@ -759,9 +810,19 @@ pub struct SendCell {
 	c: Vec<GameCellContent>
 }
 
-impl SendCell {
-	pub fn from(from: &GameCell) -> SendCell {
-		let mut purified = from.clone();
+impl From<GameCell> for SendCell {
+	fn from(mut value: GameCell) -> Self {
+		value.purify();
+		SendCell {
+			p: value.position,
+			c: value.content,
+		}
+	}
+}
+
+impl From<&GameCell> for SendCell {
+	fn from(value: &GameCell) -> Self {
+		let mut purified = value.clone();
 		purified.purify();
 		SendCell {
 			p: purified.position,
@@ -780,5 +841,5 @@ fn rand_u8(rng: &mut StdRng) -> u8 {
 /// pos: current position<br/>
 /// movement: The amount to move, negative to go the other way
 pub fn move_to_pos(pos_max: u8, pos: u8, movement: i16) -> usize {
-	((pos as i16 + movement) % pos_max as i16) as usize
+	(pos as i16 + movement).rem_euclid(pos_max as i16) as usize
 }
