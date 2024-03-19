@@ -86,7 +86,7 @@ Data types sent in response of the commands:
 	"team": string,
 	"action": string, // see below
 	"inventory": [GameCellContent],
-	"state": string, // see below
+	"state": string or object, // see below
 	"level": number,
 	"food": PlayerFood,
 }
@@ -112,6 +112,12 @@ action can only be one of:
 - `Fork`
 - `Connect`
 - `NoAction`
+
+state can only be one of:
+- `"Idle"`
+- `"Levelmax"`
+- `"Dead"`
+- `"Casting": [number, number]`
 
 ---
 ### PlayerFood

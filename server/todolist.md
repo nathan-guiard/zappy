@@ -7,7 +7,13 @@
 - [x] Inventory command
 - [x] Drop trait for player to close the FD
 - [x] Voir command
-- [ ] Avance / Droite / Gauche command
-- [ ] Team class ?
-- [ ] Movement commands for player
-- [ ] Save changed cells for the gui refresh
+- [x] Avance / Droite / Gauche commands
+- [x] Handle CTRL + C cleanely
+- [ ] BUGFIX: GUI bugs out other connections
+- [ ] Prend / Pose / Incantation commands
+- [ ] Team class / management
+- [ ] Connect command
+- [ ] Fork command
+- [ ] Better feedback on actions, not "only ok/ko"
+- [ ] Expulse command
+- [ ] Cache changed cells for the gui refresh

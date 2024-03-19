@@ -6,13 +6,15 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/18 17:45:48 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 11:09:18 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 pub mod map;
 pub mod player;
 pub mod gui;
+
+use crate::communication::send_to;
 
 use self::{map::GameMap, player::Player, gui::GraphicClient};
 
@@ -51,7 +53,6 @@ impl Game {
 	/// Logic of the game, what occurs every tick
 	pub fn execute(&mut self) {
 		let mut to_remove = None;
-		let mut players_to_remove = Vec::new();
 		
 		for player in self.players.iter_mut() {
 			player.execute_casting(&mut self.map);
@@ -61,8 +62,7 @@ impl Game {
 		}
 		
 		if let Some(fd) = to_remove {
-			players_to_remove.push(fd);
-			self.players.retain(|p| players_to_remove.contains(&p.fd));
+			self.players.retain(|p| p.fd == fd);
 			self.gui = Some(GraphicClient::new(to_remove.unwrap()));
 			self.map.send_map(self.gui.as_ref().unwrap().fd);
 		}
@@ -70,6 +70,15 @@ impl Game {
 		for player in &mut self.players {
 			player.loose_food();
 			player.increment_casting();
+		}
+	}
+}
+
+impl Drop for Game {
+	fn drop(&mut self) {
+		for x in &self.players {
+			send_to(x.fd, "Disconnected from the server: server closed\n");
+			unsafe { libc::close(x.fd) };
 		}
 	}
 }

@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/18 17:15:58 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 12:18:55 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,8 @@ mod communication;
 mod update_gui;
 
 use std::io::{Error, ErrorKind};
+use std::process::ExitCode;
+use std::sync::atomic::AtomicBool;
 use std::time::{Duration, Instant};
 use colored::Colorize;
 use epoll::Events;
@@ -29,6 +31,8 @@ use update_gui::update_gui;
 use watcher::Watcher;
 use connections::ServerConnection;
 use communication::{get_all_data, process_data};
+
+static mut EXIT: AtomicBool = AtomicBool::new(false);
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -60,7 +64,7 @@ struct Args {
 	seed: usize,
 }
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<ExitCode, Error> {
 	// Argument
 	let mut args = Args::from_args();
 	args_check(&mut args)?;
@@ -80,6 +84,15 @@ fn main() -> Result<(), Error> {
 	let mut exec_time = Duration::default();
 	let mut last_sleep = Duration::default();
 	let mut turn_nb: usize = 0;
+
+	// Ctrl-C
+	if let Err(_) = ctrlc::set_handler(|| {
+		println!("Recieved CTRL-C, will end the server at the next loop");
+		unsafe { EXIT.store(true, std::sync::atomic::Ordering::Release) };
+	}) {
+		eprintln!("Could not set up Ctrl-C handler. Aborting");
+		return Ok(ExitCode::from(1));
+	}
 
 	loop {
 		let new_events = match watcher.update() {
@@ -118,14 +131,20 @@ fn main() -> Result<(), Error> {
 		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep, turn_nb);
 		std::thread::sleep(last_sleep);
 		before = Instant::now();
-	}
+
+		if unsafe { EXIT.load(std::sync::atomic::Ordering::Relaxed) } {
+			println!("Last turn finished.");
+			break;
+		}
+	};
+	return Ok(ExitCode::from(0));
 }
 
 fn time_check(tick_speed: &Duration, exec_time: &mut Duration,
 	before: &mut Instant, last_sleep: &mut Duration, turn_nb: usize) {
 	*exec_time = Instant::now().checked_duration_since(*before).unwrap_or_default();
 	*last_sleep = tick_speed.checked_sub(*exec_time).unwrap_or_default();
-	println!("\x1b[3;2;90m---\x1b[0m turn {} | exec: {:?}", turn_nb, exec_time);
+	println!("\x1b[3;2;90m---\x1b[0;2;32m turn {} |\texec: {:?}\x1b[0m", turn_nb, exec_time);
 }
 
 fn args_check(args: &mut Args) -> Result<(), Error> {
