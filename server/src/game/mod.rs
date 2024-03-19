@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 11:09:18 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 14:00:35 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,7 +62,7 @@ impl Game {
 		}
 		
 		if let Some(fd) = to_remove {
-			self.players.retain(|p| p.fd == fd);
+			self.players.retain(|p| p.fd != fd);
 			self.gui = Some(GraphicClient::new(to_remove.unwrap()));
 			self.map.send_map(self.gui.as_ref().unwrap().fd);
 		}
