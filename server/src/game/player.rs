@@ -6,21 +6,19 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 17:14:55 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 18:47:31 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 use crate::communication::send_to;
 
 use super::{
-	map::{
+	level_up::{has_enough_ressources, remove_ressources}, map::{
 		move_to_pos,
-		GameCellContent,
+		GameCellContent::{self, *},
 		GameMap,
-		GamePosition,
-		GameCellContent::*
-	},
-	TURNS_TO_DIE
+		GamePosition
+	}, TURNS_TO_DIE
 };
 use serde::Serialize;
 use PlayerFood::*;
@@ -112,7 +110,7 @@ impl Player {
 						Pose(_) => self.exec_pose(map),
 						Expulse => send_to(self.fd, "Action not coded yet\n"), // self.exec_expulse(),
 						Broadcast(_) => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
-						Incantation => send_to(self.fd, "Action not coded yet\n"), // self.exec_incantation(),
+						Incantation => self.exec_incantation(),
 						Fork => send_to(self.fd, "Action not coded yet\n"), // self.exec_fork(),
 						Connect => send_to(self.fd, "Action not coded yet\n"), // self.exec_connect(),
 					}
@@ -226,6 +224,10 @@ impl Player {
 					"mendiane" => Mendiane(1),
 					"phiras" => Phiras(1),
 					"thystame" => Thystame(1),
+					"food" => {
+						send_to(self.fd, format!("ko: cannot drop food\n").as_str());
+						return;
+					}
 					other => {
 						send_to(self.fd, format!("ko: {other} not reckognised\n").as_str());
 						return;
@@ -243,6 +245,20 @@ impl Player {
 		}
 		else {
 			send_to(self.fd, format!("ko: no {ressource_name} on your inventory\n").as_str());
+		}
+	}
+
+	fn exec_incantation(&mut self) {
+		if has_enough_ressources(&self.inventory, self.level, 8) { // to change last param
+			remove_ressources(self);
+			self.level += 1;
+			send_to(self.fd, "ok\n");
+			if self.level == 8 {
+				self.state = LevelMax;
+				send_to(self.fd, "Congratulations! You are level 8: the maximum level!\n");
+			}
+		} else {
+			send_to(self.fd, "ko: not enough ressources\n");
 		}
 	}
 
