@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 14:00:35 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 17:03:16 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,6 +77,10 @@ impl Game {
 impl Drop for Game {
 	fn drop(&mut self) {
 		for x in &self.players {
+			send_to(x.fd, "Disconnected from the server: server closed\n");
+			unsafe { libc::close(x.fd) };
+		}
+		if let Some(x) = &self.gui {
 			send_to(x.fd, "Disconnected from the server: server closed\n");
 			unsafe { libc::close(x.fd) };
 		}

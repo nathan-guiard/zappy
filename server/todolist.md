@@ -10,8 +10,9 @@
 - [x] Avance / Droite / Gauche commands
 - [x] Handle CTRL + C cleanely
 - [x] BUGFIX: GUI bugs out other connections
-- [ ] Client deconnection "kill" its player
-- [ ] Prend / Pose / Incantation commands
+- [x] Client deconnection "kills" its player
+- [x] Prend / Pose commands
+- [ ] Incantation command
 - [ ] Team class / management
 - [ ] Connect command
 - [ ] Fork command

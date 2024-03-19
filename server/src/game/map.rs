@@ -6,11 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 10:04:28 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 16:48:58 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::{cmp::min, fmt::Display, mem, time::Instant};
+use std::{cmp::min, fmt::Display, time::Instant};
 
 use serde::Serialize;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
@@ -40,7 +40,6 @@ const DERAUMERE_COLOR: &str = "\x1b[1;100;35m";
 const LINEMATE_COLOR: &str = "\x1b[1;100;90m";
 const FOOD_COLOR: &str = "\x1b[0;42;97m";
 const PLAYER_COLOR: &str = "\x1b[0;107;30m";
-const WHITE: &str = "\x1b[0m";
 const RESET: &str = "\x1b[0m";
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -189,7 +188,7 @@ impl GameCell {
 
 	pub fn remove_content(&mut self, to_rm: GameCellContent) -> bool {
 		for i in 0..self.content.len() {
-			if self.content[i] == to_rm {
+			if self.content[i] == to_rm && self.content[i].amount() > 0 {
 				self.content[i].remove(to_rm.amount());
 				return true;
 			}
@@ -737,16 +736,16 @@ impl GameMap {
 		match direction {
 			PlayerDirection::North => {
 				for y in 0..=level as i16 {
-					for x in (y * -1)..=y {
+					for x in -y..=y {
 						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
-									[move_to_pos(self.max_position.y, pos.y, y * -1)]
+									[move_to_pos(self.max_position.y, pos.y, -y)]
 									.clone())
 					}
 				}
 			}
 			PlayerDirection::South => {
 				for y in 0..=level as i16 {
-					for x in (y * -1)..=y {
+					for x in -y..=y {
 						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
 									[move_to_pos(self.max_position.y, pos.y, y)]
 									.clone())
@@ -755,8 +754,8 @@ impl GameMap {
 			}
 			PlayerDirection::West => {
 				for x in 0..=level as i16 {
-					for y in (x * -1)..=x {
-						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x * -1)]
+					for y in -x..=x {
+						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, -x)]
 									[move_to_pos(self.max_position.y, pos.y, y)]
 									.clone())
 					}
@@ -764,7 +763,7 @@ impl GameMap {
 			}
 			PlayerDirection::East => {
 				for x in 0..=level as i16 {
-					for y in (x * -1)..=x {
+					for y in -x..=x {
 						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
 									[move_to_pos(self.max_position.y, pos.y, y)]
 									.clone())
@@ -803,16 +802,18 @@ impl GameMap {
 		send_to(fd, data.as_str());
 	}
 
-	pub fn add_content(&mut self, pos: GamePosition, content: GameCellContent) {
+	pub fn add_content_cell(&mut self, pos: GamePosition, content: GameCellContent)
+		-> bool {
 		let current_cell = &mut self.cells[pos.x as usize][pos.y as usize];
 	
-		current_cell.add_content(content);
+		current_cell.add_content(content)
 	}
 
-	pub fn remove_content(&mut self, pos: GamePosition, content: GameCellContent) {
+	pub fn remove_content_cell(&mut self, pos: GamePosition, content: GameCellContent)
+		-> bool {
 		let current_cell = &mut self.cells[pos.x as usize][pos.y as usize];
 	
-		current_cell.remove_content(content);
+		current_cell.remove_content(content)
 	}
 }
 
