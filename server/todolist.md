@@ -13,7 +13,7 @@
 - [x] Client deconnection "kills" its player
 - [x] Prend / Pose commands
 - [x] Incantation command
-- [ ] Update doc on SendPlayer.action
+- [x] Update doc on SendPlayer.action
 - [ ] Team class / management
 - [ ] Connect command
 - [ ] Fork command

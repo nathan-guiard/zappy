@@ -84,7 +84,7 @@ Data types sent in response of the commands:
 	"position": GamePosition,
 	"direction": string, // see below
 	"team": string,
-	"action": string, // see below
+	"action": string or object, // see below
 	"inventory": [GameCellContent],
 	"state": string or object, // see below
 	"level": number,
@@ -99,25 +99,30 @@ direction can only be one of:
 - `West`
 
 action can only be one of:
-- `Avance`
-- `Gauche`
-- `Droite`
-- `Voir`
-- `Inventaire`
-- `Prend`
-- `Pose`
-- `Expulse`
-- `Broadcast`
-- `Incantation`
-- `Fork`
-- `Connect`
-- `NoAction`
+- `"Avance"`
+- `"Gauche"`
+- `"Droite"`
+- `"Voir"`
+- `"Inventaire"`
+- `"Expulse"`
+- `"Incantation"`
+- `"Fork"`
+- `"Connect"`
+- `"NoAction"`
+- `"Prend": string`
+  - The string is what is being taken
+- `"Pose": string`
+  - The string is what is being dropped
+- `"Broadcast": string`
+  - The string is what will be braodcasted
 
 state can only be one of:
 - `"Idle"`
 - `"Levelmax"`
 - `"Dead"`
 - `"Casting": [number, number]`
+  - The first number is the current progress
+  - The second number is the amount of steps needed
 
 ---
 ### PlayerFood
