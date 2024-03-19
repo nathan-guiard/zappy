@@ -12,10 +12,14 @@
 - [x] BUGFIX: GUI bugs out other connections
 - [x] Client deconnection "kills" its player
 - [x] Prend / Pose commands
-- [ ] Incantation command
+- [x] Incantation command
+- [ ] Update doc on SendPlayer.action
 - [ ] Team class / management
 - [ ] Connect command
 - [ ] Fork command
-- [ ] Better feedback on actions, not "only ok/ko"
 - [ ] Expulse command
+
+Later features:
+- [ ] 10 commands on queue max
+- [ ] Better feedback on actions, not "only ok/ko"
 - [ ] Cache changed cells for the gui refresh

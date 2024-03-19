@@ -6,13 +6,14 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 17:03:16 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 17:21:12 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 pub mod map;
 pub mod player;
 pub mod gui;
+pub mod level_up;
 
 use crate::communication::send_to;
 

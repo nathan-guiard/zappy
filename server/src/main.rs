@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 14:31:03 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 17:43:13 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -172,12 +172,16 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 	if args.team_name.len() > 4 {
 		return Err(Error::new(ErrorKind::InvalidInput,
 			"Cannot have more than 4 teams"));
-	}
+		}
 	for team_name in &args.team_name {
 		if team_name == "gui" {
 			return Err(Error::new(ErrorKind::InvalidInput,
 				"None of the teams can be named 'gui'"));
 		}
+	}
+	if args.clients < args.team_name.len() as u8 {
+		return Err(Error::new(ErrorKind::InvalidInput,
+			"Cannot have less clients that team number."));
 	}
 	if args.seed == 0 {
 		args.seed = rand::thread_rng().gen();
