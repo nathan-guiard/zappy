@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 11:06:04 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 14:08:59 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,7 +94,7 @@ impl Player {
 						Avance => self.exec_avance(map),
 						Gauche => self.exec_gauche(),
 						Droite => self.exec_droite(),
-						Voir => self.exec_voir(&map),
+						Voir => self.exec_voir(map),
 						Inventaire => self.exec_inventaire(),
 						Prend => send_to(self.fd, "Action not coded yet\n"), // self.exec_prend(),
 						Pose => send_to(self.fd, "Action not coded yet\n"), // self.exec_pose(),
@@ -297,21 +297,6 @@ impl PlayerAction {
 			};
 		}
 		Err(String::from("Empty line"))
-	}
-	
-	pub fn get_time(&self) -> u16 {
-		match self.kind {
-			Connect | NoAction => 0,
-			Inventaire => 1,
-			Avance | Gauche | Droite | Broadcast |
-				Voir | Prend | Pose | Expulse => 7,
-			Fork => 42,
-			Incantation => 300,
-		}
-	}
-
-	pub fn time_of(action: &Self) -> u16 {
-		action.get_time()
 	}
 }
 

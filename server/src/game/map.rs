@@ -6,11 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 10:04:28 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 14:10:18 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::{cmp::min, fmt::Display, mem, time::Instant};
+use std::{cmp::min, fmt::Display, time::Instant};
 
 use serde::Serialize;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
@@ -40,7 +40,6 @@ const DERAUMERE_COLOR: &str = "\x1b[1;100;35m";
 const LINEMATE_COLOR: &str = "\x1b[1;100;90m";
 const FOOD_COLOR: &str = "\x1b[0;42;97m";
 const PLAYER_COLOR: &str = "\x1b[0;107;30m";
-const WHITE: &str = "\x1b[0m";
 const RESET: &str = "\x1b[0m";
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -737,16 +736,16 @@ impl GameMap {
 		match direction {
 			PlayerDirection::North => {
 				for y in 0..=level as i16 {
-					for x in (y * -1)..=y {
+					for x in -y..=y {
 						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
-									[move_to_pos(self.max_position.y, pos.y, y * -1)]
+									[move_to_pos(self.max_position.y, pos.y, -y)]
 									.clone())
 					}
 				}
 			}
 			PlayerDirection::South => {
 				for y in 0..=level as i16 {
-					for x in (y * -1)..=y {
+					for x in -y..=y {
 						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
 									[move_to_pos(self.max_position.y, pos.y, y)]
 									.clone())
@@ -755,8 +754,8 @@ impl GameMap {
 			}
 			PlayerDirection::West => {
 				for x in 0..=level as i16 {
-					for y in (x * -1)..=x {
-						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x * -1)]
+					for y in -x..=x {
+						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, -x)]
 									[move_to_pos(self.max_position.y, pos.y, y)]
 									.clone())
 					}
@@ -764,7 +763,7 @@ impl GameMap {
 			}
 			PlayerDirection::East => {
 				for x in 0..=level as i16 {
-					for y in (x * -1)..=x {
+					for y in -x..=x {
 						interest.push(self.cells[move_to_pos(self.max_position.x, pos.x, x)]
 									[move_to_pos(self.max_position.y, pos.y, y)]
 									.clone())

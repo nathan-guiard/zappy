@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 14:01:51 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 14:08:52 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,10 +86,10 @@ fn main() -> Result<ExitCode, Error> {
 	let mut turn_nb: usize = 0;
 
 	// Ctrl-C
-	if let Err(_) = ctrlc::set_handler(|| {
+	if ctrlc::set_handler(|| {
 		println!("Recieved CTRL-C, the server will shut down in the next turn.");
 		unsafe { EXIT.store(true, std::sync::atomic::Ordering::Release) };
-	}) {
+	}).is_err() {
 		eprintln!("Could not set up Ctrl-C handler. Aborting");
 		return Ok(ExitCode::from(1));
 	}
@@ -142,7 +142,7 @@ fn main() -> Result<ExitCode, Error> {
 			break;
 		}
 	};
-	return Ok(ExitCode::from(0));
+	Ok(ExitCode::from(0))
 }
 
 fn time_check(tick_speed: &Duration, exec_time: &mut Duration,
