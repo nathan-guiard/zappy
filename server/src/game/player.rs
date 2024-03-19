@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 10:24:22 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 11:06:04 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,7 +87,7 @@ impl Player {
 		match self.state {
 			Idle | Dead | LevelMax => {},
 			Casting(into, max) => {
-				println!("Was casting {:?}, {}/{}", self.action.kind, into, max);
+				println!("Is casting {:?}, {}/{}", self.action.kind, into, max);
 				if into >= max {
 					match self.action.kind {
 						NoAction => {},
@@ -176,7 +176,6 @@ impl Player {
 				return true;
 			}
 		} else {
-			println!("Avant from()");
 			match PlayerAction::from(action) {
 				Ok(player_action) => {
 					self.action = player_action.clone();

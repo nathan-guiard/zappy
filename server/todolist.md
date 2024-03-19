@@ -8,6 +8,7 @@
 - [x] Drop trait for player to close the FD
 - [x] Voir command
 - [x] Avance / Droite / Gauche commands
+- [x] Handle CTRL + C cleanely
 - [ ] BUGFIX: GUI bugs out other connections
 - [ ] Prend / Pose / Incantation commands
 - [ ] Team class / management
