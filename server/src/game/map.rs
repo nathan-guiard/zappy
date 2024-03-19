@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 14:10:18 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 16:48:58 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -188,7 +188,7 @@ impl GameCell {
 
 	pub fn remove_content(&mut self, to_rm: GameCellContent) -> bool {
 		for i in 0..self.content.len() {
-			if self.content[i] == to_rm {
+			if self.content[i] == to_rm && self.content[i].amount() > 0 {
 				self.content[i].remove(to_rm.amount());
 				return true;
 			}
@@ -802,16 +802,18 @@ impl GameMap {
 		send_to(fd, data.as_str());
 	}
 
-	pub fn add_content(&mut self, pos: GamePosition, content: GameCellContent) {
+	pub fn add_content_cell(&mut self, pos: GamePosition, content: GameCellContent)
+		-> bool {
 		let current_cell = &mut self.cells[pos.x as usize][pos.y as usize];
 	
-		current_cell.add_content(content);
+		current_cell.add_content(content)
 	}
 
-	pub fn remove_content(&mut self, pos: GamePosition, content: GameCellContent) {
+	pub fn remove_content_cell(&mut self, pos: GamePosition, content: GameCellContent)
+		-> bool {
 		let current_cell = &mut self.cells[pos.x as usize][pos.y as usize];
 	
-		current_cell.remove_content(content);
+		current_cell.remove_content(content)
 	}
 }
 

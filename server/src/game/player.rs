@@ -6,13 +6,22 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 14:08:59 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 17:14:55 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 use crate::communication::send_to;
 
-use super::{map::{move_to_pos, GameCellContent, GameMap, GamePosition}, TURNS_TO_DIE};
+use super::{
+	map::{
+		move_to_pos,
+		GameCellContent,
+		GameMap,
+		GamePosition,
+		GameCellContent::*
+	},
+	TURNS_TO_DIE
+};
 use serde::Serialize;
 use PlayerFood::*;
 use PlayerState::*;
@@ -31,6 +40,9 @@ const BROADCAST_TIME: u16 = 7;
 const INCANTATION_TIME: u16 = 300;
 const FORK_TIME: u16 = 42;
 const CONNECT_TIME: u16 = 0;
+
+const FOOD_PER_COLLECT: u16 = 50;
+const FOOD_ON_START: u16 = 250;
 
 #[derive(Debug, Clone)]
 pub struct Player {
@@ -51,7 +63,7 @@ impl Player {
 		Player {
 			fd,
 			command_queue: vec![],
-			food: HasSome(250),
+			food: HasSome(FOOD_ON_START),
 			level: 1,
 			inventory: vec![],
 			state: Idle,
@@ -96,15 +108,16 @@ impl Player {
 						Droite => self.exec_droite(),
 						Voir => self.exec_voir(map),
 						Inventaire => self.exec_inventaire(),
-						Prend => send_to(self.fd, "Action not coded yet\n"), // self.exec_prend(),
-						Pose => send_to(self.fd, "Action not coded yet\n"), // self.exec_pose(),
+						Prend(_) => self.exec_prend(map),
+						Pose(_) => self.exec_pose(map),
 						Expulse => send_to(self.fd, "Action not coded yet\n"), // self.exec_expulse(),
-						Broadcast => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
+						Broadcast(_) => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
 						Incantation => send_to(self.fd, "Action not coded yet\n"), // self.exec_incantation(),
 						Fork => send_to(self.fd, "Action not coded yet\n"), // self.exec_fork(),
 						Connect => send_to(self.fd, "Action not coded yet\n"), // self.exec_connect(),
 					}
 					self.state = Idle;
+					self.action.kind = NoAction;
 				}
 			}
 		}
@@ -124,8 +137,8 @@ impl Player {
 			West => new_pos.x = move_to_pos(map.max_position.x, new_pos.x, -1) as u8,
 		}
 
-		map.remove_content(self.position, GameCellContent::Player(1));
-		map.add_content(new_pos, GameCellContent::Player(1));
+		map.remove_content_cell(self.position, GameCellContent::Player(1));
+		map.add_content_cell(new_pos, GameCellContent::Player(1));
 		self.position = new_pos;
 		send_to(self.fd, "ok\n");
 	}
@@ -156,6 +169,101 @@ impl Player {
 	
 	fn exec_inventaire(&self) {
 		send_to(self.fd, serde_json::to_string(&self.inventory).unwrap().as_str());
+	}
+
+	fn exec_prend(&mut self, map: &mut GameMap) {
+		let ressource_name: String;
+		let ressource_taken = match &self.action.kind {
+			Prend(name) => {
+				ressource_name = name.to_ascii_lowercase();
+					match name.to_ascii_lowercase().as_str() {
+					"linemate" => Linemate(1),
+					"deraumere" => Deraumere(1),
+					"sibur" => Sibur(1),
+					"mendiane" => Mendiane(1),
+					"phiras" => Phiras(1),
+					"thystame" => Thystame(1),
+					"food" => Food(1),
+					other => {
+						send_to(self.fd, format!("ko: {other} not reckognised\n").as_str());
+						return;
+					}
+				}
+			}
+			_ => {
+				send_to(self.fd, "ko\n");
+				return;
+			} // error was not taking something (?)
+		};
+		if ressource_taken == Food(1) {
+			if map.remove_content_cell(self.position, ressource_taken) {
+				send_to(self.fd, "ok: took food\n");
+				self.add_food(FOOD_PER_COLLECT);
+			}
+			else {
+				send_to(self.fd, "ko: no food on cell\n");
+			}
+			return;
+		}
+		if map.remove_content_cell(self.position, ressource_taken) {
+			send_to(self.fd, format!("ok: took {ressource_name}\n").as_str());
+			self.add_to_inventory(ressource_taken);
+		}
+		else {
+			send_to(self.fd, format!("ko: no {ressource_name} on cell\n").as_str());
+		}
+	}
+
+	fn exec_pose(&mut self, map: &mut GameMap) {
+		let ressource_name: String;
+		let ressource_dropped = match &self.action.kind {
+			Pose(name) => {
+				ressource_name = name.to_ascii_lowercase();
+					match name.to_ascii_lowercase().as_str() {
+					"linemate" => Linemate(1),
+					"deraumere" => Deraumere(1),
+					"sibur" => Sibur(1),
+					"mendiane" => Mendiane(1),
+					"phiras" => Phiras(1),
+					"thystame" => Thystame(1),
+					other => {
+						send_to(self.fd, format!("ko: {other} not reckognised\n").as_str());
+						return;
+					}
+				}
+			}
+			_ => {
+				send_to(self.fd, "ko\n");
+				return;
+			} // error was not taking something (?)
+		};
+		if self.remove_from_inventory(ressource_dropped) {
+			map.add_content_cell(self.position, ressource_dropped);
+			send_to(self.fd, format!("ok: dropped {ressource_name}\n").as_str());
+		}
+		else {
+			send_to(self.fd, format!("ko: no {ressource_name} on your inventory\n").as_str());
+		}
+	}
+
+	pub fn add_to_inventory(&mut self, to_add: GameCellContent) {
+		for i in 0..self.inventory.len() {
+			if self.inventory[i] == to_add {
+				self.inventory[i].add(to_add.amount());
+				return;
+			}
+		}
+		self.inventory.push(to_add);
+	}
+
+	pub fn remove_from_inventory(&mut self, to_remove: GameCellContent) -> bool {
+		for i in 0..self.inventory.len() {
+			if self.inventory[i] == to_remove && self.inventory[i].amount() > 0 {
+				self.inventory[i].remove(to_remove.amount());
+				return true;
+			}
+		}
+		false
 	}
 
 	/// Executes the queue of a player
@@ -230,6 +338,21 @@ impl Player {
 		}
 	}
 
+	pub fn add_food(&mut self, food_amount: u16) {
+		if self.state == Dead ||
+			self.state == LevelMax {
+			return;
+		}
+		match self.food {
+			HasSome(x) => {
+				self.food = HasSome(x + food_amount);
+			},
+			TurnsWithout(_) => {
+				self.food = HasSome(food_amount);
+			}
+		}
+	}
+
 	pub fn start_casting(&mut self, action: &PlayerActionKind) {
 		if self.state == Idle {
 			match action {
@@ -238,10 +361,10 @@ impl Player {
 				Droite => self.state = Casting(0, DROITE_TIME),
 				Voir => self.state = Casting(0, VOIR_TIME),
 				Inventaire => self.state = Casting(0, INVENTAIRE_TIME),
-				Prend => self.state = Casting(0, PREND_TIME),
-				Pose => self.state = Casting(0, POSE_TIME),
+				Prend(_) => self.state = Casting(0, PREND_TIME),
+				Pose(_) => self.state = Casting(0, POSE_TIME),
 				Expulse => self.state = Casting(0, EXPULSE_TIME),
-				Broadcast => self.state = Casting(0, BROADCAST_TIME),
+				Broadcast(_) => self.state = Casting(0, BROADCAST_TIME),
 				Incantation => self.state = Casting(0, INCANTATION_TIME),
 				Fork => self.state = Casting(0, FORK_TIME),
 				Connect => self.state = Casting(0, CONNECT_TIME),
@@ -279,20 +402,37 @@ impl PlayerAction {
 	}
 
 	pub fn from(line: String) -> Result<Self, String> {
-		if let Some(first_word) = line.split_ascii_whitespace().next() {
+		let mut it = line.split_ascii_whitespace();
+		if let Some(first_word) = it.next() {
 			return match first_word.to_ascii_lowercase().as_str() {
 				"avance" => Ok(Self { kind: PlayerActionKind::Avance }),
 				"gauche" => Ok(Self { kind: PlayerActionKind::Gauche }),
 				"droite" => Ok(Self { kind: PlayerActionKind::Droite }),
-				"broadcast" => Ok(Self { kind: PlayerActionKind::Broadcast }),
 				"voir" => Ok(Self { kind: PlayerActionKind::Voir }),
-				"prend" => Ok(Self { kind: PlayerActionKind::Prend }),
 				"inventaire" => Ok(Self { kind: PlayerActionKind::Inventaire }),
-				"pose" => Ok(Self { kind: PlayerActionKind::Pose }),
 				"expulse" => Ok(Self { kind: PlayerActionKind::Expulse }),
 				"fork" => Ok(Self { kind: PlayerActionKind::Fork }),
 				"incantation" => Ok(Self { kind: PlayerActionKind::Incantation }),
 				"connect" => Ok(Self { kind: PlayerActionKind::Connect }),
+				"broadcast" => Ok(Self { kind: PlayerActionKind::Broadcast(it.collect()) }),
+				"prend" => {
+					if let Some(object) = it.next() {
+						Ok(Self {
+							kind: PlayerActionKind::Prend(object.into()),
+						})
+					} else {
+						Err(String::from("prend takes an argument, you need to take something"))
+					}
+				}
+				"pose" => {
+					if let Some(object) = it.next() {
+						Ok(Self {
+							kind: PlayerActionKind::Pose(object.into()),
+						})
+					} else {
+						Err(String::from("pose takes an argument, you need to put something down"))
+					}
+				}
 				_ => Err(String::from("Unrecognised action"))
 			};
 		}
@@ -307,10 +447,10 @@ pub enum PlayerActionKind {
 	Droite,
 	Voir,
 	Inventaire,
-	Prend,
-	Pose,
+	Prend(String),
+	Pose(String),
 	Expulse,
-	Broadcast,
+	Broadcast(String),
 	Incantation,
 	Fork,
 	Connect,

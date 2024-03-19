@@ -11,7 +11,8 @@
 - [x] Handle CTRL + C cleanely
 - [x] BUGFIX: GUI bugs out other connections
 - [x] Client deconnection "kills" its player
-- [ ] Prend / Pose / Incantation commands
+- [x] Prend / Pose commands
+- [ ] Incantation command
 - [ ] Team class / management
 - [ ] Connect command
 - [ ] Fork command
