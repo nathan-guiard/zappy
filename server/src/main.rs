@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/18 17:15:58 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 09:15:27 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -125,7 +125,7 @@ fn time_check(tick_speed: &Duration, exec_time: &mut Duration,
 	before: &mut Instant, last_sleep: &mut Duration, turn_nb: usize) {
 	*exec_time = Instant::now().checked_duration_since(*before).unwrap_or_default();
 	*last_sleep = tick_speed.checked_sub(*exec_time).unwrap_or_default();
-	println!("\x1b[3;2;90m---\x1b[0m turn {} | exec: {:?}", turn_nb, exec_time);
+	println!("\x1b[3;2;90m---\x1b[0;2;32m turn {} |\texec: {:?}\x1b[0m", turn_nb, exec_time);
 }
 
 fn args_check(args: &mut Args) -> Result<(), Error> {

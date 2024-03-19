@@ -6,13 +6,15 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/18 17:45:48 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 10:15:19 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 pub mod map;
 pub mod player;
 pub mod gui;
+
+use crate::communication::send_to;
 
 use self::{map::GameMap, player::Player, gui::GraphicClient};
 
@@ -70,6 +72,15 @@ impl Game {
 		for player in &mut self.players {
 			player.loose_food();
 			player.increment_casting();
+		}
+	}
+}
+
+impl Drop for Game {
+	fn drop(&mut self) {
+		for x in &self.players {
+			send_to(x.fd, "Disconnected from the server: server closed\n");
+			unsafe { libc::close(x.fd) };
 		}
 	}
 }

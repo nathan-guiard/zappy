@@ -6,11 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/18 18:10:05 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 10:04:28 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::{cmp::min, fmt::Display, time::Instant};
+use std::{cmp::min, fmt::Display, mem, time::Instant};
 
 use serde::Serialize;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
@@ -801,6 +801,18 @@ impl GameMap {
 		println!("Size of json: {}", data.len());
 
 		send_to(fd, data.as_str());
+	}
+
+	pub fn add_content(&mut self, pos: GamePosition, content: GameCellContent) {
+		let current_cell = &mut self.cells[pos.x as usize][pos.y as usize];
+	
+		current_cell.add_content(content);
+	}
+
+	pub fn remove_content(&mut self, pos: GamePosition, content: GameCellContent) {
+		let current_cell = &mut self.cells[pos.x as usize][pos.y as usize];
+	
+		current_cell.remove_content(content);
 	}
 }
 

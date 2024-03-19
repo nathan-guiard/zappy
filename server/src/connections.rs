@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/18 17:47:03 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 10:12:01 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,7 +82,6 @@ impl ServerConnection {
 			eprintln!("{}", "accept() failed".red().bold());
 			return Err(last_error);
 		}
-		println!("Connection!");
 		unsafe { fcntl(new_connection, F_SETFL, O_NONBLOCK) };
 		watcher.add(new_connection, Events::EPOLLIN | Events::EPOLLRDHUP)?;
 		send_to(new_connection, "BIENVENUE\n");
@@ -92,7 +91,6 @@ impl ServerConnection {
 	// TODO: remove or change the Player with the associated FD
 	pub fn deconnection(&self, fd: i32, watcher: &mut Watcher)
 		-> Result<i32, Error> {
-		println!("Deconnection!");
 		watcher.delete(fd)?;
 		epoll::close(fd)?;
 		Ok(fd)

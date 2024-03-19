@@ -6,13 +6,13 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/18 17:40:18 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 10:24:22 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 use crate::communication::send_to;
 
-use super::{map::{GameCellContent, GameMap, GamePosition}, TURNS_TO_DIE};
+use super::{map::{move_to_pos, GameCellContent, GameMap, GamePosition}, TURNS_TO_DIE};
 use serde::Serialize;
 use PlayerFood::*;
 use PlayerState::*;
@@ -85,30 +85,69 @@ impl Player {
 
 	pub fn execute_casting(&mut self, map: &mut GameMap) -> bool {
 		match self.state {
-			Idle | Dead | LevelMax => { println!("Nothing is casting") },
+			Idle | Dead | LevelMax => {},
 			Casting(into, max) => {
 				println!("Was casting {:?}, {}/{}", self.action.kind, into, max);
 				if into >= max {
 					match self.action.kind {
 						NoAction => {},
-						Avance => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_avance(),
-						Gauche => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_gauche(),
-						Droite => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_droite(),
+						Avance => self.exec_avance(map),
+						Gauche => self.exec_gauche(),
+						Droite => self.exec_droite(),
 						Voir => self.exec_voir(&map),
 						Inventaire => self.exec_inventaire(),
-						Prend => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_prend(),
-						Pose => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_pose(),
-						Expulse => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_expulse(),
-						Broadcast => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_broadcast(),
-						Incantation => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_incantation(),
-						Fork => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_fork(),
-						Connect => { send_to(self.fd, "Action not coded yet\n") }, // self.exec_connect(),
+						Prend => send_to(self.fd, "Action not coded yet\n"), // self.exec_prend(),
+						Pose => send_to(self.fd, "Action not coded yet\n"), // self.exec_pose(),
+						Expulse => send_to(self.fd, "Action not coded yet\n"), // self.exec_expulse(),
+						Broadcast => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
+						Incantation => send_to(self.fd, "Action not coded yet\n"), // self.exec_incantation(),
+						Fork => send_to(self.fd, "Action not coded yet\n"), // self.exec_fork(),
+						Connect => send_to(self.fd, "Action not coded yet\n"), // self.exec_connect(),
 					}
 					self.state = Idle;
 				}
 			}
 		}
 		true
+	}
+
+	fn exec_avance(&mut self, map: &mut GameMap) {
+		let mut new_pos: GamePosition = GamePosition {
+			x: self.position.x,
+			y: self.position.y,
+		};
+		
+		match self.direction {
+			North => new_pos.y = move_to_pos(map.max_position.y, new_pos.y, -1) as u8,
+			South => new_pos.y = move_to_pos(map.max_position.y, new_pos.y, 1) as u8,
+			East => new_pos.x = move_to_pos(map.max_position.x, new_pos.x, 1) as u8,
+			West => new_pos.x = move_to_pos(map.max_position.x, new_pos.x, -1) as u8,
+		}
+
+		map.remove_content(self.position, GameCellContent::Player(1));
+		map.add_content(new_pos, GameCellContent::Player(1));
+		self.position = new_pos;
+		send_to(self.fd, "ok\n");
+	}
+
+	fn exec_gauche(&mut self) {
+		match self.direction {
+			North => self.direction = West,
+			West => self.direction = South,
+			South => self.direction = East,
+			East => self.direction = North,
+		}
+		send_to(self.fd, "ok\n");
+	}
+
+	fn exec_droite(&mut self) {
+		match self.direction {
+			North => self.direction = East,
+			East => self.direction = South,
+			South => self.direction = West,
+			West => self.direction = North,
+		}
+		send_to(self.fd, "ok\n");
 	}
 	
 	fn exec_voir(&self, map: &GameMap) {
@@ -225,12 +264,6 @@ impl Player {
  			},
 			_ => false
 		}
-	}
-}
-
-impl Drop for Player {
-	fn drop(&mut self) {
-		unsafe { libc::close(self.fd) };
 	}
 }
 
