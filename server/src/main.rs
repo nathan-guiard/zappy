@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 12:18:55 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/19 14:01:51 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,7 +87,7 @@ fn main() -> Result<ExitCode, Error> {
 
 	// Ctrl-C
 	if let Err(_) = ctrlc::set_handler(|| {
-		println!("Recieved CTRL-C, will end the server at the next loop");
+		println!("Recieved CTRL-C, the server will shut down in the next turn.");
 		unsafe { EXIT.store(true, std::sync::atomic::Ordering::Release) };
 	}) {
 		eprintln!("Could not set up Ctrl-C handler. Aborting");
@@ -126,6 +126,11 @@ fn main() -> Result<ExitCode, Error> {
 		game.execute();
 		update_gui(&game);
 		game.last_map = Some(game.map.clone());
+
+		if unsafe { EXIT.load(std::sync::atomic::Ordering::Relaxed) } {
+			println!("Last turn finished.");
+			break;
+		}
 		
 		turn_nb += 1;
 		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep, turn_nb);

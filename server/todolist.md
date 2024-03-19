@@ -9,7 +9,8 @@
 - [x] Voir command
 - [x] Avance / Droite / Gauche commands
 - [x] Handle CTRL + C cleanely
-- [ ] BUGFIX: GUI bugs out other connections
+- [x] BUGFIX: GUI bugs out other connections
+- [ ] Client deconnection "kill" its player
 - [ ] Prend / Pose / Incantation commands
 - [ ] Team class / management
 - [ ] Connect command
