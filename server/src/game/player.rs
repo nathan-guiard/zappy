@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/20 15:15:41 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/20 17:03:53 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,10 +20,9 @@ use super::{
 		GameCellContent::{self, *},
 		GameMap,
 		GamePosition
-	}, teams::Team, TURNS_TO_DIE
+	}, teams::Team
 };
 use serde::Serialize;
-use PlayerFood::*;
 use PlayerState::*;
 use PlayerDirection::*;
 use PlayerActionKind::*;
@@ -48,7 +47,6 @@ const FOOD_ON_START: u16 = 250;
 pub struct Player {
 	pub fd: i32,
 	pub command_queue: Vec<String>,
-	pub food: PlayerFood,
 	pub level: u8,
 	pub inventory: Vec<GameCellContent>,
 	pub state: PlayerState,
@@ -63,7 +61,6 @@ impl Player {
 		Player {
 			fd,
 			command_queue: vec![],
-			food: HasSome(FOOD_ON_START),
 			level: 1,
 			inventory: vec![],
 			state: Idle,
@@ -80,8 +77,8 @@ impl Player {
 	pub fn enable_playability(&mut self, team: String, position: GamePosition) {
 		self.team = team;
 		self.position = position;
-		self.food = HasSome(FOOD_ON_START);
 		self.state = Idle;
+		self.add_to_inventory(Food(FOOD_ON_START));
 	}
 	
 	pub fn push_to_queue(&mut self, mut new: Vec<String>) {
@@ -360,36 +357,31 @@ impl Player {
 			self.state == LevelMax {
 			return;
 		}
-		match self.food {
-			HasSome(x) => {
-				if x == 0 {
-					self.food = TurnsWithout(0);
-				} else {
-					self.food = HasSome(x - 1);
-				}
-			},
-			TurnsWithout(x) => {
-				if x >= TURNS_TO_DIE {
-					self.state = Dead;
+		for x in &mut self.inventory {
+			if matches!(x, &mut Food(_)) {
+				if x.amount() == 0 {
+					self.state =  Dead;
 					send_to(self.fd, "You died\n");
 				} else {
-					self.food = TurnsWithout(x + 1);
+					*x = Food(x.amount() - 1);
 				}
 			}
 		}
 	}
 
 	pub fn add_food(&mut self, food_amount: u16) {
-		if self.state == Dead ||
+		if self.team.is_empty() ||
+			self.state == Dead ||
 			self.state == LevelMax {
 			return;
 		}
-		match self.food {
-			HasSome(x) => {
-				self.food = HasSome(x + food_amount);
-			},
-			TurnsWithout(_) => {
-				self.food = HasSome(food_amount);
+		for x in &mut self.inventory {
+			if matches!(x, &mut Food(_)) {
+				if (x.amount() as u32 + food_amount as u32) > u16::MAX as u32 {
+					*x = Food(u16::MAX);
+				} else {
+					*x = Food(x.amount() + food_amount);
+				}
 			}
 		}
 	}
@@ -499,12 +491,6 @@ pub enum PlayerActionKind {
 }
 
 #[derive(Debug, Serialize, Clone)]
-pub enum PlayerFood {
-	HasSome(u16),
-	TurnsWithout(u16),
-}
-
-#[derive(Debug, Serialize, Clone)]
 pub enum PlayerDirection {
 	North,
 	South,
@@ -530,7 +516,6 @@ pub struct SendPlayer {
 	inventory: Vec<GameCellContent>,
 	state: PlayerState,
 	level: u8,
-	food: PlayerFood,
 }
 
 impl From<Player> for SendPlayer {
@@ -551,7 +536,6 @@ impl From<Player> for SendPlayer {
 			inventory,
 			state: player.state.clone(),
 			level: player.level,
-			food: player.food.clone(),
 		}
 	}
 }

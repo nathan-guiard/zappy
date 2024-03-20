@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/20 16:45:57 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/20 17:00:06 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,6 @@ use crate::communication::send_to;
 
 use self::{map::GameMap, player::Player, gui::GraphicClient, teams::Team};
 
-const TURNS_TO_DIE: u16 = 150;
 
 #[derive(Debug)]
 pub struct Game {
