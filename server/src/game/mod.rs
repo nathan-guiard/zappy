@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/20 14:56:29 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/20 16:45:57 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,16 +34,19 @@ pub struct Game {
 }
 
 impl Game {
-	pub fn new(x: u8, y: u8, teams: Vec<String>, seed: usize) -> Result<Self, std::io::Error> {
-		let (map,mut positions) = GameMap::new(x, y, teams.len() as u8, seed);
+	pub fn new(x: u8, y: u8, teams: Vec<String>, clients: u8, seed: usize) -> Result<Self, std::io::Error> {
+		let (map,mut positions) = GameMap::new(x, y, teams.len() as u8, clients, seed);
 		let mut teams_map: HashMap<String, Team>= HashMap::new();
 		for t in teams {
 			let mut new_team = Team::new(t.clone());
-			if let Some(pos) = positions.pop_front() {
-				new_team.add_position(pos);
-			} else {
-				return Err(Error::new(InvalidInput, "Could not give a position to the first player of a team"));
-			}
+			for _ in 0..clients {
+				dbg!(&positions);
+				if let Some(pos) = positions.pop_front() {
+					new_team.add_position(pos);
+				} else {
+					return Err(Error::new(InvalidInput, "Could not give a position to the first player of a team"));
+				}
+			} 
 			if teams_map.insert(t.clone(), new_team).is_some() {
 				return Err(Error::new(InvalidInput, "Duplicate in team name"));
 			}

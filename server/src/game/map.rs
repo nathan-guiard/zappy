@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/20 12:48:02 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/20 16:37:03 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -315,7 +315,7 @@ impl Display for GameMap {
 }
 
 impl GameMap {
-	pub fn new(x: u8, y: u8, teams: u8, seed: usize) -> (Self, VecDeque<GamePosition>) {
+	pub fn new(x: u8, y: u8, teams: u8, clients: u8, seed: usize) -> (Self, VecDeque<GamePosition>) {
 		let mut cells = vec![vec![GameCell::empty(); y.into()]; x.into()];
 		let mut rng = StdRng::seed_from_u64(seed as u64);
 		let player_positions: VecDeque<GamePosition>;
@@ -330,7 +330,11 @@ impl GameMap {
 			}
 		}
 
-		player_positions = Self::place_ressources(&mut cells, &mut rng, x, y, teams);
+		player_positions = Self::place_ressources(&mut cells,
+			&mut rng,
+			x, y,
+			teams,
+			clients);
 
 		println!("Time to create the map: {:?}", Instant::now() - before_map);
 		(GameMap {
@@ -348,7 +352,8 @@ impl GameMap {
 		rng: &mut StdRng,
 		x: u8,
 		y: u8,
-		nb_of_team: u8) -> VecDeque<GamePosition> {
+		nb_of_team: u8,
+		clients: u8) -> VecDeque<GamePosition> {
 		let mut interest_points = vec![
 			GamePosition::default();
 			(1 + rng.next_u32() % 2 + (x > 80) as u32 + (y > 55) as u32) as usize
@@ -377,7 +382,7 @@ impl GameMap {
 				interest_points.len() as u32 *
 				25 * min((x as u32 + y as u32) / 15, 1) *
 				nb_of_team as u32 * 6 + 5000) as u16),
-			Player(nb_of_team.into()),
+			Player((nb_of_team as u8 * clients) as u16),
 		];
 
 		fn everything_placed(max: &Vec<GameCellContent>) -> bool {

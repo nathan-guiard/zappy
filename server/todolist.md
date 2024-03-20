@@ -14,13 +14,16 @@
 - [x] Prend / Pose commands
 - [x] Incantation command
 - [x] Update doc on SendPlayer.action
-- [ ] Team class / management
-- [ ] Client option management (-c)
+- [x] Team class / management
+- [x] Client option management (-c)
 - [ ] Put everything food-related to the inventory
 - [ ] Connect command
+- [ ] Eggs (for forks)
 - [ ] Fork command
 - [ ] Expulse command
 - [ ] Rework incantation to match the subject
+  - [ ] make incantation more taht just an action
+  - [ ] Put less ressources on the map, more spreaded?
 
 Later features:
 - [ ] 10 commands on queue max
