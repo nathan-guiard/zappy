@@ -6,11 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 16:48:58 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/20 12:48:02 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::{cmp::min, fmt::Display, time::Instant};
+use std::{cmp::min, collections::VecDeque, fmt::Display, time::Instant};
 
 use serde::Serialize;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
@@ -315,9 +315,10 @@ impl Display for GameMap {
 }
 
 impl GameMap {
-	pub fn new(x: u8, y: u8, teams: u8, seed: usize) -> Self {
+	pub fn new(x: u8, y: u8, teams: u8, seed: usize) -> (Self, VecDeque<GamePosition>) {
 		let mut cells = vec![vec![GameCell::empty(); y.into()]; x.into()];
 		let mut rng = StdRng::seed_from_u64(seed as u64);
+		let player_positions: VecDeque<GamePosition>;
 		let before_map = Instant::now();
 
 		for vec_x in 0..cells.len() {
@@ -329,16 +330,17 @@ impl GameMap {
 			}
 		}
 
-		Self::place_ressources(&mut cells, &mut rng, x, y, teams);
+		player_positions = Self::place_ressources(&mut cells, &mut rng, x, y, teams);
 
 		println!("Time to create the map: {:?}", Instant::now() - before_map);
-		GameMap {
+		(GameMap {
 			cells,
 			max_position: GamePosition {
 				x,
 				y,
 			}
-		}
+		},
+		player_positions)
 	}
 
 	fn place_ressources(
@@ -346,7 +348,7 @@ impl GameMap {
 		rng: &mut StdRng,
 		x: u8,
 		y: u8,
-		nb_of_team: u8) {
+		nb_of_team: u8) -> VecDeque<GamePosition> {
 		let mut interest_points = vec![
 			GamePosition::default();
 			(1 + rng.next_u32() % 2 + (x > 80) as u32 + (y > 55) as u32) as usize
@@ -355,6 +357,7 @@ impl GameMap {
 			x: rand_u8(rng) % x,
 			y: rand_u8(rng) % y,
 		};
+		let mut player_positions: VecDeque<GamePosition> = VecDeque::new();
 
 		for point_number in 0..interest_points.len() {
 			interest_points[point_number] = GamePosition {
@@ -434,15 +437,17 @@ impl GameMap {
 						&mut max[FOOD_INDEX],
 						&GamePosition { x, y },
 					);
-					Self::place_single_ressource(&interest_points,
-						rng,
-						current_cell,
+					if let Some(pos) = Self::place_player(&interest_points,
 						&mut max[PLAYER_INDEX],
 						&GamePosition { x, y },
-					);
+						rng,
+						current_cell) {
+						player_positions.push_back(pos);
+					}
 				}
 			}
-		}
+		};
+		player_positions
 	}
 
 	fn place_single_ressource(
@@ -459,8 +464,8 @@ impl GameMap {
 			Mendiane(_) => Self::place_mendiane(ipts, to_place, max_pos, rng, curr),
 			Phiras(_) => Self::place_phiras(ipts, to_place, max_pos, rng, curr),
 			Thystame(_) => Self::place_thystame(ipts, to_place, max_pos, rng, curr),
-			Player(_) => Self::place_player(ipts, to_place, max_pos, rng, curr),
 			Food(_) => Self::place_food(ipts, to_place, max_pos, rng, curr),
+			_ => {}
 		}
 	}
 
@@ -673,7 +678,7 @@ impl GameMap {
 		max_position: &GamePosition,
 		rng: &mut StdRng,
 		current_cell: &mut GameCell
-	) {
+	) -> Option<GamePosition> {
 		let mut nb_to_place = ((rng.next_u32() % 150) == 1) as u16;
 		if nb_to_place > to_place.amount() {
 			nb_to_place = to_place.amount()
@@ -690,10 +695,11 @@ impl GameMap {
 					25) {
 						to_place.remove(nb_to_place);
 						current_cell.add_content(Player(nb_to_place));
-						break;
+						return Some(current_cell.position);
 				}
 			}
 		}
+		None
 	}
 
 	fn is_in_range_of_interest_point(

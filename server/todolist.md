@@ -15,11 +15,15 @@
 - [x] Incantation command
 - [x] Update doc on SendPlayer.action
 - [ ] Team class / management
+- [ ] Client option management (-c)
+- [ ] Put everything food-related to the inventory
 - [ ] Connect command
 - [ ] Fork command
 - [ ] Expulse command
+- [ ] Rework incantation to match the subject
 
 Later features:
 - [ ] 10 commands on queue max
 - [ ] Better feedback on actions, not "only ok/ko"
 - [ ] Cache changed cells for the gui refresh
+- [ ] When a player dies, it drops all of its inventory on the floor

@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 17:43:13 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/20 12:18:56 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,7 +76,7 @@ fn main() -> Result<ExitCode, Error> {
 	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
 
 	// All the game
-	let mut game = Game::new(args.x, args.y, args.team_name, args.seed);
+	let mut game: Game = Game::new(args.x, args.y, args.team_name, args.seed)?;
 	print!("{}", game.map);
 
 	// Timing

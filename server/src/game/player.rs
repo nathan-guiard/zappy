@@ -6,9 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 18:47:31 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/20 15:15:41 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+use std::collections::HashMap;
 
 use crate::communication::send_to;
 
@@ -18,7 +20,7 @@ use super::{
 		GameCellContent::{self, *},
 		GameMap,
 		GamePosition
-	}, TURNS_TO_DIE
+	}, teams::Team, TURNS_TO_DIE
 };
 use serde::Serialize;
 use PlayerFood::*;
@@ -74,6 +76,13 @@ impl Player {
 			action: PlayerAction::new(),
 		}
 	}
+
+	pub fn enable_playability(&mut self, team: String, position: GamePosition) {
+		self.team = team;
+		self.position = position;
+		self.food = HasSome(FOOD_ON_START);
+		self.state = Idle;
+	}
 	
 	pub fn push_to_queue(&mut self, mut new: Vec<String>) {
 		if new.is_empty() {
@@ -93,7 +102,9 @@ impl Player {
 		dbg!(&self.command_queue);
 	}
 
-	pub fn execute_casting(&mut self, map: &mut GameMap) -> bool {
+	pub fn execute_casting(&mut self,
+		map: &mut GameMap,
+		teams: &mut HashMap<String, Team>) -> bool {
 		match self.state {
 			Idle | Dead | LevelMax => {},
 			Casting(into, max) => {
@@ -110,7 +121,7 @@ impl Player {
 						Pose(_) => self.exec_pose(map),
 						Expulse => send_to(self.fd, "Action not coded yet\n"), // self.exec_expulse(),
 						Broadcast(_) => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
-						Incantation => self.exec_incantation(),
+						Incantation => self.exec_incantation(teams),
 						Fork => send_to(self.fd, "Action not coded yet\n"), // self.exec_fork(),
 						Connect => send_to(self.fd, "Action not coded yet\n"), // self.exec_connect(),
 					}
@@ -248,7 +259,7 @@ impl Player {
 		}
 	}
 
-	fn exec_incantation(&mut self) {
+	fn exec_incantation(&mut self, teams: &mut HashMap<String, Team>) {
 		if has_enough_ressources(&self.inventory, self.level, 8) { // to change last param
 			remove_ressources(self);
 			self.level += 1;
@@ -256,6 +267,9 @@ impl Player {
 			if self.level == 8 {
 				self.state = LevelMax;
 				send_to(self.fd, "Congratulations! You are level 8: the maximum level!\n");
+				if let Some(my_team) = teams.get_mut(&self.team) {
+					my_team.max_level += 1;
+				}
 			}
 		} else {
 			send_to(self.fd, "ko: not enough ressources\n");
@@ -287,7 +301,7 @@ impl Player {
 	/// Has to be executed after a call to `execute_casting()`
 	/// 
 	/// Returns true if the Player has to be turned into a GraphicClient
-	pub fn execute_queue(&mut self, map: &GameMap, teams: &[String],
+	pub fn execute_queue(&mut self, map: &GameMap, teams: &mut HashMap<String, Team>,
 		has_gui: bool) -> bool {
 		if self.command_queue.is_empty() ||
 			self.state != Idle {
@@ -314,16 +328,27 @@ impl Player {
 		false
 	}
 	
-	fn team_check(&mut self, map: &GameMap, teams: &[String], team: &str, has_gui: bool) -> bool {
+	fn team_check(&mut self, map: &GameMap, teams: &mut HashMap<String, Team>, team: &str, has_gui: bool) -> bool {
 		if self.team.is_empty() {
 			if team.to_ascii_lowercase() == "gui\n" && !has_gui {
 				return true;
 			}
-			if teams.contains(&team[0..&team.len() - 1].to_string()) {
-				self.team = String::from(team);
-				send_to(self.fd, format!("1\n{} {}\n", map.max_position.x, map.max_position.y).as_str());
+			if let Some(internal_team) = teams.get_mut(&team[0..&team.len() - 1].to_string()) {
+				let connection_nbr = internal_team.available_connections();
+				if connection_nbr > 0 {
+					self.enable_playability(internal_team.name.clone(),
+						internal_team.get_next_position().unwrap_or(GamePosition {x: 0, y: 0}));
+				}
+				send_to(self.fd, format!("{}\n{} {}\n",
+						connection_nbr,
+						map.max_position.x,
+						map.max_position.y
+					).as_str());
 			} else {
-				send_to(self.fd, "This team does not exist\n");
+				send_to(self.fd, format!(
+						"The team {} does not exist\n",
+						&team[0..&team.len() - 1].to_string()
+					).as_str());
 			}
 		}
 		false

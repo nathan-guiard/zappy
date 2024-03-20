@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 17:21:12 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/20 14:56:29 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,10 +14,13 @@ pub mod map;
 pub mod player;
 pub mod gui;
 pub mod level_up;
+pub mod teams;
+
+use std::{collections::HashMap, io::{Error, ErrorKind::InvalidInput}};
 
 use crate::communication::send_to;
 
-use self::{map::GameMap, player::Player, gui::GraphicClient};
+use self::{map::GameMap, player::Player, gui::GraphicClient, teams::Team};
 
 const TURNS_TO_DIE: u16 = 150;
 
@@ -27,23 +30,33 @@ pub struct Game {
 	pub map: GameMap,
 	pub last_map: Option<GameMap>, // needed for updates to gui
 	pub gui: Option<GraphicClient>,
-	pub teams: Vec<String>,
+	pub teams: HashMap<String, Team>,
 }
 
 impl Game {
-	pub fn new(x: u8, y: u8, teams: Vec<String>, seed: usize) -> Self {
-		let map = GameMap::new(x, y, teams.len() as u8, seed);
-		Game {
+	pub fn new(x: u8, y: u8, teams: Vec<String>, seed: usize) -> Result<Self, std::io::Error> {
+		let (map,mut positions) = GameMap::new(x, y, teams.len() as u8, seed);
+		let mut teams_map: HashMap<String, Team>= HashMap::new();
+		for t in teams {
+			let mut new_team = Team::new(t.clone());
+			if let Some(pos) = positions.pop_front() {
+				new_team.add_position(pos);
+			} else {
+				return Err(Error::new(InvalidInput, "Could not give a position to the first player of a team"));
+			}
+			if teams_map.insert(t.clone(), new_team).is_some() {
+				return Err(Error::new(InvalidInput, "Duplicate in team name"));
+			}
+		}
+		Ok(Game {
 			players: vec![],
 			map: map.clone(),
 			last_map: None,
 			gui: None,
-			teams,
-		}
+			teams: teams_map,
+		})
 	}
-}
-
-impl Game {
+	
 	pub fn try_remove_gui(&mut self, fd: i32) {
 		match &self.gui {
 			Some(gc) => if fd == gc.fd { self.gui = None },
@@ -56,8 +69,8 @@ impl Game {
 		let mut to_remove = None;
 		
 		for player in self.players.iter_mut() {
-			player.execute_casting(&mut self.map);
-			if player.execute_queue(&self.map, &self.teams, self.gui.is_some()) {
+			player.execute_casting(&mut self.map, &mut self.teams);
+			if player.execute_queue(&self.map, &mut self.teams, self.gui.is_some()) {
 				to_remove = Some(player.fd);
 			}
 		}
