@@ -1,22 +1,45 @@
 import socket
+import time
+from client_lib import Player
 
 HOST = 'localhost'
-PORT = 8888
+PORT = int(input("Port: "))
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((HOST, PORT))
-print('Connextion vers ' + HOST + ':' + str(PORT) + ' reussie.')
+ret = [
+	{"p":{"x":0,"y":0},"c":[]},
+	{"p":{"x":64,"y":34},"c":[{"Food":5}]},
+	{"p":{"x":0,"y":34},"c":[{"Food":3}]},
+	{"p":{"x":1,"y":34},"c":[{"Food":1}]}]
 
-def envoie_message(message):
-	print('Envoi de message : ' + message)
-	n = client.send(message.encode())
-	if (n != len(message)):
-		print('Erreur envoi.')
-	else:
-		print('Envoi ok.')
-	print('Reception...')
-	return client.recv(1024)
+def server_connexion():
+	client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	while True:
+		try:
+			client.connect((HOST, PORT))
+		except ConnectionRefusedError:
+			print("Connexion error")
+			continue
+		break
+	print('Connexion vers ' + HOST + ':' + str(PORT) + ' reussie.')
+	client.send("".encode())
+	client.recv(1024)
+	return client
 
-messages = ("", "team", "team2")
-for msg in messages:
-	print(envoie_message(msg))
+
+def team_connexion(client: socket):
+	while True:
+		team_name = input("Team name: ")
+		n = client.send((team_name + '\n').encode())
+		if n != len(team_name + '\n'):
+			print('Erreur envoi.')
+		# print('Reception...')
+		start_player =  client.recv(1024)
+		if start_player.decode() == "This team does not exist\n":
+			print(f"Team name '{team_name}' is unknow\n")
+			continue
+		return start_player
+
+if __name__ == "__main__":
+	client = server_connexion()
+	start_player = team_connexion(client)
+	player = Player(client, start_player.decode())
