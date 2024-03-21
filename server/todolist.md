@@ -17,7 +17,7 @@
 - [x] Team class / management
 - [x] Client option management (-c)
 - [x] Put everything food-related to the inventory
-- [ ] Fix: Deconnection / Death does not add a vacant conncetion to the team
+- [x] Fix: Deconnection / Death does not add a vacant conncetion to the team
 - [ ] Connect command
 - [ ] Eggs (for forks)
 - [ ] Fork command
@@ -31,4 +31,5 @@ Later features:
 - [ ] Better feedback on actions, not "only ok/ko"
 - [ ] Cache changed cells for the gui refresh
 - [ ] When a player dies, it drops all of its inventory on the floor
-- [ ] Make levelmax plare playable?
+- [ ] Make levelmax player playable?
+- [ ] Disconnect automatically players that died?

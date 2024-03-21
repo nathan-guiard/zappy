@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/20 17:00:06 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/21 12:07:50 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,7 +84,7 @@ impl Game {
 		}
 		
 		for player in &mut self.players {
-			player.loose_food();
+			player.loose_food(&mut self.map, &mut self.teams);
 			player.increment_casting();
 		}
 	}

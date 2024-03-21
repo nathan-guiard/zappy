@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/20 17:03:53 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/21 12:07:35 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -350,8 +350,21 @@ impl Player {
 		}
 		false
 	}
+
+	pub fn die(&mut self,
+		map: &mut GameMap,
+		teams: &mut HashMap<String, Team>,) {
+		self.state = Dead;
+		map.cells[self.position.x as usize][self.position.y as usize].remove_content(Player(1));
+		if let Some(team) = teams.get_mut(&self.team) {
+			team.add_position(self.position);
+		}
+		send_to(self.fd, "You died\n");
+	}
 	
-	pub fn loose_food(&mut self) {
+	pub fn loose_food(&mut self,
+		map: &mut GameMap,
+		teams: &mut HashMap<String, Team>) {
 		if self.team.is_empty() ||
 			self.state == Dead ||
 			self.state == LevelMax {
@@ -360,8 +373,8 @@ impl Player {
 		for x in &mut self.inventory {
 			if matches!(x, &mut Food(_)) {
 				if x.amount() == 0 {
-					self.state =  Dead;
-					send_to(self.fd, "You died\n");
+					self.die(map, teams);
+					return;
 				} else {
 					*x = Food(x.amount() - 1);
 				}
