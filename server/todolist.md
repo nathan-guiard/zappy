@@ -16,7 +16,7 @@
 - [x] Update doc on SendPlayer.action
 - [x] Team class / management
 - [x] Client option management (-c)
-- [ ] Put everything food-related to the inventory
+- [x] Put everything food-related to the inventory
 - [ ] Fix: Deconnection / Death does not add a vacant conncetion to the team
 - [ ] Connect command
 - [ ] Eggs (for forks)

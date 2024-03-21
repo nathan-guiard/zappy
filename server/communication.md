@@ -88,7 +88,6 @@ Data types sent in response of the commands:
 	"inventory": [GameCellContent],
 	"state": string or object, // see below
 	"level": number,
-	"food": PlayerFood,
 }
 ```
 
@@ -123,12 +122,3 @@ state can only be one of:
 - `"Casting": [number, number]`
   - The first number is the current progress
   - The second number is the amount of steps needed
-
----
-### PlayerFood
-```json
-{
-	"HasSome": number, // OR
-	"TurnsWithout": number
-}
-```
