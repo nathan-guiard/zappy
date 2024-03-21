@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/21 12:07:35 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/21 12:22:26 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,7 +38,6 @@ const EXPULSE_TIME: u16 = 7;
 const BROADCAST_TIME: u16 = 7;
 const INCANTATION_TIME: u16 = 300;
 const FORK_TIME: u16 = 42;
-const CONNECT_TIME: u16 = 0;
 
 const FOOD_PER_COLLECT: u16 = 50;
 const FOOD_ON_START: u16 = 250;
@@ -120,7 +119,7 @@ impl Player {
 						Broadcast(_) => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
 						Incantation => self.exec_incantation(teams),
 						Fork => send_to(self.fd, "Action not coded yet\n"), // self.exec_fork(),
-						Connect => send_to(self.fd, "Action not coded yet\n"), // self.exec_connect(),
+						Connect => self.exec_connect(teams),
 					}
 					self.state = Idle;
 					self.action.kind = NoAction;
@@ -233,7 +232,7 @@ impl Player {
 					"phiras" => Phiras(1),
 					"thystame" => Thystame(1),
 					"food" => {
-						send_to(self.fd, format!("ko: cannot drop food\n").as_str());
+						send_to(self.fd,"ko: cannot drop food\n");
 						return;
 					}
 					other => {
@@ -270,6 +269,13 @@ impl Player {
 			}
 		} else {
 			send_to(self.fd, "ko: not enough ressources\n");
+		}
+	}
+
+	fn exec_connect(&self, teams: &HashMap<String, Team>) {
+		match teams.get(&self.team) {
+			Some(t) => send_to(self.fd, &(t.available_connections().to_string() + "\n")),
+			None => send_to(self.fd, "0\n"),
 		}
 	}
 
@@ -314,7 +320,9 @@ impl Player {
 			match PlayerAction::from(action) {
 				Ok(player_action) => {
 					self.action = player_action.clone();
-					self.start_casting(&player_action.kind);
+					if self.start_casting(&player_action.kind) {
+						self.exec_connect(teams);
+					}
 				}
 				Err(e) => {
 					send_to(self.fd, e.as_str());
@@ -399,7 +407,10 @@ impl Player {
 		}
 	}
 
-	pub fn start_casting(&mut self, action: &PlayerActionKind) {
+	/// Starts the casting of an action
+	/// 
+	/// Return true if the action has no cast time
+	pub fn start_casting(&mut self, action: &PlayerActionKind) -> bool {
 		if self.state == Idle {
 			match action {
 				Avance => self.state = Casting(0, AVANCE_TIME),
@@ -413,10 +424,11 @@ impl Player {
 				Broadcast(_) => self.state = Casting(0, BROADCAST_TIME),
 				Incantation => self.state = Casting(0, INCANTATION_TIME),
 				Fork => self.state = Casting(0, FORK_TIME),
-				Connect => self.state = Casting(0, CONNECT_TIME),
+				Connect => return true,
 				_ => {},
 			}
 		}
+		false
 	}
 
 	pub fn increment_casting(&mut self) -> bool {

@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/20 16:37:03 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/21 12:17:19 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -318,7 +318,6 @@ impl GameMap {
 	pub fn new(x: u8, y: u8, teams: u8, clients: u8, seed: usize) -> (Self, VecDeque<GamePosition>) {
 		let mut cells = vec![vec![GameCell::empty(); y.into()]; x.into()];
 		let mut rng = StdRng::seed_from_u64(seed as u64);
-		let player_positions: VecDeque<GamePosition>;
 		let before_map = Instant::now();
 
 		for vec_x in 0..cells.len() {
@@ -330,7 +329,7 @@ impl GameMap {
 			}
 		}
 
-		player_positions = Self::place_ressources(&mut cells,
+		let player_positions = Self::place_ressources(&mut cells,
 			&mut rng,
 			x, y,
 			teams,
@@ -382,7 +381,7 @@ impl GameMap {
 				interest_points.len() as u32 *
 				25 * min((x as u32 + y as u32) / 15, 1) *
 				nb_of_team as u32 * 6 + 5000) as u16),
-			Player((nb_of_team as u8 * clients) as u16),
+			Player((nb_of_team * clients) as u16),
 		];
 
 		fn everything_placed(max: &Vec<GameCellContent>) -> bool {
