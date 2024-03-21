@@ -6,9 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 18:47:31 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/21 12:07:35 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+use std::collections::HashMap;
 
 use crate::communication::send_to;
 
@@ -18,10 +20,9 @@ use super::{
 		GameCellContent::{self, *},
 		GameMap,
 		GamePosition
-	}, TURNS_TO_DIE
+	}, teams::Team
 };
 use serde::Serialize;
-use PlayerFood::*;
 use PlayerState::*;
 use PlayerDirection::*;
 use PlayerActionKind::*;
@@ -46,7 +47,6 @@ const FOOD_ON_START: u16 = 250;
 pub struct Player {
 	pub fd: i32,
 	pub command_queue: Vec<String>,
-	pub food: PlayerFood,
 	pub level: u8,
 	pub inventory: Vec<GameCellContent>,
 	pub state: PlayerState,
@@ -61,7 +61,6 @@ impl Player {
 		Player {
 			fd,
 			command_queue: vec![],
-			food: HasSome(FOOD_ON_START),
 			level: 1,
 			inventory: vec![],
 			state: Idle,
@@ -73,6 +72,13 @@ impl Player {
 			team: String::new(),
 			action: PlayerAction::new(),
 		}
+	}
+
+	pub fn enable_playability(&mut self, team: String, position: GamePosition) {
+		self.team = team;
+		self.position = position;
+		self.state = Idle;
+		self.add_to_inventory(Food(FOOD_ON_START));
 	}
 	
 	pub fn push_to_queue(&mut self, mut new: Vec<String>) {
@@ -93,7 +99,9 @@ impl Player {
 		dbg!(&self.command_queue);
 	}
 
-	pub fn execute_casting(&mut self, map: &mut GameMap) -> bool {
+	pub fn execute_casting(&mut self,
+		map: &mut GameMap,
+		teams: &mut HashMap<String, Team>) -> bool {
 		match self.state {
 			Idle | Dead | LevelMax => {},
 			Casting(into, max) => {
@@ -110,7 +118,7 @@ impl Player {
 						Pose(_) => self.exec_pose(map),
 						Expulse => send_to(self.fd, "Action not coded yet\n"), // self.exec_expulse(),
 						Broadcast(_) => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
-						Incantation => self.exec_incantation(),
+						Incantation => self.exec_incantation(teams),
 						Fork => send_to(self.fd, "Action not coded yet\n"), // self.exec_fork(),
 						Connect => send_to(self.fd, "Action not coded yet\n"), // self.exec_connect(),
 					}
@@ -248,7 +256,7 @@ impl Player {
 		}
 	}
 
-	fn exec_incantation(&mut self) {
+	fn exec_incantation(&mut self, teams: &mut HashMap<String, Team>) {
 		if has_enough_ressources(&self.inventory, self.level, 8) { // to change last param
 			remove_ressources(self);
 			self.level += 1;
@@ -256,6 +264,9 @@ impl Player {
 			if self.level == 8 {
 				self.state = LevelMax;
 				send_to(self.fd, "Congratulations! You are level 8: the maximum level!\n");
+				if let Some(my_team) = teams.get_mut(&self.team) {
+					my_team.max_level += 1;
+				}
 			}
 		} else {
 			send_to(self.fd, "ko: not enough ressources\n");
@@ -287,7 +298,7 @@ impl Player {
 	/// Has to be executed after a call to `execute_casting()`
 	/// 
 	/// Returns true if the Player has to be turned into a GraphicClient
-	pub fn execute_queue(&mut self, map: &GameMap, teams: &[String],
+	pub fn execute_queue(&mut self, map: &GameMap, teams: &mut HashMap<String, Team>,
 		has_gui: bool) -> bool {
 		if self.command_queue.is_empty() ||
 			self.state != Idle {
@@ -314,57 +325,76 @@ impl Player {
 		false
 	}
 	
-	fn team_check(&mut self, map: &GameMap, teams: &[String], team: &str, has_gui: bool) -> bool {
+	fn team_check(&mut self, map: &GameMap, teams: &mut HashMap<String, Team>, team: &str, has_gui: bool) -> bool {
 		if self.team.is_empty() {
 			if team.to_ascii_lowercase() == "gui\n" && !has_gui {
 				return true;
 			}
-			if teams.contains(&team[0..&team.len() - 1].to_string()) {
-				self.team = String::from(team);
-				send_to(self.fd, format!("1\n{} {}\n", map.max_position.x, map.max_position.y).as_str());
+			if let Some(internal_team) = teams.get_mut(&team[0..&team.len() - 1].to_string()) {
+				let connection_nbr = internal_team.available_connections();
+				if connection_nbr > 0 {
+					self.enable_playability(internal_team.name.clone(),
+						internal_team.get_next_position().unwrap_or(GamePosition {x: 0, y: 0}));
+				}
+				send_to(self.fd, format!("{}\n{} {}\n",
+						connection_nbr,
+						map.max_position.x,
+						map.max_position.y
+					).as_str());
 			} else {
-				send_to(self.fd, "This team does not exist\n");
+				send_to(self.fd, format!(
+						"The team {} does not exist\n",
+						&team[0..&team.len() - 1].to_string()
+					).as_str());
 			}
 		}
 		false
 	}
+
+	pub fn die(&mut self,
+		map: &mut GameMap,
+		teams: &mut HashMap<String, Team>,) {
+		self.state = Dead;
+		map.cells[self.position.x as usize][self.position.y as usize].remove_content(Player(1));
+		if let Some(team) = teams.get_mut(&self.team) {
+			team.add_position(self.position);
+		}
+		send_to(self.fd, "You died\n");
+	}
 	
-	pub fn loose_food(&mut self) {
+	pub fn loose_food(&mut self,
+		map: &mut GameMap,
+		teams: &mut HashMap<String, Team>) {
 		if self.team.is_empty() ||
 			self.state == Dead ||
 			self.state == LevelMax {
 			return;
 		}
-		match self.food {
-			HasSome(x) => {
-				if x == 0 {
-					self.food = TurnsWithout(0);
+		for x in &mut self.inventory {
+			if matches!(x, &mut Food(_)) {
+				if x.amount() == 0 {
+					self.die(map, teams);
+					return;
 				} else {
-					self.food = HasSome(x - 1);
-				}
-			},
-			TurnsWithout(x) => {
-				if x >= TURNS_TO_DIE {
-					self.state = Dead;
-					send_to(self.fd, "You died\n");
-				} else {
-					self.food = TurnsWithout(x + 1);
+					*x = Food(x.amount() - 1);
 				}
 			}
 		}
 	}
 
 	pub fn add_food(&mut self, food_amount: u16) {
-		if self.state == Dead ||
+		if self.team.is_empty() ||
+			self.state == Dead ||
 			self.state == LevelMax {
 			return;
 		}
-		match self.food {
-			HasSome(x) => {
-				self.food = HasSome(x + food_amount);
-			},
-			TurnsWithout(_) => {
-				self.food = HasSome(food_amount);
+		for x in &mut self.inventory {
+			if matches!(x, &mut Food(_)) {
+				if (x.amount() as u32 + food_amount as u32) > u16::MAX as u32 {
+					*x = Food(u16::MAX);
+				} else {
+					*x = Food(x.amount() + food_amount);
+				}
 			}
 		}
 	}
@@ -474,12 +504,6 @@ pub enum PlayerActionKind {
 }
 
 #[derive(Debug, Serialize, Clone)]
-pub enum PlayerFood {
-	HasSome(u16),
-	TurnsWithout(u16),
-}
-
-#[derive(Debug, Serialize, Clone)]
 pub enum PlayerDirection {
 	North,
 	South,
@@ -505,7 +529,6 @@ pub struct SendPlayer {
 	inventory: Vec<GameCellContent>,
 	state: PlayerState,
 	level: u8,
-	food: PlayerFood,
 }
 
 impl From<Player> for SendPlayer {
@@ -526,7 +549,6 @@ impl From<Player> for SendPlayer {
 			inventory,
 			state: player.state.clone(),
 			level: player.level,
-			food: player.food.clone(),
 		}
 	}
 }

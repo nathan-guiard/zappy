@@ -14,12 +14,22 @@
 - [x] Prend / Pose commands
 - [x] Incantation command
 - [x] Update doc on SendPlayer.action
-- [ ] Team class / management
+- [x] Team class / management
+- [x] Client option management (-c)
+- [x] Put everything food-related to the inventory
+- [x] Fix: Deconnection / Death does not add a vacant conncetion to the team
 - [ ] Connect command
+- [ ] Eggs (for forks)
 - [ ] Fork command
 - [ ] Expulse command
+- [ ] Rework incantation to match the subject
+  - [ ] make incantation more taht just an action
+  - [ ] Put less ressources on the map, more spreaded?
 
 Later features:
 - [ ] 10 commands on queue max
 - [ ] Better feedback on actions, not "only ok/ko"
 - [ ] Cache changed cells for the gui refresh
+- [ ] When a player dies, it drops all of its inventory on the floor
+- [ ] Make levelmax player playable?
+- [ ] Disconnect automatically players that died?

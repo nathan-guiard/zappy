@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 17:43:13 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/21 11:48:23 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,8 @@ use watcher::Watcher;
 use connections::ServerConnection;
 use communication::{get_all_data, process_data};
 
+use crate::game::player::get_player_from_fd;
+
 static mut EXIT: AtomicBool = AtomicBool::new(false);
 
 #[derive(StructOpt, Debug)]
@@ -51,8 +53,8 @@ struct Args {
 	#[structopt(short = "n", long)]
 	team_name: Vec<String>,
 
-	/// The number of clients authorized at the beginning of the game
-	#[structopt(short, long, default_value = "100")]
+	/// The number of clients authorized at the beginning of the game per team
+	#[structopt(short, long, default_value = "1")]
 	clients: u8,
 
 	/// The time unit divider, every step of the server will go at 1/t second
@@ -76,7 +78,10 @@ fn main() -> Result<ExitCode, Error> {
 	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
 
 	// All the game
-	let mut game = Game::new(args.x, args.y, args.team_name, args.seed);
+	let mut game: Game = Game::new(args.x, args.y,
+									args.team_name,
+									args.clients,
+									args.seed)?;
 	print!("{}", game.map);
 
 	// Timing
@@ -117,6 +122,11 @@ fn main() -> Result<ExitCode, Error> {
 				game.try_remove_gui(
 					con_data.deconnection(event.data as i32, &mut watcher)?
 				);
+				if let Some(player) = get_player_from_fd(&mut game.players, event.data as i32) {
+					if let Some(team_of_player) = game.teams.get_mut(&player.team) {
+						team_of_player.add_position(player.position);
+					}
+				}
 				game.players.retain(|p| p.fd != event.data as i32);
 			}
 		}
@@ -179,9 +189,9 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 				"None of the teams can be named 'gui'"));
 		}
 	}
-	if args.clients < args.team_name.len() as u8 {
+	if args.clients < 1 || args.clients > 6 as u8 {
 		return Err(Error::new(ErrorKind::InvalidInput,
-			"Cannot have less clients that team number."));
+			"Clients per team at the beginning of the game must be between 1 and 6."));
 	}
 	if args.seed == 0 {
 		args.seed = rand::thread_rng().gen();
