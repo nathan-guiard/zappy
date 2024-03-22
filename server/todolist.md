@@ -18,10 +18,13 @@
 - [x] Client option management (-c)
 - [x] Put everything food-related to the inventory
 - [x] Fix: Deconnection / Death does not add a vacant conncetion to the team
-- [ ] Connect command
-- [ ] Eggs (for forks)
-- [ ] Fork command
+- [x] Connect command
+- [x] Eggs (for forks)
+- [x] Fork command
+- [x] \n at the end of every json
+- [ ] command to enable updates on gui
 - [ ] Expulse command
+- [ ] Win / lose check every round
 - [ ] Rework incantation to match the subject
   - [ ] make incantation more taht just an action
   - [ ] Put less ressources on the map, more spreaded?

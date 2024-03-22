@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 05:53:29 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/15 17:31:32 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 11:15:25 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,13 +14,26 @@ use std::{collections::HashMap, io::Error};
 
 use libc::{c_void, send, EWOULDBLOCK};
 
-use crate::game::player::{get_player_from_fd, Player};
+use crate::game::{gui::GraphicClient, player::{get_player_from_fd, Player}};
 use colored::Colorize;
 
-pub fn process_data(data: &HashMap<i32, Vec<String>>, players: &mut [Player]) {
+pub fn process_data(data: &HashMap<i32, Vec<String>>,
+	players: &mut [Player],
+	gui: &mut Option<GraphicClient>) {
+	let mut unwrapped_gui: &mut GraphicClient = &mut GraphicClient {
+		fd: -1,
+		enabled: true,
+	};
+	if gui.is_some() {
+		unwrapped_gui = gui.as_mut().unwrap()
+	}
+	
 	for (fd, lines) in data {
 		if let Some(player) = get_player_from_fd(players, *fd) {
 			player.push_to_queue(lines.clone());
+		}
+		if !unwrapped_gui.enabled && &unwrapped_gui.fd == fd {
+			unwrapped_gui.enable(lines.clone());
 		}
 	}
 }
