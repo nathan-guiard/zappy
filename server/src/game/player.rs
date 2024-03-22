@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 10:37:40 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 10:50:25 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -174,7 +174,7 @@ impl Player {
 	}
 	
 	fn exec_inventaire(&self) {
-		send_to(self.fd, serde_json::to_string(&self.inventory).unwrap().as_str());
+		send_to(self.fd, (serde_json::to_string(&self.inventory).unwrap() + "\n").as_str());
 	}
 
 	fn exec_prend(&mut self, map: &mut GameMap) {

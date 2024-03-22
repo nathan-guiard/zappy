@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 09:49:55 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 10:50:12 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -795,7 +795,7 @@ impl GameMap {
 		}
 		
 		let variable = interest.into_iter().map(|cell| SendCell::from(cell)).collect::<Vec<SendCell>>(); // map doesnt work
-		serde_json::to_string(&variable).unwrap()
+		serde_json::to_string(&variable).unwrap() + "\n"
 	}
 	
 	pub fn send_map(&self, fd: i32) {
@@ -817,7 +817,7 @@ impl GameMap {
 			}
 		}
 
-		let data = serde_json::to_string(&cells_to_send).unwrap();
+		let data = serde_json::to_string(&cells_to_send).unwrap() + "\n";
 
 		println!("Size of json: {}", data.len());
 

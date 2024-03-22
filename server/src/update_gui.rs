@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/15 12:07:50 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 10:45:10 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 10:50:35 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,7 +43,7 @@ pub fn update_gui(game: &Game) {
 
 	to_send.eggs = game.eggs.clone();
 
-	send_to(gui.fd, serde_json::to_string(&to_send).unwrap().as_str());
+	send_to(gui.fd, (serde_json::to_string(&to_send).unwrap() + "\n").as_str());
 }
 
 #[derive(Serialize)]
