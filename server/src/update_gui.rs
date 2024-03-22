@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/15 12:07:50 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 10:50:35 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 10:54:29 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,9 @@ pub fn update_gui(game: &Game) {
 		return;
 	}
 	let gui = game.gui.as_ref().unwrap();
+	if !gui.enabled {
+		return;
+	}
 	if game.last_map.is_none() {
 		game.map.send_map(gui.fd)
 	}

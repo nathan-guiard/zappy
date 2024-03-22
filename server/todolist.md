@@ -21,7 +21,7 @@
 - [x] Connect command
 - [x] Eggs (for forks)
 - [x] Fork command
-- [ ] \n at the end of every json
+- [x] \n at the end of every json
 - [ ] command to enable updates on gui
 - [ ] Expulse command
 - [ ] Win / lose check every round

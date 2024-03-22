@@ -7,7 +7,9 @@
 On connection, the server sends the whole map as it is. <br />
 It sends an array of an array of cells, so `[[SendCell]]`
 
-On every tick, the server sends the updated cells and every player
+Then, the gui has to send `ready\n` to recieve the updates.
+
+If ready, on every tick, the server sends the updated cells and every player
 (because every player HAS TO be update due to food loss). <br />
 It sends an `UpdateMap`.
 

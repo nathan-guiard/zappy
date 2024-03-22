@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 10:35:07 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 11:09:44 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -134,7 +134,7 @@ fn main() -> Result<ExitCode, Error> {
 		}
 		
 		let data = get_all_data(&ready_to_read)?;
-		process_data(&data, &mut game.players);
+		process_data(&data, &mut game.players, &mut game.gui);
 		
 		game.execute();
 		update_gui(&game);
