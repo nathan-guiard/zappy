@@ -22,9 +22,10 @@
 - [x] Eggs (for forks)
 - [x] Fork command
 - [x] \n at the end of every json
-- [ ] command to enable updates on gui
+- [x] command to enable updates on gui
 - [ ] Expulse command
 - [ ] Win / lose check every round
+- [ ] Broadcast command
 - [ ] Rework incantation to match the subject
   - [ ] make incantation more taht just an action
   - [ ] Put less ressources on the map, more spreaded?
