@@ -36,7 +36,8 @@ Data types sent in response of the commands:
 ```json
 {
 	"cells": [SendCell],
-	"players": [SendPlayer], 
+	"players": [SendPlayer],
+	"eggs": [Egg]
 }
 ```
 
@@ -72,7 +73,8 @@ Data types sent in response of the commands:
 	"Phiras": number, // OR
 	"Thystame": number, // OR
 	"Player": number, // OR
-	"Food": number,
+	"Food": number, // OR
+	"Egg":  number,
 }
 ```
 
@@ -122,3 +124,12 @@ state can only be one of:
 - `"Casting": [number, number]`
   - The first number is the current progress
   - The second number is the amount of steps needed
+
+---
+### Egg
+```json
+{
+	"position": GamePosition,
+	"team": string,
+	"timer": number,
+}

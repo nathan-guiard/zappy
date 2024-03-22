@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/21 12:22:26 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 10:37:40 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use crate::communication::send_to;
 
 use super::{
-	level_up::{has_enough_ressources, remove_ressources}, map::{
+	egg::Egg, level_up::{has_enough_ressources, remove_ressources}, map::{
 		move_to_pos,
 		GameCellContent::{self, *},
 		GameMap,
@@ -39,8 +39,8 @@ const BROADCAST_TIME: u16 = 7;
 const INCANTATION_TIME: u16 = 300;
 const FORK_TIME: u16 = 42;
 
-const FOOD_PER_COLLECT: u16 = 50;
-const FOOD_ON_START: u16 = 250;
+const FOOD_PER_COLLECT: u16 = 126;
+const FOOD_ON_START: u16 = 1260;
 
 #[derive(Debug, Clone)]
 pub struct Player {
@@ -100,7 +100,8 @@ impl Player {
 
 	pub fn execute_casting(&mut self,
 		map: &mut GameMap,
-		teams: &mut HashMap<String, Team>) -> bool {
+		teams: &mut HashMap<String, Team>,
+		eggs: &mut Vec<Egg>) -> bool {
 		match self.state {
 			Idle | Dead | LevelMax => {},
 			Casting(into, max) => {
@@ -118,7 +119,7 @@ impl Player {
 						Expulse => send_to(self.fd, "Action not coded yet\n"), // self.exec_expulse(),
 						Broadcast(_) => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
 						Incantation => self.exec_incantation(teams),
-						Fork => send_to(self.fd, "Action not coded yet\n"), // self.exec_fork(),
+						Fork => self.exec_fork(eggs),
 						Connect => self.exec_connect(teams),
 					}
 					self.state = Idle;
@@ -279,6 +280,10 @@ impl Player {
 		}
 	}
 
+	fn exec_fork(&self, eggs: &mut Vec<Egg>) {
+		eggs.push(Egg::new(self.position, self.team.clone()));
+	}
+
 	pub fn add_to_inventory(&mut self, to_add: GameCellContent) {
 		for i in 0..self.inventory.len() {
 			if self.inventory[i] == to_add {
@@ -304,7 +309,10 @@ impl Player {
 	/// Has to be executed after a call to `execute_casting()`
 	/// 
 	/// Returns true if the Player has to be turned into a GraphicClient
-	pub fn execute_queue(&mut self, map: &GameMap, teams: &mut HashMap<String, Team>,
+	pub fn execute_queue(&mut self,
+		map: &GameMap,
+		teams: &mut HashMap<String, Team>,
+		eggs: &mut Vec<Egg>,
 		has_gui: bool) -> bool {
 		if self.command_queue.is_empty() ||
 			self.state != Idle {
@@ -326,9 +334,9 @@ impl Player {
 				}
 				Err(e) => {
 					send_to(self.fd, e.as_str());
-					self.execute_queue(map, teams, has_gui); // sus
+					self.execute_queue(map, teams, eggs, has_gui); // sus
 				}
-			}	
+			}
 		}
 		false
 	}

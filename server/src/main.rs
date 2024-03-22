@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/21 11:48:23 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 10:35:07 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,7 @@ use watcher::Watcher;
 use connections::ServerConnection;
 use communication::{get_all_data, process_data};
 
-use crate::game::player::get_player_from_fd;
+use crate::game::player::{get_player_from_fd, PlayerState};
 
 static mut EXIT: AtomicBool = AtomicBool::new(false);
 
@@ -124,7 +124,9 @@ fn main() -> Result<ExitCode, Error> {
 				);
 				if let Some(player) = get_player_from_fd(&mut game.players, event.data as i32) {
 					if let Some(team_of_player) = game.teams.get_mut(&player.team) {
-						team_of_player.add_position(player.position);
+						if player.state != PlayerState::Dead {
+							team_of_player.add_position(player.position);
+						}
 					}
 				}
 				game.players.retain(|p| p.fd != event.data as i32);

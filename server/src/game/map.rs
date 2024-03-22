@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/21 12:17:19 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 09:49:55 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,6 +39,7 @@ const SIBUR_COLOR: &str = "\x1b[1;100;31m";
 const DERAUMERE_COLOR: &str = "\x1b[1;100;35m";
 const LINEMATE_COLOR: &str = "\x1b[1;100;90m";
 const FOOD_COLOR: &str = "\x1b[0;42;97m";
+const EGG_COLOR: &str = "\x1b[0;43;97m";
 const PLAYER_COLOR: &str = "\x1b[0;107;30m";
 const RESET: &str = "\x1b[0m";
 
@@ -52,6 +53,7 @@ pub enum GameCellContent {
 	Thystame(u16),
 	Player(u16),
 	Food(u16),
+	Egg(u16)
 }
 
 impl PartialEq for GameCellContent {
@@ -65,6 +67,7 @@ impl PartialEq for GameCellContent {
 			(Thystame(_), Thystame(_)) => true,
 			(Player(_), Player(_)) => true,
 			(Food(_), Food(_)) => true,
+			(Egg(_), Egg(_)) => true,
 			(_, _) => false
 		}
 	}
@@ -81,7 +84,8 @@ impl GameCellContent {
 			| Phiras(x)
 			| Thystame(x)
 			| Player(x)
-			| Food(x) => *x,
+			| Food(x)
+			| Egg(x) => *x,
 		}
 	}
 
@@ -94,7 +98,8 @@ impl GameCellContent {
 			| Phiras(x)
 			| Thystame(x)
 			| Player(x)
-			| Food(x) => {
+			| Food(x)
+			| Egg(x) => {
 				if *x <= amount {
 					*x = 0;
 				} else {
@@ -113,7 +118,8 @@ impl GameCellContent {
 			| Phiras(x)
 			| Thystame(x)
 			| Player(x)
-			| Food(x) => {
+			| Food(x)
+			| Egg(x) => {
 				if *x as u32 + amount as u32 >= u16::MAX.into() {
 					*x = u16::MAX;
 				} else {
@@ -148,6 +154,7 @@ impl Display for GameCell {
 			Phiras(_) => PHIRAS_COLOR,
 			Thystame(_) => THYSTAME_COLOR,
 			Food(_) => FOOD_COLOR,
+			Egg(_) => EGG_COLOR,
 		};
 		let amout_str: &str = match mvp.amount() {
 			0 => "\x1b[42;90m.",
@@ -237,6 +244,7 @@ impl GameCell {
 		let mut thystame_amout: u16 = 0;
 		let mut player_amout: u16 = 0;
 		let mut food_amout: u16 = 0;
+		let mut egg_amout: u16 = 0;
 	
 		for i in 0..self.content.len() {
 			match self.content[i] {
@@ -248,11 +256,15 @@ impl GameCell {
 				Thystame(x) => thystame_amout = x,
 				Player(x) => player_amout = x,
 				Food(x) => food_amout = x,
+				Egg(x) => egg_amout = x,
 			}
 		};
 
 		if player_amout > 0 {
 			return Player(player_amout);
+		}
+		if egg_amout > 0 {
+			return Egg(egg_amout);
 		}
 		if thystame_amout > 0 {
 			return Thystame(thystame_amout);
