@@ -11,9 +11,9 @@ levels = {1: {"linemate": 1},
         7: {"linemate": 2, "deraumere": 2, "sibur": 2, "mendiane": 2, "phiras": 2, "thystame": 1},
 }
 
+DEAD = "You died\n"
+
 class Player:
-
-
 
 	def __init__(self, client: socket, start_player) -> None:
 		self.client = client
@@ -22,6 +22,7 @@ class Player:
 		print(coord)
 		self.map=[]
 		print(start_player)
+		self.routine()
 		print(self.envoie_message("voir"))
 
 	def envoie_message(self, message):
@@ -32,4 +33,17 @@ class Player:
 			print('Erreur envoi.')
 		# print('Reception...')
 		return self.client.recv(1024).decode()
-		
+	
+	def routine(self):
+		while True:
+			retour_command = self.envoie_message("voir")
+			print(retour_command)
+			if retour_command == DEAD:
+				print("Je suis dead")
+				exit() 
+ 
+ 
+ 
+ 
+ 
+ 
