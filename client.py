@@ -97,9 +97,7 @@ def print_map(map):
 def send_command(client, command):
     client.send(command.encode())
     response = client.recv(1024).decode()
-    print(response)
-
-
+    return response
 
 def calculate_moves(x, y, x_dest, y_dest, direction):
     moves = []
@@ -177,10 +175,13 @@ def calculate_moves(x, y, x_dest, y_dest, direction):
 
 def prendre(consommables, client):
     while consommables :
+        print(consommables)
         items = [i for i in consommables]
         focus_items = random.choices(items, k=1)[0]
         send_command(client, f"prend {focus_items}\n")
         consommables[focus_items] -= 126 if focus_items == "Food" else 1
+        if consommables[focus_items] <= 0:
+            del consommables[focus_items]
         
 def calculate_best_move(map, x, y, direction, client):
     # Liste des positions adjacentes
@@ -191,22 +192,19 @@ def calculate_best_move(map, x, y, direction, client):
     for case in adjacent_positions:
         consommable = {key: item for key, item in case.items() if key not in ['x', 'y', 'Player']}
         score = sum(consommable.values())
-        print(score)
-        if score > max_score :
+        if score > max_score and score > 0 :
             best_moves = [case["x"], case["y"]]
             max_score = score
     # Calculer les mouvements pour atteindre la meilleure position
     if best_moves:
         if best_moves == [x, y]:
-            print("Same place")
+            print(f"Same place {best_moves} {consommable} {client}")
             prendre(consommable, client)
         return calculate_moves(x, y, best_moves[0], best_moves[1], direction)
     else:
         # Si aucune position adjacente n'a de ressources, rester sur place
         direction = random.choices(['avance', 'droite', 'gauche'], weights=[0.5, 0.25, 0.25], k=1)[0]
         return [f"{direction}\n"], direction 
-
-
 
 def main():
     args = parser()
@@ -218,6 +216,8 @@ def main():
     player["direction"] = 'N'  # Direction initiale
     
     map = [[{} for x in range(map_size[0])] for y in range(map_size[1])]
+
+
     
     # Demander la vision au serveur
     command = "voir\n"
@@ -228,94 +228,34 @@ def main():
     # Analyser la vision
     vision_data = json.loads(response)
     
-    # Mettre à jour la position du joueur
-    player_position = get_player_position(vision_data)
-    if player_position:
-        print("Votre position:", player_position)
-        player["position"] = player_position
-    
     # Mettre à jour la carte avec la vision
     update_map_with_vision(map, vision_data)
     
-    
-    mouvements, player["direction"] = calculate_best_move(map, player_position[0], player_position[1], player["direction"], client)
-    print(mouvements)
-    for mouv in mouvements :
-        send_command(client, mouv)
-    # print("Mouvements:", moves)
-    # print("Nouvelle direction:", new_direction)
+    while True :
+        # Demander la vision au serveur
+        command = "inventaire\n"
+        client.send(command.encode())
+        response = client.recv(1024).decode()
+        print(f"inventaire : {response}")
+        command = "voir\n"
+        client.send(command.encode())
+        response = client.recv(1024).decode()
+        print(response)
+        vision_data = json.loads(response)
+        player_position = get_player_position(vision_data)
+        if player_position:
+            print("Votre position:", player_position)
+            player["position"] = player_position
+        update_map_with_vision(map, vision_data)
+        
+        mouvements, player["direction"] = calculate_best_move(map, player_position[0], player_position[1], player["direction"], client)
+        print(mouvements)
+        for mouv in mouvements :
+            send_command(client, mouv)
+        # print("Mouvements:", moves)
+        # print("Nouvelle direction:", new_direction)
+        
     
     # Afficher la carte
     # print_map(map)
 
-
-
-"""
-# command = "avance\n"
-# client.send(command.encode())
-# response = client.recv(1024).decode()
-# print(f"{command} : {response}")
-# command = "droite\n"
-# client.send(command.encode())
-# response = client.recv(1024).decode()
-# print(f"{command} : {response}")
-# command = "avance\n"
-# client.send(command.encode())
-# response = client.recv(1024).decode()
-# print(f"{command} : {response}")
-
-
-# command = "voir\n"
-# client.send(command.encode())
-# response = client.recv(1024).decode()
-# print(f"{command} : {response}")
-
-# command = "gauche\n"
-# client.send(command.encode())
-# response = client.recv(1024).decode()
-# print(f"{command} : {response}")
-
-# command = "avance\n"
-# client.send(command.encode())
-# response = client.recv(1024).decode()
-# print(f"{command} : {response}")
-
-# command = "voir\n"
-# client.send(command.encode())
-# response = client.recv(1024).decode()
-# print(f"{command} : {response}")
-
-# player["vision"] = {}
-# while True:
-#     # Vérifier s'il n'y a pas d'informations dans la vision du joueur
-#     if not player["vision"]:
-#         client.send("voir\n".encode())
-#         vision_response = client.recv(1024).decode()
-#         player["vision"] = json.loads(vision_response)
-
-#     # Avancer vers une case contenant des ressources
-#     next_position = None
-#     for case in player["vision"]:
-#         if case["c"]:
-#             next_position = (case["p"]["x"], case["p"]["y"])
-#             break
-
-#     if next_position:
-#         # Envoyer une commande pour avancer vers la prochaine position
-#         command = "avance\n"
-#         client.send(command.encode())
-#         response = client.recv(1024).decode()
-#         print(response)  # Afficher la réponse du serveur
-
-#         # Mettre à jour la position du joueur
-#         player["x"], player["y"] = next_position
-#         # Afficher la nouvelle position du joueur
-#         print(f"Le joueur est maintenant à la position ({player['x']}, {player['y']})")
-
-#         # Réinitialiser la vision du joueur pour demander de nouveaux informations
-#         player["vision"] = {}
-#     else:
-#         print("Aucune case contenant des ressources n'a été trouvée.")
-#         break  # Sortir de la boucle principale si aucune case n'est trouvée
-
-#     # Ajouter plus de logique ici selon les besoins"""
