@@ -23,11 +23,12 @@
 - [x] Fork command
 - [x] \n at the end of every json
 - [x] command to enable updates on gui
+- [ ] fix linemate generation
 - [ ] Expulse command
 - [ ] Win / lose check every round
 - [ ] Broadcast command
 - [ ] Rework incantation to match the subject
-  - [ ] make incantation more taht just an action
+  - [ ] make incantation more that just an action
   - [ ] Put less ressources on the map, more spreaded?
 
 Later features:

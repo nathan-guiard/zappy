@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 10:50:25 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/26 13:56:59 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -101,9 +101,9 @@ impl Player {
 	pub fn execute_casting(&mut self,
 		map: &mut GameMap,
 		teams: &mut HashMap<String, Team>,
-		eggs: &mut Vec<Egg>) -> bool {
+		eggs: &mut Vec<Egg>) -> Option<PlayerActionKind> {
 		match self.state {
-			Idle | Dead | LevelMax => {},
+			Idle | Dead | LevelMax => return None,
 			Casting(into, max) => {
 				println!("Is casting {:?}, {}/{}", self.action.kind, into, max);
 				if into >= max {
@@ -123,11 +123,13 @@ impl Player {
 						Connect => self.exec_connect(teams),
 					}
 					self.state = Idle;
+					let last_action = self.action.kind.clone();
 					self.action.kind = NoAction;
+					return Some(last_action);
 				}
+				return None;
 			}
 		}
-		true
 	}
 
 	fn exec_avance(&mut self, map: &mut GameMap) {
