@@ -6,19 +6,22 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/15 12:07:50 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/18 17:39:32 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 10:54:29 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 use serde::Serialize;
 
-use crate::{communication::send_to, game::{map::SendCell, player::SendPlayer, Game}};
+use crate::{communication::send_to, game::{egg::Egg, map::SendCell, player::SendPlayer, Game}};
 
 pub fn update_gui(game: &Game) {
 	if game.gui.is_none() {
 		return;
 	}
 	let gui = game.gui.as_ref().unwrap();
+	if !gui.enabled {
+		return;
+	}
 	if game.last_map.is_none() {
 		game.map.send_map(gui.fd)
 	}
@@ -41,13 +44,16 @@ pub fn update_gui(game: &Game) {
 		}
 	}
 
-	send_to(gui.fd, serde_json::to_string(&to_send).unwrap().as_str());
+	to_send.eggs = game.eggs.clone();
+
+	send_to(gui.fd, (serde_json::to_string(&to_send).unwrap() + "\n").as_str());
 }
 
 #[derive(Serialize)]
 struct UpdateMap {
 	cells: Vec<SendCell>,
-	players: Vec<SendPlayer>, // To implement
+	players: Vec<SendPlayer>,
+	eggs: Vec<Egg>,
 }
 
 impl UpdateMap {
@@ -55,6 +61,7 @@ impl UpdateMap {
 		Self {
 			cells: vec![],
 			players: vec![],
+			eggs: vec![],
 		}
 	}
 }

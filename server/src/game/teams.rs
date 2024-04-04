@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/20 11:16:22 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/20 15:04:17 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/21 12:16:20 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,7 +30,7 @@ impl Team {
 	}
 
 	pub fn available_connections(&self) -> usize {
-		return self.next_posititons.len()
+		self.next_posititons.len()
 	}
 
 	pub fn get_next_position(&mut self) -> Option<GamePosition> {

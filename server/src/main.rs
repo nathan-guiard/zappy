@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/20 16:34:45 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 11:09:44 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,8 @@ use update_gui::update_gui;
 use watcher::Watcher;
 use connections::ServerConnection;
 use communication::{get_all_data, process_data};
+
+use crate::game::player::{get_player_from_fd, PlayerState};
 
 static mut EXIT: AtomicBool = AtomicBool::new(false);
 
@@ -120,12 +122,19 @@ fn main() -> Result<ExitCode, Error> {
 				game.try_remove_gui(
 					con_data.deconnection(event.data as i32, &mut watcher)?
 				);
+				if let Some(player) = get_player_from_fd(&mut game.players, event.data as i32) {
+					if let Some(team_of_player) = game.teams.get_mut(&player.team) {
+						if player.state != PlayerState::Dead {
+							team_of_player.add_position(player.position);
+						}
+					}
+				}
 				game.players.retain(|p| p.fd != event.data as i32);
 			}
 		}
 		
 		let data = get_all_data(&ready_to_read)?;
-		process_data(&data, &mut game.players);
+		process_data(&data, &mut game.players, &mut game.gui);
 		
 		game.execute();
 		update_gui(&game);

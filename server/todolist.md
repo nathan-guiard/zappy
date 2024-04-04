@@ -16,12 +16,15 @@
 - [x] Update doc on SendPlayer.action
 - [x] Team class / management
 - [x] Client option management (-c)
-- [ ] Put everything food-related to the inventory
-- [ ] Fix: Deconnection / Death does not add a vacant conncetion to the team
-- [ ] Connect command
-- [ ] Eggs (for forks)
-- [ ] Fork command
+- [x] Put everything food-related to the inventory
+- [x] Fix: Deconnection / Death does not add a vacant conncetion to the team
+- [x] Connect command
+- [x] Eggs (for forks)
+- [x] Fork command
+- [x] \n at the end of every json
+- [ ] command to enable updates on gui
 - [ ] Expulse command
+- [ ] Win / lose check every round
 - [ ] Rework incantation to match the subject
   - [ ] make incantation more taht just an action
   - [ ] Put less ressources on the map, more spreaded?
@@ -31,4 +34,5 @@ Later features:
 - [ ] Better feedback on actions, not "only ok/ko"
 - [ ] Cache changed cells for the gui refresh
 - [ ] When a player dies, it drops all of its inventory on the floor
-- [ ] Make levelmax plare playable?
+- [ ] Make levelmax player playable?
+- [ ] Disconnect automatically players that died?

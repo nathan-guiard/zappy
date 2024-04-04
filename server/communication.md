@@ -7,7 +7,9 @@
 On connection, the server sends the whole map as it is. <br />
 It sends an array of an array of cells, so `[[SendCell]]`
 
-On every tick, the server sends the updated cells and every player
+Then, the gui has to send `ready\n` to recieve the updates.
+
+If ready, on every tick, the server sends the updated cells and every player
 (because every player HAS TO be update due to food loss). <br />
 It sends an `UpdateMap`.
 
@@ -36,7 +38,8 @@ Data types sent in response of the commands:
 ```json
 {
 	"cells": [SendCell],
-	"players": [SendPlayer], 
+	"players": [SendPlayer],
+	"eggs": [Egg]
 }
 ```
 
@@ -72,7 +75,8 @@ Data types sent in response of the commands:
 	"Phiras": number, // OR
 	"Thystame": number, // OR
 	"Player": number, // OR
-	"Food": number,
+	"Food": number, // OR
+	"Egg":  number,
 }
 ```
 
@@ -88,7 +92,6 @@ Data types sent in response of the commands:
 	"inventory": [GameCellContent],
 	"state": string or object, // see below
 	"level": number,
-	"food": PlayerFood,
 }
 ```
 
@@ -125,10 +128,10 @@ state can only be one of:
   - The second number is the amount of steps needed
 
 ---
-### PlayerFood
+### Egg
 ```json
 {
-	"HasSome": number, // OR
-	"TurnsWithout": number
+	"position": GamePosition,
+	"team": string,
+	"timer": number,
 }
-```

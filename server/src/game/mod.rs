@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/20 17:00:06 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/22 10:31:58 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,12 +15,19 @@ pub mod player;
 pub mod gui;
 pub mod level_up;
 pub mod teams;
+pub mod egg;
 
 use std::{collections::HashMap, io::{Error, ErrorKind::InvalidInput}};
 
 use crate::communication::send_to;
 
-use self::{map::GameMap, player::Player, gui::GraphicClient, teams::Team};
+use self::{
+	egg::Egg,
+	gui::GraphicClient,
+	map::GameMap,
+	player::Player,
+	teams::Team
+};
 
 
 #[derive(Debug)]
@@ -30,6 +37,7 @@ pub struct Game {
 	pub last_map: Option<GameMap>, // needed for updates to gui
 	pub gui: Option<GraphicClient>,
 	pub teams: HashMap<String, Team>,
+	pub eggs: Vec<Egg>
 }
 
 impl Game {
@@ -56,6 +64,7 @@ impl Game {
 			last_map: None,
 			gui: None,
 			teams: teams_map,
+			eggs: vec!(),
 		})
 	}
 	
@@ -71,8 +80,8 @@ impl Game {
 		let mut to_remove = None;
 		
 		for player in self.players.iter_mut() {
-			player.execute_casting(&mut self.map, &mut self.teams);
-			if player.execute_queue(&self.map, &mut self.teams, self.gui.is_some()) {
+			player.execute_casting(&mut self.map, &mut self.teams, &mut self.eggs);
+			if player.execute_queue(&self.map, &mut self.teams, &mut self.eggs, self.gui.is_some()) {
 				to_remove = Some(player.fd);
 			}
 		}
@@ -84,9 +93,19 @@ impl Game {
 		}
 		
 		for player in &mut self.players {
-			player.loose_food();
+			player.loose_food(&mut self.map, &mut self.teams);
 			player.increment_casting();
 		}
+		self.eggs.retain_mut(|egg| {
+			if let Some((position, team_name)) = egg.try_hatch() {
+				if let Some(team) = self.teams.get_mut(&team_name) {
+					team.add_position(position);
+				}
+				false
+			} else {
+				true
+			}
+		})
 	}
 }
 
