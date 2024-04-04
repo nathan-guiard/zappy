@@ -6,11 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/26 13:56:59 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/04 14:41:54 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Display};
 
 use crate::communication::send_to;
 
@@ -531,6 +531,17 @@ pub enum PlayerDirection {
 	South,
 	East,
 	West,
+}
+
+impl std::fmt::Display for PlayerDirection {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			North => write!(f, "North"),
+			South => write!(f, "South"),
+			East => write!(f, "East"),
+			West => write!(f, "West"),
+		}
+	}
 }
 
 #[derive(Debug, PartialEq, Serialize, Clone)]

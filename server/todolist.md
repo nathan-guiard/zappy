@@ -23,8 +23,11 @@
 - [x] Fork command
 - [x] \n at the end of every json
 - [x] command to enable updates on gui
-- [ ] fix linemate generation
+- [x] fix linemate generation
 - [ ] Expulse command
+  - [ ] tell the players they have been kicked
+  - [ ] move the players
+  - [ ] stop their casting
 - [ ] Win / lose check every round
 - [ ] Broadcast command
 - [ ] Rework incantation to match the subject

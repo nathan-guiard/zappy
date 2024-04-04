@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/26 14:25:40 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/04 15:05:32 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -121,8 +121,25 @@ impl Game {
 	}
 
 	fn handle_kick(players: &mut Vec<Player>, map: &mut GameMap, kicking_fd: i32) {
-		let other = players.clone().retain(|p| p.fd != kicking_fd);
-		let kicking = players.
+		let mut other = players.clone();
+		let mut kicking = players.clone();
+		other.retain(|p| p.fd != kicking_fd);
+		kicking.retain(|p| p.fd == kicking_fd);
+	
+		for player in kicking {
+			let mut cell = &map.cells[player.position.x as usize][player.position.y as usize];
+		
+			if let Some(player_content) = cell.get_content(map::GameCellContent::Player(0)) {
+				if player_content.amount() > 1 {
+					for other_player in &other {
+						if other_player.position == player.position {
+							send_to(other_player.fd,
+								format!("deplacement {}\n", player.direction).as_str())
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
