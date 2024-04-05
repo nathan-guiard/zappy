@@ -4,18 +4,24 @@ import argparse
 import json
 import random
 from color import color
+import copy
+
 
 # Variable Globale
-Debug = False
+Debug : bool
 Client : socket
 Direction = ['N', 'E', 'S', 'W']
 Player: dict
 
-ret = [
-    {"p":{"x":0,"y":0},"c":[]},
-    {"p":{"x":64,"y":34},"c":[{"Food":5}]},
-    {"p":{"x":0,"y":34},"c":[{"Food":3}]},
-    {"p":{"x":1,"y":34},"c":[{"Food":1}]}]
+levels = {
+        1: {"Linemate": 1},
+        2: {"Linemate": 1, "Deraumere": 1, "Sibur": 1},
+        3: {"Linemate": 2, "Sibur": 1, "Phiras": 2},
+        4: {"Linemate": 1, "Deraumere": 1, "Sibur": 2, "Phiras": 1},
+        5: {"Linemate": 1, "Deraumere": 2, "Sibur": 1, "Mendiane": 3},
+        6: {"Linemate": 1, "Deraumere": 2, "Sibur": 3, "Phiras": 1},
+        7: {"Linemate": 2, "Deraumere": 2, "Sibur": 2, "Mendiane": 2, "Phiras": 2, "Thystame": 1},
+}
 
 def parser():
     parser = argparse.ArgumentParser(description='Client program', add_help=False)
@@ -59,6 +65,7 @@ def server_connexion(host, port, team):
     print(client.recv(1024).decode())
     client.send((team + '\n').encode())
     connexion_and_map_size =  client.recv(1024)
+    print(connexion_and_map_size)
     if connexion_and_map_size.decode() == f"The team {team} does not exist\n":
         sys.stderr.write(connexion_and_map_size.decode())
         sys.exit(1)
@@ -75,6 +82,7 @@ def init(hostname, port, team):
     Player["connexion"] = connexion_and_map_size[0]
     Player["map_size"] = tuple(map(int, connexion_and_map_size[1].split()))
     Player["map"] = [[{} for x in range(Player["map_size"][0])] for y in range(Player["map_size"][1])]
+    Player["level"] = 1
 
 def get_player_position(vision_data):
     if vision_data and isinstance(vision_data[0], dict) and "p" in vision_data[0]:
@@ -104,107 +112,148 @@ def print_map(map):
     for i, row in enumerate(map):
         print(i, row)
 
-def send_command(*args):
-    command = " ".join(args)
+def send_command(command):
     Client.send((command + '\n').encode())
     try : 
         response = Client.recv(1024).decode()
     except socket.timeout:
         sys.stderr.write("Tu es mort\n")
+        Client.close()
         sys.exit(0)
     if response == "You died\n":
         sys.stderr.write("Tu es mort\n")
+        Client.close()
         sys.exit(0)
     if Debug:
         print(f"{color(command, "red")} : {color(" ".join(response.split()), "lightgreen")}")
     return response
 
 def calculate_moves(x_dest, y_dest):
+    def wrapped_distance(a, b, size):
+        choix = ((a - b) % size, (b - a) % size)
+        return "moins" if choix.index(min(choix)) == 0 else "plus", min(choix)
     moves = []
-    x, y, direction = Player["position"][0], Player["position"][0], Player["direction"]
+    x, y, direction = Player["position"][0], Player["position"][1], Player["direction"]
     print(color("calculate_moves:", "purple"), x, y, x_dest, y_dest, direction)
-    # Bouger horizontalement
-    while x != x_dest:
-        
-        # print("calculate_moves", x, y, x_dest, y_dest, direction)
-        # Déplacer vers l'est
-        if x_dest > x: # Si tu dois aller a droite
-            if direction == 'N':
-                moves.append("droite")
-                direction = 'E'
-            elif direction == 'E':
-                moves.append("avance")
-                x += 1
+    
+    direction_x, distance_x = wrapped_distance(x, x_dest, Player["map_size"][0])
+    # print(f"vertical {direction_x} de {distance_x}")
+    direction_y, distance_y = wrapped_distance(y, y_dest, Player["map_size"][1])
+    # print(f"horizontal {direction_y} de {distance_y}")
+    
+    # Bouger verticalement
+    while distance_y:
+        if direction_y == "moins":  #monter
+            if direction == 'E':
+                moves.append("gauche")
+                direction = 'N'
             elif direction == 'S':
                 moves.append("gauche")
-                direction = 'E'
+                moves.append("gauche")
+                direction = 'N'
             elif direction == 'W':
-                moves.append("gauche")
-                moves.append("gauche")
-                direction = 'E'
-        # Déplacer vers l'ouest
-        elif x_dest < x: # Si tu dois aller a gauche
-            if direction == 'N':
-                moves.append("gauche")
-                direction = 'W'
-            elif direction == 'E':
-                moves.append("gauche")
-                moves.append("gauche")
-                direction = 'W'
-            elif direction == 'S':
                 moves.append("droite")
-                direction = 'W'
-            elif direction == 'W':
+                direction = 'N'
+            if direction == 'N':
                 moves.append("avance")
-                x -= 1
+                distance_y -= 1
+        elif direction_y == "plus": #descendre
+            if direction == 'W':
+                moves.append("gauche")
+                direction = 'S'
+            elif direction == 'N':
+                moves.append("gauche")
+                moves.append("gauche")
+                direction = 'S'
+            elif direction == 'E':
+                moves.append("droite")
+                direction = 'S'
+            if direction == 'S':
+                moves.append("avance")
+                distance_y -= 1
 
     # Bouger verticalement
-    while y != y_dest:
-        # print("calculate_moves", x, y, x_dest, y_dest, direction)
-
-        # Déplacer vers le nord
-        if y_dest < y: 
+    while distance_x:
+        if direction_x == "moins":  #gauche
             if direction == 'N':
-                moves.append("avance")
-                y -= 1
+                moves.append("gauche")
+                direction = 'W'
             elif direction == 'E':
                 moves.append("gauche")
-                direction = 'N'
+                moves.append("gauche")
+                direction = 'W'
             elif direction == 'S':
                 moves.append("droite")
-                moves.append("droite")
-                direction = 'N'
-            elif direction == 'W':
-                moves.append("droite")
-                direction = 'N'
-        # Déplacer vers le sud
-        elif y_dest > y:
-            if direction == 'N':
-                moves.append("droite")
-                moves.append("droite")
-                direction = 'S'
-            elif direction == 'E':
-                moves.append("droite")
-                direction = 'S'
-            elif direction == 'S':
+                direction = 'W'
+            if direction == 'W':
                 moves.append("avance")
-                y += 1
+                distance_x -= 1
+        elif direction_x == "plus": #droite
+            if direction == 'S':
+                moves.append("gauche")
+                direction = 'E'
             elif direction == 'W':
                 moves.append("gauche")
-                direction = 'S'
+                moves.append("gauche")
+                direction = 'E'
+            elif direction == 'N':
+                moves.append("droite")
+                direction = 'E'
+            if direction == 'E':
+                moves.append("avance")
+                distance_x -= 1
     Player["direction"] = direction
     return moves
 
-def prendre(consommables):
+def prendre(consommables, x, y):
     while consommables:
         items = [i for i in consommables]
         focus_items = random.choices(items, k=1)[0]
-        send_command(f"prend {focus_items}")
-        consommables[focus_items] -= 126 if focus_items == "Food" else 1
-        if consommables[focus_items] <= 0:
+        response = send_command(f"prend {focus_items}")
+        if response[:2] == "ko":
+            if Debug:
+                print(color(f"Prendre {focus_items} fail -> update la vision", "red_bg"))
+            update_map_with_vision()
+            return
+        consommables[focus_items] -= 1
+        Player["map"][y][x][focus_items] -= 1
+        if not consommables[focus_items]:
             del consommables[focus_items]
+            del Player["map"][y][x][focus_items]
         if Debug:
             print(color("Reste sur case:", "purple"), consommables)
+        print(Player["map"][y][x])
+
+def map_print(passage, x, y, taillex=65, tailley=35):
+    print()
+    m = [[" " for _ in range(taillex)] for i in range(tailley)]
+    for coord in passage:
+        m[coord['y']][coord['x']] = color(f"{len(coord) - 2}", "blue")
+    m[y][x] = color(f'{m[y][x]}', "red_bg")
+    print(" " + "-" * (taillex))
+    for i in m :
+        print("|", *i, "|", sep="")
+    print(" " + "-" * (taillex))
+    
+def score_by_level(consommable: dict): 
+    # Définir les coefficients des ressources en fonction du niveau du joueur
+    # Coef
+    # "Linemate": 2, "Deraumere": 3, "Sibur": 4, "Mendiane": 5, "Phiras": 6, "Thystame": 10
+
+    resource_coefficients = {
+        1: {'Linemate': 2, 'Deraumere': 0, 'Sibur': 0, 'Mendiane': 0, 'Phiras': 0, 'Thystame': 0, 'Food': 1},
+        2: {'Linemate': 2, 'Deraumere': 3, 'Sibur': 4, 'Mendiane': 0, 'Phiras': 0, 'Thystame': 0, 'Food': 1},
+        3: {'Linemate': 4, 'Sibur': 4, 'Phiras': 12, 'Deraumere': 0, 'Mendiane': 0, 'Thystame': 0, 'Food': 1},
+        4: {'Linemate': 2, 'Deraumere': 3, 'Sibur': 8, 'Phiras': 6, 'Mendiane': 0, 'Thystame': 0, 'Food': 1},
+        5: {'Linemate': 2, 'Deraumere': 6, 'Sibur': 4, 'Mendiane': 15, 'Phiras': 0, 'Thystame': 0, 'Food': 1},
+        6: {'Linemate': 2, 'Deraumere': 6, 'Sibur': 12, 'Phiras': 6, 'Mendiane': 0, 'Thystame': 0, 'Food': 1},
+        7: {'Linemate': 4, 'Deraumere': 6, 'Sibur': 8, 'Mendiane': 10, 'Phiras': 12, 'Thystame': 10, 'Food': 1}
+    }
+    
+    # Calculer le score en tenant compte des coefficients
+    score = sum(quantity * resource_coefficients[Player["level"]].get(resource, 1)
+                for resource, quantity in consommable.items())
+    return score
 
 def calculate_best_move():
     # Liste des positions adjacentes
@@ -212,22 +261,39 @@ def calculate_best_move():
     max_score = float('-inf')
     best_moves = []
     
+    map_print(adjacent_positions, Player["position"][0], Player["position"][1])
+    
     for case in adjacent_positions:
-        consommable = {key: item for key, item in case.items() if key not in ['x', 'y', 'Player']}
-        score = sum(consommable.values())
-        if score > max_score and score > 0 and consommable:
+        if [case["x"], case["y"]] == [Player["position"][0], Player["position"][1]]:
+            actual_ressource = {key: item for key, item in case.items() if key not in ['x', 'y', 'Player']}
+        consommable_tested = {key: item for key, item in case.items() if key not in ['x', 'y', 'Player']}
+        
+        
+        score = score_by_level(consommable_tested)
+        
+        if score > max_score and score > 0 and consommable_tested:
             best_moves = [case["x"], case["y"]]
             max_score = score
+            consommable = copy.deepcopy(consommable_tested)
     # Calculer les mouvements pour atteindre la meilleure position
     if best_moves:
-        if best_moves == [Player["position"][0], Player["position"][1]]:
+        if Debug:
+            print(f"{color("Actual:", "purple")}", actual_ressource)
+            print(f"{color("Search:", "purple")}", consommable)
+        if actual_ressource:
+            if Debug:
+                print(f"{color("Prise des ressources case actuelle", "red_bg")}", actual_ressource)
+            prendre(actual_ressource, Player["position"][0], Player["position"][1])
+        
+        elif best_moves == [Player["position"][0], Player["position"][1]]:
             if Debug:
                 print(f"{color("Same place", "red_bg")}", consommable)
-            prendre(consommable)
+            prendre(consommable, *best_moves)
         return calculate_moves(best_moves[0], best_moves[1])
     else:
+        # Avancer de x en fonction de la vision du joueur pour eviter de voir pour rien
         if Debug:
-            print(f"{color("Avance random", "red_bg")}", Player["direction"], "\n",adjacent_positions)
+            print(f"{color("Avance random", "red_bg")}", Player["direction"])
         # Si aucune position adjacente n'a de ressources, rester sur place
         direction = random.choices(['avance', 'droite', 'gauche'], weights=[0.5, 0.25, 0.25], k=1)[0]
         if direction == "droite":
@@ -238,6 +304,35 @@ def calculate_best_move():
             print(f"random : {direction}\nnouvelle direction : {Player["direction"]}")
         update_map_with_vision()
         return [direction]
+
+def update_inventory():
+    response = send_command("inventaire")
+    inventory_data = json.loads(response)
+    print(f"{color("Inventaire", "red")} : {color(" ".join(response.split()), "lightgreen")}")
+    inventory = {}
+    for item in inventory_data:
+        for key, value in item.items():
+            inventory[key] = value
+    Player["inventory"] = inventory
+
+def check_level_requirements():
+    level, inventory = Player["level"], Player["inventory"]
+    
+    requirements = levels[level]
+    for item, quantity in requirements.items():
+        if item not in inventory or inventory[item] < quantity:
+            return False
+    return True
+
+def level_up():
+    level, inventory = Player["level"], Player["inventory"]
+    # if inventory["Food"] < 
+    requirements = levels[level]
+    for item, quantity in requirements.items():
+        for _ in range(quantity):
+            send_command(f"pose {item}")
+    print(send_command("incantation"))
+    
 
 def main():
     args = parser()
@@ -252,15 +347,26 @@ def main():
         for i in Player:
             print("\t", i)
     
+    # send_command("inventaire")
+    # send_command("avance")
+    # send_command("incantation")
+    # send_command("inventaire")
+    
     while True :
         # Demander la vision au serveur
-        response = send_command("inventaire")
+        update_inventory()
+        # current_level = 3
+        # if check_level_requirements():
+        #     print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
+        #     level_up()
+
         print(color("Votre position:", "blue"), Player["position"])
         
         mouvements = calculate_best_move()
-        print(mouvements)
+        # print(mouvements)
         for mouv in mouvements :
             send_command(mouv)
+        update_map_with_vision()
         # print("Mouvements:", moves)
         # print("Nouvelle direction:", new_direction)
         
