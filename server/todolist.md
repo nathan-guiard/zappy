@@ -22,11 +22,17 @@
 - [x] Eggs (for forks)
 - [x] Fork command
 - [x] \n at the end of every json
-- [ ] command to enable updates on gui
+- [x] command to enable updates on gui
+- [x] fix linemate generation
 - [ ] Expulse command
+  - [x] tell the players they have been kicked
+  - [ ] move the players
+  - [ ] stop their casting
+- [ ] Player dies while incanting (wtf?)
 - [ ] Win / lose check every round
+- [ ] Broadcast command
 - [ ] Rework incantation to match the subject
-  - [ ] make incantation more taht just an action
+  - [ ] make incantation more that just an action
   - [ ] Put less ressources on the map, more spreaded?
 
 Later features:

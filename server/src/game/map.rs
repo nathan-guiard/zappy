@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 10:50:12 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/04 14:31:21 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -213,6 +213,16 @@ impl GameCell {
 		false
 	}
 
+	pub fn get_content(&self, to_get: GameCellContent)
+		-> Option<GameCellContent> {
+		for i in 0..self.content.len() {
+			if self.content[i] == to_get {
+				return Some(self.content[i]);
+			}
+		}
+		None
+	}
+	
 	pub fn empty_content(&self) -> bool {
 		for i in 0..self.content.len() {
 			if self.content[i].amount() > 0 {
@@ -642,7 +652,7 @@ impl GameMap {
 			nb_to_place = to_place.amount()
 		}
 		let start_interest_point_index = rng.next_u32();
-		if current_cell.content.contains(&Deraumere(0)) &&
+		if current_cell.content.contains(&Linemate(0)) &&
 			nb_to_place > 0 {
 			for i in 0..interest_points.len() {
 				if Self::is_in_range_of_interest_point(
@@ -652,7 +662,7 @@ impl GameMap {
 					9,
 					14) {
 						to_place.remove(nb_to_place);
-						current_cell.add_content(Deraumere(nb_to_place));
+						current_cell.add_content(Linemate(nb_to_place));
 						break;
 				}
 			}

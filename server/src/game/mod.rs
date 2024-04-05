@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 10:31:58 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/05 17:01:13 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,8 +24,8 @@ use crate::communication::send_to;
 use self::{
 	egg::Egg,
 	gui::GraphicClient,
-	map::GameMap,
-	player::Player,
+	map::{move_to_pos, GameMap},
+	player::{Player, PlayerActionKind, PlayerDirection},
 	teams::Team
 };
 
@@ -78,11 +78,24 @@ impl Game {
 	/// Logic of the game, what occurs every tick
 	pub fn execute(&mut self) {
 		let mut to_remove = None;
+		let mut to_do_after: Vec<(i32, PlayerActionKind)> = vec![];
 		
 		for player in self.players.iter_mut() {
-			player.execute_casting(&mut self.map, &mut self.teams, &mut self.eggs);
+			if let Some(action) = player.execute_casting(&mut self.map, &mut self.teams, &mut self.eggs) {
+				to_do_after.push((player.fd, action))
+			}
 			if player.execute_queue(&self.map, &mut self.teams, &mut self.eggs, self.gui.is_some()) {
 				to_remove = Some(player.fd);
+			}
+		}
+
+		for (fd, action) in &mut to_do_after {
+			match action {
+				PlayerActionKind::Expulse => {
+					Self::handle_kick(&mut self.players, &mut self.map, *fd);
+					dbg!(&self.players);
+				}
+				_ => {}
 			}
 		}
 		
@@ -106,6 +119,47 @@ impl Game {
 				true
 			}
 		})
+	}
+
+	fn handle_kick(players: &mut Vec<Player>, map: &mut GameMap, kicking_fd: i32) {
+		let mut other = players.clone();
+		let mut kicking = players.clone();
+		other.retain(|p| p.fd != kicking_fd);
+		kicking.retain(|p| p.fd == kicking_fd);
+	
+		for player in kicking {
+			let cell = &map.cells[player.position.x as usize][player.position.y as usize];
+		
+			if let Some(player_content) = cell.get_content(map::GameCellContent::Player(0)) {
+				if player_content.amount() > 1 {
+					for mut other_player in &mut other {
+						if other_player.position == player.position {
+							Self::move_kicked_player(map, &mut other_player, player.direction.clone());
+							dbg!(&other_player);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	fn move_kicked_player(map: &mut GameMap,
+		player: &mut Player,
+		direction: PlayerDirection) {
+		let mut pos = player.position;
+
+		map.remove_content_cell(pos, map::GameCellContent::Player(1));
+		match direction {
+			PlayerDirection::North => pos.y = move_to_pos(map.max_position.y, pos.y, -1) as u8,
+			PlayerDirection::South => pos.y = move_to_pos(map.max_position.y, pos.y, 1) as u8,
+			PlayerDirection::East => pos.x = move_to_pos(map.max_position.x, pos.x, 1) as u8,
+			PlayerDirection::West => pos.x = move_to_pos(map.max_position.x, pos.x, -1) as u8,
+		}
+
+		map.add_content_cell(pos, map::GameCellContent::Player(1));
+		player.position = pos;
+		dbg!(&player);
+		send_to(player.fd, format!("deplacement {}\n", direction).as_str());
 	}
 }
 
