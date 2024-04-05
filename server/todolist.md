@@ -28,6 +28,7 @@
   - [x] tell the players they have been kicked
   - [ ] move the players
   - [ ] stop their casting
+- [ ] Player dies while incanting (wtf?)
 - [ ] Win / lose check every round
 - [ ] Broadcast command
 - [ ] Rework incantation to match the subject

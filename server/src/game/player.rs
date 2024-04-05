@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/05 15:32:31 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/05 16:52:10 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,7 +116,7 @@ impl Player {
 						Inventaire => self.exec_inventaire(),
 						Prend(_) => self.exec_prend(map),
 						Pose(_) => self.exec_pose(map),
-						Expulse => {}, // handled after this function ends
+						Expulse => send_to(self.fd, "ok\n"), // handled after this function ends
 						Broadcast(_) => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
 						Incantation => self.exec_incantation(teams),
 						Fork => self.exec_fork(eggs),
