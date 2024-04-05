@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/04 15:05:32 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/05 15:31:48 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,7 +92,7 @@ impl Game {
 		for (fd, action) in &mut to_do_after {
 			match action {
 				PlayerActionKind::Expulse => {
-					
+					Self::handle_kick(&mut self.players, &mut self.map, *fd);
 				}
 				_ => {}
 			}

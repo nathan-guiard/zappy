@@ -25,7 +25,7 @@
 - [x] command to enable updates on gui
 - [x] fix linemate generation
 - [ ] Expulse command
-  - [ ] tell the players they have been kicked
+  - [x] tell the players they have been kicked
   - [ ] move the players
   - [ ] stop their casting
 - [ ] Win / lose check every round
