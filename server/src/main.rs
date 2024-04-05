@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 17:43:13 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/03/20 16:34:45 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,8 +51,8 @@ struct Args {
 	#[structopt(short = "n", long)]
 	team_name: Vec<String>,
 
-	/// The number of clients authorized at the beginning of the game
-	#[structopt(short, long, default_value = "100")]
+	/// The number of clients authorized at the beginning of the game per team
+	#[structopt(short, long, default_value = "1")]
 	clients: u8,
 
 	/// The time unit divider, every step of the server will go at 1/t second
@@ -76,7 +76,10 @@ fn main() -> Result<ExitCode, Error> {
 	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
 
 	// All the game
-	let mut game = Game::new(args.x, args.y, args.team_name, args.seed);
+	let mut game: Game = Game::new(args.x, args.y,
+									args.team_name,
+									args.clients,
+									args.seed)?;
 	print!("{}", game.map);
 
 	// Timing
@@ -179,9 +182,9 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 				"None of the teams can be named 'gui'"));
 		}
 	}
-	if args.clients < args.team_name.len() as u8 {
+	if args.clients < 1 || args.clients > 6 as u8 {
 		return Err(Error::new(ErrorKind::InvalidInput,
-			"Cannot have less clients that team number."));
+			"Clients per team at the beginning of the game must be between 1 and 6."));
 	}
 	if args.seed == 0 {
 		args.seed = rand::thread_rng().gen();
