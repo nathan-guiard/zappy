@@ -6,11 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 10:50:25 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/05 16:52:10 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Display};
 
 use crate::communication::send_to;
 
@@ -101,9 +101,9 @@ impl Player {
 	pub fn execute_casting(&mut self,
 		map: &mut GameMap,
 		teams: &mut HashMap<String, Team>,
-		eggs: &mut Vec<Egg>) -> bool {
+		eggs: &mut Vec<Egg>) -> Option<PlayerActionKind> {
 		match self.state {
-			Idle | Dead | LevelMax => {},
+			Idle | Dead | LevelMax => return None,
 			Casting(into, max) => {
 				println!("Is casting {:?}, {}/{}", self.action.kind, into, max);
 				if into >= max {
@@ -116,18 +116,20 @@ impl Player {
 						Inventaire => self.exec_inventaire(),
 						Prend(_) => self.exec_prend(map),
 						Pose(_) => self.exec_pose(map),
-						Expulse => send_to(self.fd, "Action not coded yet\n"), // self.exec_expulse(),
+						Expulse => send_to(self.fd, "ok\n"), // handled after this function ends
 						Broadcast(_) => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
 						Incantation => self.exec_incantation(teams),
 						Fork => self.exec_fork(eggs),
 						Connect => self.exec_connect(teams),
 					}
 					self.state = Idle;
+					let last_action = self.action.kind.clone();
 					self.action.kind = NoAction;
+					return Some(last_action);
 				}
+				return None;
 			}
 		}
-		true
 	}
 
 	fn exec_avance(&mut self, map: &mut GameMap) {
@@ -529,6 +531,17 @@ pub enum PlayerDirection {
 	South,
 	East,
 	West,
+}
+
+impl std::fmt::Display for PlayerDirection {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			North => write!(f, "North"),
+			South => write!(f, "South"),
+			East => write!(f, "East"),
+			West => write!(f, "West"),
+		}
+	}
 }
 
 #[derive(Debug, PartialEq, Serialize, Clone)]
