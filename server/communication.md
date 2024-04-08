@@ -34,6 +34,12 @@ Data types sent in response of the commands:
 
 ### Special events
 
+When player sends a broadcast, every other players will recieve:
+- `broadcast <x>: <message>`
+
+Where `<x>` is a digit and `<mesage>` is the message of the player. <br />
+`<x>` is a digit to localise where the message has been sent from, as written in the 6th page of the project
+
 When a player is kicked from its cell, the server sends `deplacement <direction>\n` where `<direction>` is either North, South, East or West.<br />
 When a player reiceves this data, it has been moved and its ongoing casting is interrupted.
 

@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/08 10:44:14 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 12:06:43 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,7 +116,7 @@ impl Player {
 						Prend(_) => self.exec_prend(map),
 						Pose(_) => self.exec_pose(map),
 						Expulse => send_to(self.fd, "ok\n"), // handled after this function ends
-						Broadcast(_) => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
+						Broadcast(_) => self.exec_broadcast(),
 						Incantation => self.exec_incantation(teams),
 						Fork => self.exec_fork(eggs),
 						Connect => self.exec_connect(teams),
@@ -283,6 +283,10 @@ impl Player {
 
 	fn exec_fork(&self, eggs: &mut Vec<Egg>) {
 		eggs.push(Egg::new(self.position, self.team.clone()));
+	}
+
+	fn exec_broadcast(&self) {
+		send_to(self.fd, "ok\n");
 	}
 
 	pub fn add_to_inventory(&mut self, to_add: GameCellContent) {
@@ -486,7 +490,7 @@ impl PlayerAction {
 				"fork" => Ok(Self { kind: PlayerActionKind::Fork }),
 				"incantation" => Ok(Self { kind: PlayerActionKind::Incantation }),
 				"connect" => Ok(Self { kind: PlayerActionKind::Connect }),
-				"broadcast" => Ok(Self { kind: PlayerActionKind::Broadcast(it.collect()) }),
+				"broadcast" => Ok(Self { kind: PlayerActionKind::Broadcast(it.collect::<Vec<&str>>().join(" ")) }),
 				"prend" => {
 					if let Some(object) = it.next() {
 						Ok(Self {

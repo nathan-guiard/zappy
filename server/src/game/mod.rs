@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/08 10:45:01 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 15:46:28 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ use crate::communication::send_to;
 use self::{
 	egg::Egg,
 	gui::GraphicClient,
-	map::{move_to_pos, GameMap},
+	map::{move_to_pos, GameMap, GamePosition},
 	player::{Player, PlayerActionKind, PlayerDirection},
 	teams::Team
 };
@@ -95,6 +95,9 @@ impl Game {
 				PlayerActionKind::Expulse => {
 					Self::handle_kick(&mut self.players, &mut self.map, *fd);
 				}
+				PlayerActionKind::Broadcast(text) => {
+					Self::handle_broadcast(&self.players, &self.map, *fd, text);
+				}
 				_ => {}
 			}
 		}
@@ -126,6 +129,38 @@ impl Game {
 		})
 	}
 
+	fn handle_broadcast(players: &Vec<Player>,
+		map: &GameMap,
+		broadcasting: i32,
+		text: &String) {
+
+		let mut other = players.clone();
+		other.retain(|p| p.fd != broadcasting);
+		let mut position = GamePosition { x: 255, y: 255 };
+	
+		for p in players {
+			if p.fd == broadcasting {
+				position = p.position.clone();
+				break;
+			}
+		}
+
+		if position.x == 255 {
+			return;
+		}
+
+		for p in other {
+			let mut comming_from: u8;
+			if p.position == position {
+				comming_from = 0;
+			} else {
+				comming_from = map.comes_from(p.position, position, p.direction);
+			}
+			send_to(p.fd, format!("braodcast {comming_from}: {text}\n").as_str());
+		}
+		
+	}
+	
 	fn handle_kick(players: &mut Vec<Player>, map: &mut GameMap, kicking_fd: i32) {
 		let mut other = players.clone();
 		let kicking = players;
