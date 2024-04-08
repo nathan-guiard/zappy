@@ -24,10 +24,10 @@
 - [x] \n at the end of every json
 - [x] command to enable updates on gui
 - [x] fix linemate generation
-- [ ] Expulse command
+- [x] Expulse command
   - [x] tell the players they have been kicked
   - [x] move the players
-  - [ ] stop their casting
+  - [x] stop their casting
 - [ ] Player dies while incanting (wtf?)
 - [ ] Win / lose check every round
 - [ ] Broadcast command

@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/08 08:53:16 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 09:10:57 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -135,6 +135,7 @@ impl Game {
 					for i in 0..other.len() {
 						if other[i].position == player.position {
 							Self::move_kicked_player(map, &mut other[i], player.direction.clone());
+							other[i].interrupt_casting();
 							dbg!(&other[i]);
 						}
 					}
