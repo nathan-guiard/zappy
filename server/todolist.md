@@ -26,7 +26,7 @@
 - [x] fix linemate generation
 - [ ] Expulse command
   - [x] tell the players they have been kicked
-  - [ ] move the players
+  - [x] move the players
   - [ ] stop their casting
 - [ ] Player dies while incanting (wtf?)
 - [ ] Win / lose check every round
@@ -34,6 +34,7 @@
 - [ ] Rework incantation to match the subject
   - [ ] make incantation more that just an action
   - [ ] Put less ressources on the map, more spreaded?
+- [ ] Death removes a vacant connection from the team
 
 Later features:
 - [ ] 10 commands on queue max
