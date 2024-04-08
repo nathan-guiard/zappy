@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/05 17:01:13 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 09:10:57 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -123,23 +123,28 @@ impl Game {
 
 	fn handle_kick(players: &mut Vec<Player>, map: &mut GameMap, kicking_fd: i32) {
 		let mut other = players.clone();
-		let mut kicking = players.clone();
+		let kicking = players;
 		other.retain(|p| p.fd != kicking_fd);
 		kicking.retain(|p| p.fd == kicking_fd);
 	
-		for player in kicking {
+		for player in kicking.clone() {
 			let cell = &map.cells[player.position.x as usize][player.position.y as usize];
 		
 			if let Some(player_content) = cell.get_content(map::GameCellContent::Player(0)) {
 				if player_content.amount() > 1 {
-					for mut other_player in &mut other {
-						if other_player.position == player.position {
-							Self::move_kicked_player(map, &mut other_player, player.direction.clone());
-							dbg!(&other_player);
+					for i in 0..other.len() {
+						if other[i].position == player.position {
+							Self::move_kicked_player(map, &mut other[i], player.direction.clone());
+							other[i].interrupt_casting();
+							dbg!(&other[i]);
 						}
 					}
 				}
 			}
+		}
+
+		for player in other {
+			kicking.push(player);
 		}
 	}
 

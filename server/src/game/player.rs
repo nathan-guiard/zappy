@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/05 16:52:10 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 09:08:25 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -437,6 +437,14 @@ impl Player {
 				Connect => return true,
 				_ => {},
 			}
+		}
+		false
+	}
+
+	pub fn interrupt_casting(&mut self) -> bool {
+		if matches!(self.state, Casting(_, _)) {
+			self.state = Idle;
+			self.action.kind = NoAction;
 		}
 		false
 	}
