@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/04 14:31:21 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 10:45:32 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -221,15 +221,6 @@ impl GameCell {
 			}
 		}
 		None
-	}
-	
-	pub fn empty_content(&self) -> bool {
-		for i in 0..self.content.len() {
-			if self.content[i].amount() > 0 {
-				return false;
-			}
-		};
-		true
 	}
 
 	/// Removes the empty contents

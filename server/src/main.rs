@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 11:09:44 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 10:43:58 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,7 @@ use watcher::Watcher;
 use connections::ServerConnection;
 use communication::{get_all_data, process_data};
 
+use crate::communication::send_to;
 use crate::game::player::{get_player_from_fd, PlayerState};
 
 static mut EXIT: AtomicBool = AtomicBool::new(false);
@@ -137,6 +138,16 @@ fn main() -> Result<ExitCode, Error> {
 		process_data(&data, &mut game.players, &mut game.gui);
 		
 		game.execute();
+		if let Some(s) = game.win_check() {
+			for p in &game.players {
+				send_to(p.fd, s.as_str())
+			}
+			if let Some(gui) = game.gui.as_ref() {
+				send_to(gui.fd, s.as_str());
+			};
+			println!("\n{s}");
+			break;
+		}
 		update_gui(&game);
 		game.last_map = Some(game.map.clone());
 

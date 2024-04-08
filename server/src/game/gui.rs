@@ -6,14 +6,9 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/12 18:12:59 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 11:15:35 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 10:44:06 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
-use std::io::Error;
-
-use colored::Colorize;
-use libc::{c_void, EWOULDBLOCK};
 
 use crate::communication::send_to;
 
@@ -32,7 +27,6 @@ impl GraphicClient {
 	}
 
 	pub fn enable(&mut self, lines: Vec<String>) -> bool{
-		dbg!(&lines);
 		for line in lines {
 			if line.to_ascii_lowercase() == "ready\n" {
 				self.enabled = true;

@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/20 11:16:22 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/21 12:16:20 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 09:32:12 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@ pub struct Team {
 	pub name: String,
 	pub max_level: u8,
 	next_posititons: VecDeque<GamePosition>,
+	pub lost: bool,
 }
 
 impl Team {
@@ -26,6 +27,7 @@ impl Team {
 			name,
 			max_level: 0,
 			next_posititons: VecDeque::new(),
+			lost: false,
 		}
 	}
 
