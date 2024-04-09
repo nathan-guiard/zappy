@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/08 15:51:32 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 10:07:20 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -831,16 +831,30 @@ impl GameMap {
 		send_to(fd, data.as_str());
 	}
 
+	pub fn get_cell(&self, x: u8, y: u8) -> Option<&GameCell> {
+		if x > self.max_position.x || y > self.max_position.y {
+			return None
+		}
+		Some(&self.cells[x as usize][y as usize])
+	}
+
+	pub fn get_cell_mut(&mut self, x: u8, y: u8) -> Option<&mut GameCell> {
+		if x > self.max_position.x || y > self.max_position.y {
+			return None
+		}
+		Some(&mut self.cells[x as usize][y as usize])
+	}
+
 	pub fn add_content_cell(&mut self, pos: GamePosition, content: GameCellContent)
 		-> bool {
-		let current_cell = &mut self.cells[pos.x as usize][pos.y as usize];
+		let current_cell = &mut self.get_cell_mut(pos.x, pos.y).unwrap();
 	
 		current_cell.add_content(content)
 	}
 
 	pub fn remove_content_cell(&mut self, pos: GamePosition, content: GameCellContent)
 		-> bool {
-		let current_cell = &mut self.cells[pos.x as usize][pos.y as usize];
+		let current_cell = &mut self.get_cell_mut(pos.x, pos.y).unwrap();
 	
 		current_cell.remove_content(content)
 	}
@@ -850,7 +864,6 @@ impl GameMap {
 			x: b.x as i16 - a.x as i16,
 			y: b.y as i16 - a.y as i16,
 		};
-		let mut result = 0;
 		
 		if a == b {
 			return 0;

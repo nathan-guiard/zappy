@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 08:52:35 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 11:17:57 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,9 +17,10 @@ pub mod level_up;
 pub mod teams;
 pub mod egg;
 
-use std::{collections::HashMap, io::{Error, ErrorKind::InvalidInput}};
+use std::{collections::HashMap, io::{Error, ErrorKind::InvalidInput}, ops::SubAssign};
 
 use crate::communication::send_to;
+use crate::PlayerState::WaitingIncantation;
 
 use self::{
 	egg::Egg,
@@ -38,7 +39,8 @@ pub struct Game {
 	pub last_map: Option<GameMap>, // needed for updates to gui
 	pub gui: Option<GraphicClient>,
 	pub teams: HashMap<String, Team>,
-	pub eggs: Vec<Egg>
+	pub eggs: Vec<Egg>,
+	pub castings: HashMap<String, Vec<i32>>
 }
 
 impl Game {
@@ -65,6 +67,7 @@ impl Game {
 			gui: None,
 			teams: teams_map,
 			eggs: vec!(),
+			castings: HashMap::new(),
 		})
 	}
 	
@@ -78,19 +81,36 @@ impl Game {
 	/// Logic of the game, what occurs every tick
 	pub fn execute(&mut self) {
 		let mut to_remove = None;
-		let mut to_do_after: Vec<(i32, PlayerActionKind)> = vec![];
+		let mut actions_to_do_after: Vec<(i32, PlayerActionKind)> = vec![];
 		let mut dead_players: Vec<i32> = vec![];
+		let mut updated_castings: Vec<(GamePosition, u8, String)> = vec![];
 		
 		for player in self.players.iter_mut() {
 			if let Some(action) = player.execute_casting(&mut self.map, &mut self.teams, &mut self.eggs) {
-				to_do_after.push((player.fd, action))
+				actions_to_do_after.push((player.fd, action))
 			}
-			if player.execute_queue(&self.map, &mut self.teams, &mut self.eggs, self.gui.is_some()) {
-				to_remove = Some(player.fd);
+			match player.execute_queue(&self.map, &mut self.teams, &mut self.eggs, self.gui.is_some()) {
+				Err(_) => to_remove = Some(player.fd),
+				Ok(action) => match action {
+					PlayerActionKind::Incantation => {
+						let key = Self::casting_insert(
+							&mut self.castings,
+							(player.position, player.level),
+							player.fd);
+						updated_castings.push((player.position, player.level, key));
+					},
+					_ => {}
+				}
 			}
 		}
 
-		for (fd, action) in &mut to_do_after {
+		for (pos, level, key) in updated_castings {
+			if Self::casting_update(&mut self.players, pos, level) {
+				self.castings.remove(&key);
+			}
+		}
+
+		for (fd, action) in &mut actions_to_do_after {
 			match action {
 				PlayerActionKind::Expulse => {
 					Self::handle_kick(&mut self.players, &mut self.map, *fd);
@@ -153,7 +173,7 @@ impl Game {
 		}
 
 		for p in other {
-			let mut comming_from: u8;
+			let comming_from: u8;
 			if p.position == position {
 				comming_from = 0;
 			} else {
@@ -161,7 +181,6 @@ impl Game {
 			}
 			send_to(p.fd, format!("braodcast {comming_from}: {text}\n").as_str());
 		}
-		
 	}
 	
 	fn handle_kick(players: &mut Vec<Player>, map: &mut GameMap, kicking_fd: i32) {
@@ -254,6 +273,56 @@ impl Game {
 			}
 			i += 1;
 		}
+	}
+	
+	fn casting_insert(
+		castings: &mut HashMap<String, Vec<i32>>,
+		key: (GamePosition, u8),
+		fd: i32) -> String {
+		let key_string = format!("{} {} {}", key.0.x, key.0.y, key.1);
+	
+		match castings.get_mut(&key_string) {
+			None => {
+				castings.insert(key_string.clone(), vec![fd]);
+			},
+			Some(casting) => {
+				casting.push(fd);
+			}
+		}
+		key_string
+	}
+
+	fn casting_update(players: &mut Vec<Player>, position: GamePosition, level: u8) -> bool {
+		let mut nb_of_players = match level {
+			1 => 1,
+			2 | 3 => 2,
+			4 | 5 => 4,
+			6 | 7 => 6,
+			_ => 1000000,
+		};
+
+		// enough players?
+		for p in & *players {
+			if p.position == position &&
+				p.level == level &&
+				nb_of_players > 0 {
+				nb_of_players -= 1;
+			}
+		}
+
+		if nb_of_players > 0 {
+			return false
+		}
+
+		// Start the casting
+		for p in players {
+			if p.position == position &&
+				p.level == level &&
+				p.state == WaitingIncantation {
+				p.start_incantation_casting();
+			}
+		}
+		true
 	}
 }
 

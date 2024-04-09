@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 08:57:01 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 09:26:25 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use crate::communication::send_to;
 
 use super::{
-	egg::Egg, level_up::{has_enough_ressources, remove_ressources}, map::{
+	egg::Egg, map::{
 		move_to_pos,
 		GameCellContent::{self, *},
 		GameMap,
@@ -102,7 +102,7 @@ impl Player {
 		teams: &mut HashMap<String, Team>,
 		eggs: &mut Vec<Egg>) -> Option<PlayerActionKind> {
 		match self.state {
-			Idle | Dead | LevelMax => return None,
+			Idle | Dead | LevelMax | WaitingIncantation => return None,
 			Casting(into, max) => {
 				println!("Is casting {:?}, {}/{}", self.action.kind, into, max);
 				if into >= max {
@@ -297,37 +297,42 @@ impl Player {
 	/// 
 	/// Has to be executed after a call to `execute_casting()`
 	/// 
-	/// Returns true if the Player has to be turned into a GraphicClient
+	/// Returns Err if the Player has to be turned into a GraphicClient
+	/// 	or Ok(action) with the action that is being executed
 	pub fn execute_queue(&mut self,
 		map: &GameMap,
 		teams: &mut HashMap<String, Team>,
 		eggs: &mut Vec<Egg>,
-		has_gui: bool) -> bool {
+		has_gui: bool) -> Result<PlayerActionKind, ()> {
 		if self.command_queue.is_empty() ||
 			self.state != Idle {
-			return false;
+			return Ok(NoAction);
 		}
 		let action = self.command_queue.first().unwrap().to_ascii_lowercase();
 		self.command_queue.remove(0);
 		if self.team.is_empty() {
 			if self.team_check(map, teams, &action, has_gui) {
-				return true;
+				return Err(());
+			} else {
+				return Ok(NoAction);
 			}
 		} else {
 			match PlayerAction::from(action) {
 				Ok(player_action) => {
 					self.action = player_action.clone();
 					if self.start_casting(&player_action.kind) {
-						self.exec_connect(teams);
+						if matches!(player_action.kind, Connect) {
+							self.exec_connect(teams);
+						}
 					}
+					Ok(player_action.kind)
 				}
 				Err(e) => {
 					send_to(self.fd, e.as_str());
-					self.execute_queue(map, teams, eggs, has_gui);
+					self.execute_queue(map, teams, eggs, has_gui)
 				}
 			}
 		}
-		false
 	}
 	
 	fn team_check(&mut self, map: &GameMap, teams: &mut HashMap<String, Team>, team: &str, has_gui: bool) -> bool {
@@ -416,7 +421,7 @@ impl Player {
 				Pose(_) => self.state = Casting(0, POSE_TIME),
 				Expulse => self.state = Casting(0, EXPULSE_TIME),
 				Broadcast(_) => self.state = Casting(0, BROADCAST_TIME),
-				Incantation => self.state = Casting(0, INCANTATION_TIME),
+				Incantation => { self.wait_incantation(); return true },
 				Fork => self.state = Casting(0, FORK_TIME),
 				Connect => return true,
 				_ => {},
@@ -429,6 +434,7 @@ impl Player {
 		if matches!(self.state, Casting(_, _)) {
 			self.state = Idle;
 			self.action.kind = NoAction;
+			return true;
 		}
 		false
 	}
@@ -446,6 +452,16 @@ impl Player {
  			},
 			_ => false
 		}
+	}
+
+	// INCANTATION
+
+	pub fn wait_incantation(&mut self) {
+		self.state =  WaitingIncantation;
+	}
+
+	pub fn start_incantation_casting(&mut self) {
+		self.state = Casting(0, INCANTATION_TIME);
 	}
 }
 
@@ -543,6 +559,7 @@ pub enum PlayerState {
 	/// (current time, remaining time)
 	Casting(u16, u16),
 	LevelMax,
+	WaitingIncantation,
 }
 
 #[derive(Serialize)]

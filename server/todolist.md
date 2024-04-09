@@ -35,9 +35,11 @@
 - [x] Broadcast command
 - [x] Check if every command sends "ok/ko"
 - [ ] Rework incantation to match the subject
-  - [ ] Wait on incantation to have enough players
-  - [ ] "Free" broadcast on start of each incantation
+  - [x] Wait on incantation to have enough players
+  - [x] Make incantation start only when enough player are waiting for incantation
   - [ ] People checker to start the casting
+  - [ ] Radar command
+  - [ ] "Free" broadcast on start of each incantation
   - [ ] Put less ressources on the map, more spreaded?
 
 Later features:

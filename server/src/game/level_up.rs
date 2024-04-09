@@ -6,82 +6,35 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/19 17:20:38 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 18:33:57 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 09:02:20 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 use super::map::GameCellContent;
 use super::map::GameCellContent::*;
-use super::player::Player;
 
-pub fn has_enough_ressources(inventory: &[GameCellContent],
+pub fn has_enough_ressources(ressources: &[GameCellContent],
 	level: u8,
 	nb_of_same_lvl: u8) -> bool {
 	match level {
-		1 => enough_level1(inventory, nb_of_same_lvl),
-		2 => enough_level2(inventory, nb_of_same_lvl),
-		3 => enough_level3(inventory, nb_of_same_lvl),
-		4 => enough_level4(inventory, nb_of_same_lvl),
-		5 => enough_level5(inventory, nb_of_same_lvl),
-		6 => enough_level6(inventory, nb_of_same_lvl),
-		7 => enough_level7(inventory, nb_of_same_lvl),
+		1 => enough_level1(ressources, nb_of_same_lvl),
+		2 => enough_level2(ressources, nb_of_same_lvl),
+		3 => enough_level3(ressources, nb_of_same_lvl),
+		4 => enough_level4(ressources, nb_of_same_lvl),
+		5 => enough_level5(ressources, nb_of_same_lvl),
+		6 => enough_level6(ressources, nb_of_same_lvl),
+		7 => enough_level7(ressources, nb_of_same_lvl),
 		_ => false
 	}
 }
 
-pub fn remove_ressources(player: &mut Player) {
-	match player.level {
-		1 => {
-			player.remove_from_inventory(Linemate(1));
-		}
-		2 => {
-			player.remove_from_inventory(Linemate(1));
-			player.remove_from_inventory(Deraumere(1));
-			player.remove_from_inventory(Sibur(1));
-		}
-		3 => {
-			player.remove_from_inventory(Linemate(2));
-			player.remove_from_inventory(Sibur(1));
-			player.remove_from_inventory(Phiras(2));
-		}
-		4 => {
-			player.remove_from_inventory(Linemate(1));
-			player.remove_from_inventory(Deraumere(1));
-			player.remove_from_inventory(Sibur(2));
-			player.remove_from_inventory(Phiras(1));
-		}
-		5 => {
-			player.remove_from_inventory(Linemate(1));
-			player.remove_from_inventory(Deraumere(2));
-			player.remove_from_inventory(Sibur(1));
-			player.remove_from_inventory(Mendiane(3));
-		}
-		6 => {
-			player.remove_from_inventory(Linemate(1));
-			player.remove_from_inventory(Deraumere(2));
-			player.remove_from_inventory(Sibur(3));
-			player.remove_from_inventory(Phiras(1));
-		}
-		7 => {
-			player.remove_from_inventory(Linemate(2));
-			player.remove_from_inventory(Deraumere(2));
-			player.remove_from_inventory(Sibur(2));
-			player.remove_from_inventory(Mendiane(2));
-			player.remove_from_inventory(Phiras(2));
-			player.remove_from_inventory(Thystame(1));
-		}
-		_ => {},
-	}
-} 
-
-
-fn enough_level1(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
+fn enough_level1(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_linemate = false;
 
 	if nb_of_same_lvl < 1 {
 		return false;
 	}
-	for x in inventory {
+	for x in ressources {
 		if x == &Linemate(0) {
 			enough_linemate = x.amount() >= 1;
 		}
@@ -89,14 +42,14 @@ fn enough_level1(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	enough_linemate
 }
 
-fn enough_level2(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
+fn enough_level2(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_linemate = false;
 	let mut enough_deraumere = false;
 
 	if nb_of_same_lvl < 2 {
 		return false;
 	}
-	for x in inventory {
+	for x in ressources {
 		if x == &Linemate(0) {
 			enough_linemate = x.amount() >= 1;
 		}
@@ -107,7 +60,7 @@ fn enough_level2(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	enough_linemate && enough_deraumere
 }
 
-fn enough_level3(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
+fn enough_level3(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_linemate = false;
 	let mut enough_sibur = false;
 	let mut enough_phiras = false;
@@ -115,7 +68,7 @@ fn enough_level3(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	if nb_of_same_lvl < 2 {
 		return false;
 	}
-	for x in inventory {
+	for x in ressources {
 		if x == &Linemate(0) {
 			enough_linemate = x.amount() >= 2;
 		}
@@ -129,7 +82,7 @@ fn enough_level3(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	enough_linemate && enough_sibur && enough_phiras
 }
 
-fn enough_level4(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
+fn enough_level4(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_linemate = false;
 	let mut enough_sibur = false;
 	let mut enough_phiras = false;
@@ -138,7 +91,7 @@ fn enough_level4(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	if nb_of_same_lvl < 4 {
 		return false;
 	}
-	for x in inventory {
+	for x in ressources {
 		if x == &Linemate(0) {
 			enough_linemate = x.amount() >= 1;
 		}
@@ -155,7 +108,7 @@ fn enough_level4(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	enough_linemate && enough_sibur && enough_phiras && enough_deraumere
 }
 
-fn enough_level5(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
+fn enough_level5(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_linemate = false;
 	let mut enough_sibur = false;
 	let mut enough_mendiane = false;
@@ -164,7 +117,7 @@ fn enough_level5(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	if nb_of_same_lvl < 4 {
 		return false;
 	}
-	for x in inventory {
+	for x in ressources {
 		if x == &Linemate(0) {
 			enough_linemate = x.amount() >= 1;
 		}
@@ -181,7 +134,7 @@ fn enough_level5(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	enough_linemate && enough_sibur && enough_mendiane && enough_deraumere
 }
 
-fn enough_level6(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
+fn enough_level6(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_linemate = false;
 	let mut enough_sibur = false;
 	let mut enough_phiras = false;
@@ -190,7 +143,7 @@ fn enough_level6(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	if nb_of_same_lvl < 6 {
 		return false;
 	}
-	for x in inventory {
+	for x in ressources {
 		if x == &Linemate(0) {
 			enough_linemate = x.amount() >= 1;
 		}
@@ -207,7 +160,7 @@ fn enough_level6(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	enough_linemate && enough_sibur && enough_phiras && enough_deraumere
 }
 
-fn enough_level7(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
+fn enough_level7(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_linemate = false;
 	let mut enough_sibur = false;
 	let mut enough_phiras = false;
@@ -218,7 +171,7 @@ fn enough_level7(inventory: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	if nb_of_same_lvl < 6 {
 		return false;
 	}
-	for x in inventory {
+	for x in ressources {
 		if x == &Linemate(0) {
 			enough_linemate = x.amount() >= 2;
 		}
