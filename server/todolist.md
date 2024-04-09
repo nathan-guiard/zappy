@@ -33,7 +33,7 @@
 - [x] Win / lose check every round
 - [x] Death removes a vacant connection from the team
 - [x] Broadcast command
-- [ ] Check if every command sends "ok/ko"
+- [x] Check if every command sends "ok/ko"
 - [ ] Rework incantation to match the subject
   - [ ] Wait on incantation to have enough players
   - [ ] "Free" broadcast on start of each incantation

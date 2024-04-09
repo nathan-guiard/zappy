@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/08 15:46:28 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 08:52:35 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,6 +97,9 @@ impl Game {
 				}
 				PlayerActionKind::Broadcast(text) => {
 					Self::handle_broadcast(&self.players, &self.map, *fd, text);
+				}
+				PlayerActionKind::Incantation => {
+					
 				}
 				_ => {}
 			}

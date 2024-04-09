@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/08 12:06:43 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 08:57:01 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -117,7 +117,7 @@ impl Player {
 						Pose(_) => self.exec_pose(map),
 						Expulse => send_to(self.fd, "ok\n"), // handled after this function ends
 						Broadcast(_) => self.exec_broadcast(),
-						Incantation => self.exec_incantation(teams),
+						Incantation => {}, // handled after this function ends
 						Fork => self.exec_fork(eggs),
 						Connect => self.exec_connect(teams),
 					}
@@ -257,23 +257,6 @@ impl Player {
 		}
 	}
 
-	fn exec_incantation(&mut self, teams: &mut HashMap<String, Team>) {
-		if has_enough_ressources(&self.inventory, self.level, 8) { // to change last param
-			remove_ressources(self);
-			self.level += 1;
-			send_to(self.fd, "ok\n");
-			if self.level == 8 {
-				self.state = LevelMax;
-				send_to(self.fd, "Congratulations! You are level 8: the maximum level!\n");
-				if let Some(my_team) = teams.get_mut(&self.team) {
-					my_team.max_level += 1;
-				}
-			}
-		} else {
-			send_to(self.fd, "ko: not enough ressources\n");
-		}
-	}
-
 	fn exec_connect(&self, teams: &HashMap<String, Team>) {
 		match teams.get(&self.team) {
 			Some(t) => send_to(self.fd, &(t.available_connections().to_string() + "\n")),
@@ -283,6 +266,7 @@ impl Player {
 
 	fn exec_fork(&self, eggs: &mut Vec<Egg>) {
 		eggs.push(Egg::new(self.position, self.team.clone()));
+		send_to(self.fd, "ok\n");
 	}
 
 	fn exec_broadcast(&self) {
@@ -339,7 +323,7 @@ impl Player {
 				}
 				Err(e) => {
 					send_to(self.fd, e.as_str());
-					self.execute_queue(map, teams, eggs, has_gui); // sus
+					self.execute_queue(map, teams, eggs, has_gui);
 				}
 			}
 		}
@@ -497,7 +481,7 @@ impl PlayerAction {
 							kind: PlayerActionKind::Prend(object.into()),
 						})
 					} else {
-						Err(String::from("prend takes an argument, you need to take something"))
+						Err(String::from("prend takes an argument, you need to take something\n"))
 					}
 				}
 				"pose" => {
@@ -506,13 +490,13 @@ impl PlayerAction {
 							kind: PlayerActionKind::Pose(object.into()),
 						})
 					} else {
-						Err(String::from("pose takes an argument, you need to put something down"))
+						Err(String::from("pose takes an argument, you need to put something down\n"))
 					}
 				}
-				_ => Err(String::from("Unrecognised action"))
+				_ => Err(String::from("Unrecognised action\n"))
 			};
 		}
-		Err(String::from("Empty line"))
+		Err(String::from("Empty line\n"))
 	}
 }
 
