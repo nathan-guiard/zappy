@@ -28,18 +28,21 @@
   - [x] tell the players they have been kicked
   - [x] move the players
   - [x] stop their casting
-- [ ] Player dies while incanting (wtf?)
-- [ ] Win / lose check every round
-- [ ] Broadcast command
+- [x] Player dies while incanting (wtf?)
+- [x] Removed O_NONBLOCK on the socket fd to match the subject (lets hope it breaks nothing)
+- [x] Win / lose check every round
+- [x] Death removes a vacant connection from the team
+- [x] Broadcast command
+- [ ] Check if every command sends "ok/ko"
 - [ ] Rework incantation to match the subject
-  - [ ] make incantation more that just an action
+  - [ ] Wait on incantation to have enough players
+  - [ ] "Free" broadcast on start of each incantation
+  - [ ] People checker to start the casting
   - [ ] Put less ressources on the map, more spreaded?
-- [ ] Death removes a vacant connection from the team
 
 Later features:
-- [ ] 10 commands on queue max
-- [ ] Better feedback on actions, not "only ok/ko"
+- [x] Disconnect automatically players that died
+- [ ] 10 commands on queue max (MENDATORY)
 - [ ] Cache changed cells for the gui refresh
 - [ ] When a player dies, it drops all of its inventory on the floor
 - [ ] Make levelmax player playable?
-- [ ] Disconnect automatically players that died?

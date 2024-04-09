@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/04 14:31:21 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 15:51:32 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@ use GameCellContent::*;
 
 use crate::communication::send_to;
 
-use super::player::PlayerDirection;
+use super::{player::PlayerDirection, Game};
 const DEVIDE_U32_TO_U8: u32 = 16843009;
 
 /// Indexes in the "max" tab
@@ -136,6 +136,12 @@ pub struct GamePosition {
 	pub y: u8,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Copy, Serialize)]
+pub struct GamePositionDiff {
+	pub x: i16,
+	pub y: i16,
+}
+
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct GameCell {
 	pub position: GamePosition,
@@ -221,15 +227,6 @@ impl GameCell {
 			}
 		}
 		None
-	}
-	
-	pub fn empty_content(&self) -> bool {
-		for i in 0..self.content.len() {
-			if self.content[i].amount() > 0 {
-				return false;
-			}
-		};
-		true
 	}
 
 	/// Removes the empty contents
@@ -846,6 +843,39 @@ impl GameMap {
 		let current_cell = &mut self.cells[pos.x as usize][pos.y as usize];
 	
 		current_cell.remove_content(content)
+	}
+
+	pub fn comes_from(&self, a: GamePosition, b: GamePosition, direction: PlayerDirection) -> u8 {
+		let shortest = GamePositionDiff {
+			x: b.x as i16 - a.x as i16,
+			y: b.y as i16 - a.y as i16,
+		};
+		let mut result = 0;
+		
+		if a == b {
+			return 0;
+		}
+
+		let mut angle = f64::atan2(f64::from(shortest.y), f64::from(shortest.x)).to_degrees();
+
+		match direction {
+			PlayerDirection::North => {},
+			PlayerDirection::South => angle += 180_f64,
+			PlayerDirection::East => angle += 270_f64,
+			PlayerDirection::West => angle += 90_f64,
+		}
+
+		match (angle as i32 + 360) % 360 {
+			0..=22 | 338..=360 => 7,
+			23..=67 => 6,
+			68..=112 => 5,
+			113..=157 => 4,
+			158..=202 => 3,
+			203..=247 => 2,
+			248..=292 => 1,
+			293..=337 => 8,
+			_ => unreachable!()
+		}
 	}
 }
 

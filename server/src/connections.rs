@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/19 10:12:01 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 09:52:14 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,13 +37,6 @@ impl ServerConnection {
 		result.soc_addr.sin_addr.s_addr = INADDR_ANY.to_be();
 		result.soc_addr.sin_port = port.to_be();
 		result.soc_addr.sin_family = AF_INET as u16;
-	
-		if unsafe { fcntl(result.socket_fd, F_SETFL, O_NONBLOCK) }	< 0 {
-			let error = Error::last_os_error();
-			unsafe { libc::close(result.socket_fd) };
-			eprintln!("{}", "Could not set socket fd to non-blocking".red().bold());
-			return Err(error);
-		}
 	
 		if unsafe { bind(result.socket_fd,
 			&result.soc_addr as *const _ as *const _,

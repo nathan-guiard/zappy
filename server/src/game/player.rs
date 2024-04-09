@@ -6,11 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/08 09:08:25 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 12:06:43 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::{collections::HashMap, path::Display};
+use std::collections::HashMap;
 
 use crate::communication::send_to;
 
@@ -95,7 +95,6 @@ impl Player {
 			}
 			self.command_queue.append(&mut new);
 		}
-		dbg!(&self.command_queue);
 	}
 
 	pub fn execute_casting(&mut self,
@@ -117,7 +116,7 @@ impl Player {
 						Prend(_) => self.exec_prend(map),
 						Pose(_) => self.exec_pose(map),
 						Expulse => send_to(self.fd, "ok\n"), // handled after this function ends
-						Broadcast(_) => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
+						Broadcast(_) => self.exec_broadcast(),
 						Incantation => self.exec_incantation(teams),
 						Fork => self.exec_fork(eggs),
 						Connect => self.exec_connect(teams),
@@ -286,6 +285,10 @@ impl Player {
 		eggs.push(Egg::new(self.position, self.team.clone()));
 	}
 
+	fn exec_broadcast(&self) {
+		send_to(self.fd, "ok\n");
+	}
+
 	pub fn add_to_inventory(&mut self, to_add: GameCellContent) {
 		for i in 0..self.inventory.len() {
 			if self.inventory[i] == to_add {
@@ -370,34 +373,31 @@ impl Player {
 	}
 
 	pub fn die(&mut self,
-		map: &mut GameMap,
-		teams: &mut HashMap<String, Team>,) {
+		map: &mut GameMap,) {
 		self.state = Dead;
 		map.cells[self.position.x as usize][self.position.y as usize].remove_content(Player(1));
-		if let Some(team) = teams.get_mut(&self.team) {
-			team.add_position(self.position);
-		}
 		send_to(self.fd, "You died\n");
+		unsafe { libc::close(self.fd); }
 	}
 	
 	pub fn loose_food(&mut self,
-		map: &mut GameMap,
-		teams: &mut HashMap<String, Team>) {
+		map: &mut GameMap) -> bool {
 		if self.team.is_empty() ||
 			self.state == Dead ||
 			self.state == LevelMax {
-			return;
+			return false;
 		}
 		for x in &mut self.inventory {
 			if matches!(x, &mut Food(_)) {
 				if x.amount() == 0 {
-					self.die(map, teams);
-					return;
+					self.die(map);
+					return true;
 				} else {
 					*x = Food(x.amount() - 1);
 				}
 			}
 		}
+		false
 	}
 
 	pub fn add_food(&mut self, food_amount: u16) {
@@ -490,7 +490,7 @@ impl PlayerAction {
 				"fork" => Ok(Self { kind: PlayerActionKind::Fork }),
 				"incantation" => Ok(Self { kind: PlayerActionKind::Incantation }),
 				"connect" => Ok(Self { kind: PlayerActionKind::Connect }),
-				"broadcast" => Ok(Self { kind: PlayerActionKind::Broadcast(it.collect()) }),
+				"broadcast" => Ok(Self { kind: PlayerActionKind::Broadcast(it.collect::<Vec<&str>>().join(" ")) }),
 				"prend" => {
 					if let Some(object) = it.next() {
 						Ok(Self {

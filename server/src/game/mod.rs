@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/08 09:10:57 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/08 15:46:28 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,11 +24,12 @@ use crate::communication::send_to;
 use self::{
 	egg::Egg,
 	gui::GraphicClient,
-	map::{move_to_pos, GameMap},
+	map::{move_to_pos, GameMap, GamePosition},
 	player::{Player, PlayerActionKind, PlayerDirection},
 	teams::Team
 };
 
+const MAX_LEVEL_TO_WIN: u8 = 6;
 
 #[derive(Debug)]
 pub struct Game {
@@ -47,7 +48,6 @@ impl Game {
 		for t in teams {
 			let mut new_team = Team::new(t.clone());
 			for _ in 0..clients {
-				dbg!(&positions);
 				if let Some(pos) = positions.pop_front() {
 					new_team.add_position(pos);
 				} else {
@@ -79,6 +79,7 @@ impl Game {
 	pub fn execute(&mut self) {
 		let mut to_remove = None;
 		let mut to_do_after: Vec<(i32, PlayerActionKind)> = vec![];
+		let mut dead_players: Vec<i32> = vec![];
 		
 		for player in self.players.iter_mut() {
 			if let Some(action) = player.execute_casting(&mut self.map, &mut self.teams, &mut self.eggs) {
@@ -93,7 +94,9 @@ impl Game {
 			match action {
 				PlayerActionKind::Expulse => {
 					Self::handle_kick(&mut self.players, &mut self.map, *fd);
-					dbg!(&self.players);
+				}
+				PlayerActionKind::Broadcast(text) => {
+					Self::handle_broadcast(&self.players, &self.map, *fd, text);
 				}
 				_ => {}
 			}
@@ -106,9 +109,14 @@ impl Game {
 		}
 		
 		for player in &mut self.players {
-			player.loose_food(&mut self.map, &mut self.teams);
+			if player.loose_food(&mut self.map) {
+				dead_players.push(player.fd);
+			}
 			player.increment_casting();
 		}
+
+		self.players.retain(|p| !dead_players.contains(&p.fd));
+
 		self.eggs.retain_mut(|egg| {
 			if let Some((position, team_name)) = egg.try_hatch() {
 				if let Some(team) = self.teams.get_mut(&team_name) {
@@ -121,6 +129,38 @@ impl Game {
 		})
 	}
 
+	fn handle_broadcast(players: &Vec<Player>,
+		map: &GameMap,
+		broadcasting: i32,
+		text: &String) {
+
+		let mut other = players.clone();
+		other.retain(|p| p.fd != broadcasting);
+		let mut position = GamePosition { x: 255, y: 255 };
+	
+		for p in players {
+			if p.fd == broadcasting {
+				position = p.position.clone();
+				break;
+			}
+		}
+
+		if position.x == 255 {
+			return;
+		}
+
+		for p in other {
+			let mut comming_from: u8;
+			if p.position == position {
+				comming_from = 0;
+			} else {
+				comming_from = map.comes_from(p.position, position, p.direction);
+			}
+			send_to(p.fd, format!("braodcast {comming_from}: {text}\n").as_str());
+		}
+		
+	}
+	
 	fn handle_kick(players: &mut Vec<Player>, map: &mut GameMap, kicking_fd: i32) {
 		let mut other = players.clone();
 		let kicking = players;
@@ -136,7 +176,6 @@ impl Game {
 						if other[i].position == player.position {
 							Self::move_kicked_player(map, &mut other[i], player.direction.clone());
 							other[i].interrupt_casting();
-							dbg!(&other[i]);
 						}
 					}
 				}
@@ -163,8 +202,55 @@ impl Game {
 
 		map.add_content_cell(pos, map::GameCellContent::Player(1));
 		player.position = pos;
-		dbg!(&player);
 		send_to(player.fd, format!("deplacement {}\n", direction).as_str());
+	}
+	
+	pub fn win_check(&mut self) -> Option<String> {
+		let mut not_lost_teams: Vec<&Team> = vec![];
+
+		self.loose_check();
+		for team in self.teams.values() {
+			if team.max_level == MAX_LEVEL_TO_WIN {
+				return Some(format!(
+					"End of game: Win: Team {} won the game by elevating!\n",
+					not_lost_teams[1].name));
+			}
+			if !team.lost {
+				not_lost_teams.push(team);
+			}
+		}
+
+		if not_lost_teams.len() == 0 {
+			return Some("End of game: Draw: Every team lost.\n".to_string())
+		} else if not_lost_teams.len() == 1 {
+			return Some(format!(
+				"End of game: Win: Team {} won the game by being the last one alive!\n",
+				not_lost_teams[0].name));
+		}
+		None
+	}
+	
+	fn loose_check(&mut self) {
+		let mut players_alive: Vec<u8> = vec![];
+		let mut i = 0;
+
+		for team_name in self.teams.keys() {
+			let mut count = 0;
+			for player in &self.players {
+				if &player.team == team_name {
+					count += 1;
+				}
+			}
+			players_alive.push(count)
+		}
+
+		for (team_name, team) in &mut self.teams {
+			if team.available_connections() + players_alive[i] as usize == 0 {
+				println!("Team {} lost the game.", team_name);
+				team.lost = true;
+			}
+			i += 1;
+		}
 	}
 }
 
