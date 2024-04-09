@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 14:58:58 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 15:04:08 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -145,7 +145,7 @@ fn main() -> Result<ExitCode, Error> {
 			if let Some(gui) = game.gui.as_ref() {
 				send_to(gui.fd, s.as_str());
 			};
-			println!("\n{s}");
+			print!("\n{s}");
 			break;
 		}
 		update_gui(&game);
