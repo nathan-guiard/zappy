@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 14:36:15 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 15:09:23 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -800,7 +800,11 @@ impl GameMap {
 			}
 		}
 		
-		let variable = interest.into_iter().map(|cell| SendCell::from(cell)).collect::<Vec<SendCell>>(); // map doesnt work
+		if interest.len() > 0 {
+			interest[0].remove_content(Player(1));
+		}
+		let variable = interest.into_iter().map(|cell| SendCell::from(cell)).collect::<Vec<SendCell>>();
+		
 		serde_json::to_string(&variable).unwrap() + "\n"
 	}
 	

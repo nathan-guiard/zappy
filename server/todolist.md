@@ -41,7 +41,7 @@
   - [x] Actually level up poeple if enough ressources
   - [x] Beacon command
   - [x] Put less ressources on the map, more spreaded?
-- [ ] Can't see yourself on the voir command
+- [x] Can't see yourself on the voir command
 
 Later features:
 - [x] Disconnect automatically players that died
