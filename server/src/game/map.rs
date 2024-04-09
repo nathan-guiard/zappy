@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 10:07:20 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 14:36:15 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -390,16 +390,15 @@ impl GameMap {
 		}
 
 		let mut max: Vec<GameCellContent> = vec![
-			Linemate(9 * nb_of_team as u16 * 6 + 55),
-			Deraumere(8 * nb_of_team as u16 * 6 + 45),
-			Sibur(10 * nb_of_team as u16 * 6 + 35),
-			Mendiane(5 * nb_of_team as u16 * 6 + 25),
-			Phiras(6 * nb_of_team as u16 * 6 + 15),
-			Thystame(nb_of_team as u16 * 6 + 5),
-			Food(min(u16::MAX as u32,
-				interest_points.len() as u32 *
-				25 * min((x as u32 + y as u32) / 15, 1) *
-				nb_of_team as u32 * 6 + 5000) as u16),
+			Linemate(9 * nb_of_team as u16),
+			Deraumere(7 * nb_of_team as u16 + 5),
+			Sibur(8 * nb_of_team as u16),
+			Mendiane(3 * nb_of_team as u16 + 3),
+			Phiras(6 * nb_of_team as u16 + 15),
+			Thystame(nb_of_team as u16 + 3),
+			Food(min(u16::MAX as u32, 25 *
+				(x as u32 * y as u32) / 30 *
+				((nb_of_team / 3) + 1) as u32 + 2000) as u16),
 			Player((nb_of_team * clients) as u16),
 		];
 
@@ -673,7 +672,7 @@ impl GameMap {
 		rng: &mut StdRng,
 		current_cell: &mut GameCell
 	) {
-		let mut nb_to_place = ((rng.next_u32() % 3) == 1) as u16;
+		let mut nb_to_place = ((rng.next_u32() % 15) == 1) as u16;
 		if nb_to_place > to_place.amount() {
 			nb_to_place = to_place.amount()
 		}

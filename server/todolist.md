@@ -34,13 +34,13 @@
 - [x] Death removes a vacant connection from the team
 - [x] Broadcast command
 - [x] Check if every command sends "ok/ko"
-- [ ] Rework incantation to match the subject
+- [x] Rework incantation to match the subject
   - [x] Wait on incantation to have enough players
   - [x] Make incantation start only when enough player are waiting for incantation
   - [x] People checker to start the casting
   - [x] Actually level up poeple if enough ressources
   - [x] Beacon command
-  - [ ] Put less ressources on the map, more spreaded?
+  - [x] Put less ressources on the map, more spreaded?
 - [ ] Can't see yourself on the voir command
 
 Later features:
