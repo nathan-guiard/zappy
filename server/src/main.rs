@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/08 10:43:58 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 15:04:08 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,11 +43,11 @@ struct Args {
 	port: u16,
 
 	/// The map width
-	#[structopt(short, default_value = "65")]
+	#[structopt(short, default_value = "60")]
 	x: u8,
 
 	/// The map height
-	#[structopt(short, default_value = "35")]
+	#[structopt(short, default_value = "45")]
 	y: u8,
 
 	/// The team name(s)
@@ -145,7 +145,7 @@ fn main() -> Result<ExitCode, Error> {
 			if let Some(gui) = game.gui.as_ref() {
 				send_to(gui.fd, s.as_str());
 			};
-			println!("\n{s}");
+			print!("\n{s}");
 			break;
 		}
 		update_gui(&game);
@@ -181,25 +181,32 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 		return Err(Error::new(ErrorKind::InvalidInput,
 			"Time cannot be more than 128"));
 	}
-	if args.x > 150 || args.y > 120 {
+	if args.x > 80 || args.y > 60 {
 		return Err(Error::new(ErrorKind::InvalidInput,
-			"Map too big, max size is X:150, Y:120"));
+			"Map too big, max size is X:80, Y:60"));
 	}
-	if args.x < 30 || args.y < 25 {
+	if args.x < 40 || args.y < 30 {
 		return Err(Error::new(ErrorKind::InvalidInput,
-			"Map too big, max size is X:30, Y:25"));
+			"Map too big, max size is X:40, Y:30"));
 	}
 	if args.team_name.is_empty() {
-		args.team_name.push("ekip".into());
+		args.team_name.push("the alliance".into());
+		args.team_name.push("the assembly".into());
+		args.team_name.push("the order".into());
+		args.team_name.push("the federation".into());
 	}
-	if args.team_name.len() > 4 {
+	if args.team_name.len() > 4 || args.team_name.len() < 2{
 		return Err(Error::new(ErrorKind::InvalidInput,
-			"Cannot have more than 4 teams"));
+			"Cannot have less than 2 or more than 4 teams"));
 		}
 	for team_name in &args.team_name {
 		if team_name == "gui" {
 			return Err(Error::new(ErrorKind::InvalidInput,
 				"None of the teams can be named 'gui'"));
+		}
+		if !team_name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_whitespace()) {
+			return Err(Error::new(ErrorKind::InvalidInput,
+				"Team name has to be ascii lower case"));
 		}
 	}
 	if args.clients < 1 || args.clients > 6 as u8 {
@@ -213,6 +220,11 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 	println!("Map dimentions: X:{} Y:{}", args.x, args.y);
 	println!("Seed: {}", args.seed);
 	println!("Tick rate: {}s", 1_f64 / args.time as f64);
+	println!("---");
+	println!("Competing teams:");
+	for s in &args.team_name {
+		println!(" - {}", s);
+	}
 	println!("---");
 	Ok(())
 }

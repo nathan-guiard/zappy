@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 05:53:29 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/08 10:26:55 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 11:44:05 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@ use std::{collections::HashMap, io::Error};
 
 use libc::{c_void, send, EWOULDBLOCK};
 
-use crate::game::{gui::GraphicClient, player::{get_player_from_fd, Player}};
+use crate::game::{gui::GraphicClient, player::{get_player_from_fd_mut, Player}};
 use colored::Colorize;
 
 pub fn process_data(data: &HashMap<i32, Vec<String>>,
@@ -29,7 +29,7 @@ pub fn process_data(data: &HashMap<i32, Vec<String>>,
 	}
 	
 	for (fd, lines) in data {
-		if let Some(player) = get_player_from_fd(players, *fd) {
+		if let Some(player) = get_player_from_fd_mut(players, *fd) {
 			player.push_to_queue(lines.clone());
 		}
 		if !unwrapped_gui.enabled && &unwrapped_gui.fd == fd {

@@ -31,6 +31,7 @@ Data types sent in response of the commands:
 - fork: ok/ko
 - voir: `[SendCell]`
 - inventaire: `[GameCellContent]`
+- beacon: `[GamePosition]`
 
 ### Special events
 
