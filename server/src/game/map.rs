@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/04 14:31:21 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 15:09:23 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@ use GameCellContent::*;
 
 use crate::communication::send_to;
 
-use super::player::PlayerDirection;
+use super::{player::PlayerDirection, Game};
 const DEVIDE_U32_TO_U8: u32 = 16843009;
 
 /// Indexes in the "max" tab
@@ -136,6 +136,12 @@ pub struct GamePosition {
 	pub y: u8,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Copy, Serialize)]
+pub struct GamePositionDiff {
+	pub x: i16,
+	pub y: i16,
+}
+
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct GameCell {
 	pub position: GamePosition,
@@ -221,15 +227,6 @@ impl GameCell {
 			}
 		}
 		None
-	}
-	
-	pub fn empty_content(&self) -> bool {
-		for i in 0..self.content.len() {
-			if self.content[i].amount() > 0 {
-				return false;
-			}
-		};
-		true
 	}
 
 	/// Removes the empty contents
@@ -393,16 +390,15 @@ impl GameMap {
 		}
 
 		let mut max: Vec<GameCellContent> = vec![
-			Linemate(9 * nb_of_team as u16 * 6 + 55),
-			Deraumere(8 * nb_of_team as u16 * 6 + 45),
-			Sibur(10 * nb_of_team as u16 * 6 + 35),
-			Mendiane(5 * nb_of_team as u16 * 6 + 25),
-			Phiras(6 * nb_of_team as u16 * 6 + 15),
-			Thystame(nb_of_team as u16 * 6 + 5),
-			Food(min(u16::MAX as u32,
-				interest_points.len() as u32 *
-				25 * min((x as u32 + y as u32) / 15, 1) *
-				nb_of_team as u32 * 6 + 5000) as u16),
+			Linemate(9 * nb_of_team as u16),
+			Deraumere(7 * nb_of_team as u16 + 5),
+			Sibur(8 * nb_of_team as u16),
+			Mendiane(3 * nb_of_team as u16 + 3),
+			Phiras(6 * nb_of_team as u16 + 15),
+			Thystame(nb_of_team as u16 + 3),
+			Food(min(u16::MAX as u32, 25 *
+				(x as u32 * y as u32) / 30 *
+				((nb_of_team / 3) + 1) as u32 + 2000) as u16),
 			Player((nb_of_team * clients) as u16),
 		];
 
@@ -676,7 +672,7 @@ impl GameMap {
 		rng: &mut StdRng,
 		current_cell: &mut GameCell
 	) {
-		let mut nb_to_place = ((rng.next_u32() % 3) == 1) as u16;
+		let mut nb_to_place = ((rng.next_u32() % 15) == 1) as u16;
 		if nb_to_place > to_place.amount() {
 			nb_to_place = to_place.amount()
 		}
@@ -804,7 +800,11 @@ impl GameMap {
 			}
 		}
 		
-		let variable = interest.into_iter().map(|cell| SendCell::from(cell)).collect::<Vec<SendCell>>(); // map doesnt work
+		if interest.len() > 0 {
+			interest[0].remove_content(Player(1));
+		}
+		let variable = interest.into_iter().map(|cell| SendCell::from(cell)).collect::<Vec<SendCell>>();
+		
 		serde_json::to_string(&variable).unwrap() + "\n"
 	}
 	
@@ -834,18 +834,64 @@ impl GameMap {
 		send_to(fd, data.as_str());
 	}
 
+	pub fn get_cell(&self, x: u8, y: u8) -> Option<&GameCell> {
+		if x > self.max_position.x || y > self.max_position.y {
+			return None
+		}
+		Some(&self.cells[x as usize][y as usize])
+	}
+
+	pub fn get_cell_mut(&mut self, x: u8, y: u8) -> Option<&mut GameCell> {
+		if x > self.max_position.x || y > self.max_position.y {
+			return None
+		}
+		Some(&mut self.cells[x as usize][y as usize])
+	}
+
 	pub fn add_content_cell(&mut self, pos: GamePosition, content: GameCellContent)
 		-> bool {
-		let current_cell = &mut self.cells[pos.x as usize][pos.y as usize];
+		let current_cell = &mut self.get_cell_mut(pos.x, pos.y).unwrap();
 	
 		current_cell.add_content(content)
 	}
 
 	pub fn remove_content_cell(&mut self, pos: GamePosition, content: GameCellContent)
 		-> bool {
-		let current_cell = &mut self.cells[pos.x as usize][pos.y as usize];
+		let current_cell = &mut self.get_cell_mut(pos.x, pos.y).unwrap();
 	
 		current_cell.remove_content(content)
+	}
+
+	pub fn comes_from(&self, a: GamePosition, b: GamePosition, direction: PlayerDirection) -> u8 {
+		let shortest = GamePositionDiff {
+			x: b.x as i16 - a.x as i16,
+			y: b.y as i16 - a.y as i16,
+		};
+		
+		if a == b {
+			return 0;
+		}
+
+		let mut angle = f64::atan2(f64::from(shortest.y), f64::from(shortest.x)).to_degrees();
+
+		match direction {
+			PlayerDirection::North => {},
+			PlayerDirection::South => angle += 180_f64,
+			PlayerDirection::East => angle += 270_f64,
+			PlayerDirection::West => angle += 90_f64,
+		}
+
+		match (angle as i32 + 360) % 360 {
+			0..=22 | 338..=360 => 7,
+			23..=67 => 6,
+			68..=112 => 5,
+			113..=157 => 4,
+			158..=202 => 3,
+			203..=247 => 2,
+			248..=292 => 1,
+			293..=337 => 8,
+			_ => unreachable!()
+		}
 	}
 }
 

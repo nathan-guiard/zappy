@@ -24,21 +24,28 @@
 - [x] \n at the end of every json
 - [x] command to enable updates on gui
 - [x] fix linemate generation
-- [ ] Expulse command
+- [x] Expulse command
   - [x] tell the players they have been kicked
-  - [ ] move the players
-  - [ ] stop their casting
-- [ ] Player dies while incanting (wtf?)
-- [ ] Win / lose check every round
-- [ ] Broadcast command
-- [ ] Rework incantation to match the subject
-  - [ ] make incantation more that just an action
-  - [ ] Put less ressources on the map, more spreaded?
+  - [x] move the players
+  - [x] stop their casting
+- [x] Player dies while incanting (wtf?)
+- [x] Removed O_NONBLOCK on the socket fd to match the subject (lets hope it breaks nothing)
+- [x] Win / lose check every round
+- [x] Death removes a vacant connection from the team
+- [x] Broadcast command
+- [x] Check if every command sends "ok/ko"
+- [x] Rework incantation to match the subject
+  - [x] Wait on incantation to have enough players
+  - [x] Make incantation start only when enough player are waiting for incantation
+  - [x] People checker to start the casting
+  - [x] Actually level up poeple if enough ressources
+  - [x] Beacon command
+  - [x] Put less ressources on the map, more spreaded?
+- [x] Can't see yourself on the voir command
 
 Later features:
-- [ ] 10 commands on queue max
-- [ ] Better feedback on actions, not "only ok/ko"
+- [x] Disconnect automatically players that died
+- [ ] 10 commands on queue max (MENDATORY)
 - [ ] Cache changed cells for the gui refresh
 - [ ] When a player dies, it drops all of its inventory on the floor
 - [ ] Make levelmax player playable?
-- [ ] Disconnect automatically players that died?

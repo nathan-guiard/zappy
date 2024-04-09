@@ -6,16 +6,16 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/05 16:52:10 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 14:13:08 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use std::{collections::HashMap, path::Display};
+use std::collections::HashMap;
 
 use crate::communication::send_to;
 
 use super::{
-	egg::Egg, level_up::{has_enough_ressources, remove_ressources}, map::{
+	egg::Egg, map::{
 		move_to_pos,
 		GameCellContent::{self, *},
 		GameMap,
@@ -37,8 +37,10 @@ const POSE_TIME: u16 = 7;
 const EXPULSE_TIME: u16 = 7;
 const BROADCAST_TIME: u16 = 7;
 const INCANTATION_TIME: u16 = 300;
+const BEACON_TIME: u16 = 42;
 const FORK_TIME: u16 = 42;
 
+const ENDED_INCANTATION: u16 = 342;
 const FOOD_PER_COLLECT: u16 = 126;
 const FOOD_ON_START: u16 = 1260;
 
@@ -95,15 +97,15 @@ impl Player {
 			}
 			self.command_queue.append(&mut new);
 		}
-		dbg!(&self.command_queue);
 	}
 
 	pub fn execute_casting(&mut self,
 		map: &mut GameMap,
 		teams: &mut HashMap<String, Team>,
-		eggs: &mut Vec<Egg>) -> Option<PlayerActionKind> {
+		eggs: &mut Vec<Egg>,
+		castings: &HashMap<String, (GamePosition, u8, Vec<i32>)>) -> Option<PlayerActionKind> {
 		match self.state {
-			Idle | Dead | LevelMax => return None,
+			Idle | Dead | LevelMax | WaitingIncantation => return None,
 			Casting(into, max) => {
 				println!("Is casting {:?}, {}/{}", self.action.kind, into, max);
 				if into >= max {
@@ -117,10 +119,11 @@ impl Player {
 						Prend(_) => self.exec_prend(map),
 						Pose(_) => self.exec_pose(map),
 						Expulse => send_to(self.fd, "ok\n"), // handled after this function ends
-						Broadcast(_) => send_to(self.fd, "Action not coded yet\n"), // self.exec_broadcast(),
-						Incantation => self.exec_incantation(teams),
+						Broadcast(_) => self.exec_broadcast(),
+						Incantation => return Some(self.action.kind.clone()), // handled after this function ends
 						Fork => self.exec_fork(eggs),
 						Connect => self.exec_connect(teams),
+						Beacon => self.exec_beacon(castings),
 					}
 					self.state = Idle;
 					let last_action = self.action.kind.clone();
@@ -258,23 +261,6 @@ impl Player {
 		}
 	}
 
-	fn exec_incantation(&mut self, teams: &mut HashMap<String, Team>) {
-		if has_enough_ressources(&self.inventory, self.level, 8) { // to change last param
-			remove_ressources(self);
-			self.level += 1;
-			send_to(self.fd, "ok\n");
-			if self.level == 8 {
-				self.state = LevelMax;
-				send_to(self.fd, "Congratulations! You are level 8: the maximum level!\n");
-				if let Some(my_team) = teams.get_mut(&self.team) {
-					my_team.max_level += 1;
-				}
-			}
-		} else {
-			send_to(self.fd, "ko: not enough ressources\n");
-		}
-	}
-
 	fn exec_connect(&self, teams: &HashMap<String, Team>) {
 		match teams.get(&self.team) {
 			Some(t) => send_to(self.fd, &(t.available_connections().to_string() + "\n")),
@@ -284,6 +270,28 @@ impl Player {
 
 	fn exec_fork(&self, eggs: &mut Vec<Egg>) {
 		eggs.push(Egg::new(self.position, self.team.clone()));
+		send_to(self.fd, "ok\n");
+	}
+
+	fn exec_broadcast(&self) {
+		send_to(self.fd, "ok\n");
+	}
+
+	fn exec_beacon(&self, castings: &HashMap<String, (GamePosition, u8, Vec<i32>)>) {
+		let mut positions = vec![];
+		for (pos, level, _) in castings.values() {
+			if *level == self.level {
+				positions.push(pos);
+			}
+		}
+
+		let json = serde_json::to_string(&positions);
+		
+		if json.is_err() {
+			send_to(self.fd, "ko\n");
+		}
+		
+		send_to(self.fd, format!("{}\n", json.unwrap()).as_str());
 	}
 
 	pub fn add_to_inventory(&mut self, to_add: GameCellContent) {
@@ -310,37 +318,42 @@ impl Player {
 	/// 
 	/// Has to be executed after a call to `execute_casting()`
 	/// 
-	/// Returns true if the Player has to be turned into a GraphicClient
+	/// Returns Err if the Player has to be turned into a GraphicClient
+	/// 	or Ok(action) with the action that is being executed
 	pub fn execute_queue(&mut self,
 		map: &GameMap,
 		teams: &mut HashMap<String, Team>,
 		eggs: &mut Vec<Egg>,
-		has_gui: bool) -> bool {
+		has_gui: bool) -> Result<PlayerActionKind, ()> {
 		if self.command_queue.is_empty() ||
 			self.state != Idle {
-			return false;
+			return Ok(NoAction);
 		}
 		let action = self.command_queue.first().unwrap().to_ascii_lowercase();
 		self.command_queue.remove(0);
 		if self.team.is_empty() {
 			if self.team_check(map, teams, &action, has_gui) {
-				return true;
+				return Err(());
+			} else {
+				return Ok(NoAction);
 			}
 		} else {
 			match PlayerAction::from(action) {
 				Ok(player_action) => {
 					self.action = player_action.clone();
 					if self.start_casting(&player_action.kind) {
-						self.exec_connect(teams);
+						if matches!(player_action.kind, Connect) {
+							self.exec_connect(teams);
+						}
 					}
+					Ok(player_action.kind)
 				}
 				Err(e) => {
 					send_to(self.fd, e.as_str());
-					self.execute_queue(map, teams, eggs, has_gui); // sus
+					self.execute_queue(map, teams, eggs, has_gui)
 				}
 			}
 		}
-		false
 	}
 	
 	fn team_check(&mut self, map: &GameMap, teams: &mut HashMap<String, Team>, team: &str, has_gui: bool) -> bool {
@@ -370,34 +383,31 @@ impl Player {
 	}
 
 	pub fn die(&mut self,
-		map: &mut GameMap,
-		teams: &mut HashMap<String, Team>,) {
+		map: &mut GameMap,) {
 		self.state = Dead;
 		map.cells[self.position.x as usize][self.position.y as usize].remove_content(Player(1));
-		if let Some(team) = teams.get_mut(&self.team) {
-			team.add_position(self.position);
-		}
 		send_to(self.fd, "You died\n");
+		unsafe { libc::close(self.fd); }
 	}
 	
 	pub fn loose_food(&mut self,
-		map: &mut GameMap,
-		teams: &mut HashMap<String, Team>) {
+		map: &mut GameMap) -> bool {
 		if self.team.is_empty() ||
 			self.state == Dead ||
 			self.state == LevelMax {
-			return;
+			return false;
 		}
 		for x in &mut self.inventory {
 			if matches!(x, &mut Food(_)) {
 				if x.amount() == 0 {
-					self.die(map, teams);
-					return;
+					self.die(map);
+					return true;
 				} else {
 					*x = Food(x.amount() - 1);
 				}
 			}
 		}
+		false
 	}
 
 	pub fn add_food(&mut self, food_amount: u16) {
@@ -432,11 +442,21 @@ impl Player {
 				Pose(_) => self.state = Casting(0, POSE_TIME),
 				Expulse => self.state = Casting(0, EXPULSE_TIME),
 				Broadcast(_) => self.state = Casting(0, BROADCAST_TIME),
-				Incantation => self.state = Casting(0, INCANTATION_TIME),
+				Incantation => { self.wait_incantation(); return true },
 				Fork => self.state = Casting(0, FORK_TIME),
 				Connect => return true,
-				_ => {},
+				Beacon => self.state = Casting(0, BEACON_TIME),
+				NoAction => {},
 			}
+		}
+		false
+	}
+
+	pub fn interrupt_casting(&mut self) -> bool {
+		if matches!(self.state, Casting(_, _)) {
+			self.state = Idle;
+			self.action.kind = NoAction;
+			return true;
 		}
 		false
 	}
@@ -445,15 +465,36 @@ impl Player {
 		match self.state {
 			Casting(current, max) => {
 				if current == max {
-					self.state = Idle;
-					true
+					if matches!(self.action.kind, Incantation) {
+						self.state = Casting(ENDED_INCANTATION, INCANTATION_TIME);
+						true
+					} else {
+						self.state = Idle;
+						true
+					}
 				} else {
-					self.state = Casting(current + 1, max);
-					false
+					if matches!(self.action.kind, Incantation) &&
+						current == ENDED_INCANTATION &&
+						max == INCANTATION_TIME {
+						false
+					} else {
+						self.state = Casting(current + 1, max);
+						false
+					}
 				}
  			},
 			_ => false
 		}
+	}
+
+	// INCANTATION
+
+	pub fn wait_incantation(&mut self) {
+		self.state =  WaitingIncantation;
+	}
+
+	pub fn start_incantation_casting(&mut self) {
+		self.state = Casting(0, INCANTATION_TIME);
 	}
 }
 
@@ -481,15 +522,16 @@ impl PlayerAction {
 				"expulse" => Ok(Self { kind: PlayerActionKind::Expulse }),
 				"fork" => Ok(Self { kind: PlayerActionKind::Fork }),
 				"incantation" => Ok(Self { kind: PlayerActionKind::Incantation }),
+				"beacon" => Ok(Self { kind: PlayerActionKind::Beacon }),
 				"connect" => Ok(Self { kind: PlayerActionKind::Connect }),
-				"broadcast" => Ok(Self { kind: PlayerActionKind::Broadcast(it.collect()) }),
+				"broadcast" => Ok(Self { kind: PlayerActionKind::Broadcast(it.collect::<Vec<&str>>().join(" ")) }),
 				"prend" => {
 					if let Some(object) = it.next() {
 						Ok(Self {
 							kind: PlayerActionKind::Prend(object.into()),
 						})
 					} else {
-						Err(String::from("prend takes an argument, you need to take something"))
+						Err(String::from("prend takes an argument, you need to take something\n"))
 					}
 				}
 				"pose" => {
@@ -498,13 +540,13 @@ impl PlayerAction {
 							kind: PlayerActionKind::Pose(object.into()),
 						})
 					} else {
-						Err(String::from("pose takes an argument, you need to put something down"))
+						Err(String::from("pose takes an argument, you need to put something down\n"))
 					}
 				}
-				_ => Err(String::from("Unrecognised action"))
+				_ => Err(String::from("Unrecognised action\n"))
 			};
 		}
-		Err(String::from("Empty line"))
+		Err(String::from("Empty line\n"))
 	}
 }
 
@@ -520,6 +562,7 @@ pub enum PlayerActionKind {
 	Expulse,
 	Broadcast(String),
 	Incantation,
+	Beacon,
 	Fork,
 	Connect,
 	NoAction,
@@ -551,6 +594,7 @@ pub enum PlayerState {
 	/// (current time, remaining time)
 	Casting(u16, u16),
 	LevelMax,
+	WaitingIncantation,
 }
 
 #[derive(Serialize)]
@@ -586,6 +630,10 @@ impl From<Player> for SendPlayer {
 	}
 }
 
-pub fn get_player_from_fd(players: &mut [Player], fd: i32) -> Option<&mut Player> {
+pub fn get_player_from_fd(players: &[Player], fd: i32) -> Option<&Player> {
+	players.iter().find(|p| p.fd == fd)
+}
+
+pub fn get_player_from_fd_mut(players: &mut [Player], fd: i32) -> Option<&mut Player> {
 	players.iter_mut().find(|p| p.fd == fd)
 }
