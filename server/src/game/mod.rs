@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 11:17:57 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 11:48:10 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,17 +17,13 @@ pub mod level_up;
 pub mod teams;
 pub mod egg;
 
-use std::{collections::HashMap, io::{Error, ErrorKind::InvalidInput}, ops::SubAssign};
+use std::{collections::HashMap, io::{Error, ErrorKind::InvalidInput}};
 
 use crate::communication::send_to;
 use crate::PlayerState::WaitingIncantation;
 
 use self::{
-	egg::Egg,
-	gui::GraphicClient,
-	map::{move_to_pos, GameMap, GamePosition},
-	player::{Player, PlayerActionKind, PlayerDirection},
-	teams::Team
+	egg::Egg, gui::GraphicClient, level_up::{has_enough_ressources, remove_ressources}, map::{move_to_pos, GameMap, GamePosition}, player::{get_player_from_fd, get_player_from_fd_mut, Player, PlayerActionKind, PlayerDirection, PlayerState}, teams::Team
 };
 
 const MAX_LEVEL_TO_WIN: u8 = 6;
@@ -119,7 +115,7 @@ impl Game {
 					Self::handle_broadcast(&self.players, &self.map, *fd, text);
 				}
 				PlayerActionKind::Incantation => {
-					
+					Self::handle_incantation(&mut self.players, &mut self.map, *fd);
 				}
 				_ => {}
 			}
@@ -150,6 +146,39 @@ impl Game {
 				true
 			}
 		})
+	}
+
+	fn handle_incantation(players: &mut Vec<Player>, map: &mut GameMap, fd: i32) {
+		let player = get_player_from_fd(players, fd).unwrap();
+		let pos = player.position.clone();
+		let level = player.level;
+		let cell = map.get_cell_mut(pos.x, pos.y).unwrap();
+		let mut same_level = 0;
+		let mut to_level_up: Vec<i32> = vec![];
+	
+		for p in players.clone() {
+			if p.position == pos && p.level == level {
+				same_level += 1;
+				to_level_up.push(p.fd);
+			}
+		}
+
+		if has_enough_ressources(&cell.content, level, same_level) {
+			remove_ressources(cell, level);
+			for fd in to_level_up {
+				let p = get_player_from_fd_mut(players, fd).unwrap();
+				p.level += 1;
+				p.state = PlayerState::Idle;
+				println!("Player leveled up!");
+				send_to(p.fd, "ok\n");
+			}
+		} else {
+			for fd in to_level_up {
+				let p = get_player_from_fd_mut(players, fd).unwrap();
+				p.state = PlayerState::Idle;
+				send_to(p.fd, "ko\n");
+			}
+		}
 	}
 
 	fn handle_broadcast(players: &Vec<Player>,

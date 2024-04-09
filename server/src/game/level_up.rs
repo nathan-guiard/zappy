@@ -6,11 +6,11 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/19 17:20:38 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 09:02:20 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 11:39:43 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-use super::map::GameCellContent;
+use super::map::{GameCell, GameCellContent};
 use super::map::GameCellContent::*;
 
 pub fn has_enough_ressources(ressources: &[GameCellContent],
@@ -27,6 +27,51 @@ pub fn has_enough_ressources(ressources: &[GameCellContent],
 		_ => false
 	}
 }
+
+pub fn remove_ressources(cell: &mut GameCell, level: u8) {
+	match level {
+		1 => {
+			cell.remove_content(Linemate(1));
+		}
+		2 => {
+			cell.remove_content(Linemate(1));
+			cell.remove_content(Deraumere(1));
+			cell.remove_content(Sibur(1));
+		}
+		3 => {
+			cell.remove_content(Linemate(2));
+			cell.remove_content(Sibur(1));
+			cell.remove_content(Phiras(2));
+		}
+		4 => {
+			cell.remove_content(Linemate(1));
+			cell.remove_content(Deraumere(1));
+			cell.remove_content(Sibur(2));
+			cell.remove_content(Phiras(1));
+		}
+		5 => {
+			cell.remove_content(Linemate(1));
+			cell.remove_content(Deraumere(2));
+			cell.remove_content(Sibur(1));
+			cell.remove_content(Mendiane(3));
+		}
+		6 => {
+			cell.remove_content(Linemate(1));
+			cell.remove_content(Deraumere(2));
+			cell.remove_content(Sibur(3));
+			cell.remove_content(Phiras(1));
+		}
+		7 => {
+			cell.remove_content(Linemate(2));
+			cell.remove_content(Deraumere(2));
+			cell.remove_content(Sibur(2));
+			cell.remove_content(Mendiane(2));
+			cell.remove_content(Phiras(2));
+			cell.remove_content(Thystame(1));
+		}
+		_ => {},
+	}
+} 
 
 fn enough_level1(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_linemate = false;

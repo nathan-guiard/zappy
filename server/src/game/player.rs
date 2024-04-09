@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 09:26:25 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 11:36:17 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,6 +39,7 @@ const BROADCAST_TIME: u16 = 7;
 const INCANTATION_TIME: u16 = 300;
 const FORK_TIME: u16 = 42;
 
+const ENDED_INCANTATION: u16 = 342;
 const FOOD_PER_COLLECT: u16 = 126;
 const FOOD_ON_START: u16 = 1260;
 
@@ -117,7 +118,7 @@ impl Player {
 						Pose(_) => self.exec_pose(map),
 						Expulse => send_to(self.fd, "ok\n"), // handled after this function ends
 						Broadcast(_) => self.exec_broadcast(),
-						Incantation => {}, // handled after this function ends
+						Incantation => return Some(self.action.kind.clone()), // handled after this function ends
 						Fork => self.exec_fork(eggs),
 						Connect => self.exec_connect(teams),
 					}
@@ -443,11 +444,22 @@ impl Player {
 		match self.state {
 			Casting(current, max) => {
 				if current == max {
-					self.state = Idle;
-					true
+					if matches!(self.action.kind, Incantation) {
+						self.state = Casting(ENDED_INCANTATION, INCANTATION_TIME);
+						true
+					} else {
+						self.state = Idle;
+						true
+					}
 				} else {
-					self.state = Casting(current + 1, max);
-					false
+					if matches!(self.action.kind, Incantation) &&
+						current == ENDED_INCANTATION &&
+						max == INCANTATION_TIME {
+						false
+					} else {
+						self.state = Casting(current + 1, max);
+						false
+					}
 				}
  			},
 			_ => false
@@ -595,6 +607,10 @@ impl From<Player> for SendPlayer {
 	}
 }
 
-pub fn get_player_from_fd(players: &mut [Player], fd: i32) -> Option<&mut Player> {
+pub fn get_player_from_fd(players: &[Player], fd: i32) -> Option<&Player> {
+	players.iter().find(|p| p.fd == fd)
+}
+
+pub fn get_player_from_fd_mut(players: &mut [Player], fd: i32) -> Option<&mut Player> {
 	players.iter_mut().find(|p| p.fd == fd)
 }
