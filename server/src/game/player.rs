@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 11:36:17 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 14:13:08 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,6 +37,7 @@ const POSE_TIME: u16 = 7;
 const EXPULSE_TIME: u16 = 7;
 const BROADCAST_TIME: u16 = 7;
 const INCANTATION_TIME: u16 = 300;
+const BEACON_TIME: u16 = 42;
 const FORK_TIME: u16 = 42;
 
 const ENDED_INCANTATION: u16 = 342;
@@ -101,7 +102,8 @@ impl Player {
 	pub fn execute_casting(&mut self,
 		map: &mut GameMap,
 		teams: &mut HashMap<String, Team>,
-		eggs: &mut Vec<Egg>) -> Option<PlayerActionKind> {
+		eggs: &mut Vec<Egg>,
+		castings: &HashMap<String, (GamePosition, u8, Vec<i32>)>) -> Option<PlayerActionKind> {
 		match self.state {
 			Idle | Dead | LevelMax | WaitingIncantation => return None,
 			Casting(into, max) => {
@@ -121,6 +123,7 @@ impl Player {
 						Incantation => return Some(self.action.kind.clone()), // handled after this function ends
 						Fork => self.exec_fork(eggs),
 						Connect => self.exec_connect(teams),
+						Beacon => self.exec_beacon(castings),
 					}
 					self.state = Idle;
 					let last_action = self.action.kind.clone();
@@ -274,6 +277,23 @@ impl Player {
 		send_to(self.fd, "ok\n");
 	}
 
+	fn exec_beacon(&self, castings: &HashMap<String, (GamePosition, u8, Vec<i32>)>) {
+		let mut positions = vec![];
+		for (pos, level, _) in castings.values() {
+			if *level == self.level {
+				positions.push(pos);
+			}
+		}
+
+		let json = serde_json::to_string(&positions);
+		
+		if json.is_err() {
+			send_to(self.fd, "ko\n");
+		}
+		
+		send_to(self.fd, format!("{}\n", json.unwrap()).as_str());
+	}
+
 	pub fn add_to_inventory(&mut self, to_add: GameCellContent) {
 		for i in 0..self.inventory.len() {
 			if self.inventory[i] == to_add {
@@ -425,7 +445,8 @@ impl Player {
 				Incantation => { self.wait_incantation(); return true },
 				Fork => self.state = Casting(0, FORK_TIME),
 				Connect => return true,
-				_ => {},
+				Beacon => self.state = Casting(0, BEACON_TIME),
+				NoAction => {},
 			}
 		}
 		false
@@ -501,6 +522,7 @@ impl PlayerAction {
 				"expulse" => Ok(Self { kind: PlayerActionKind::Expulse }),
 				"fork" => Ok(Self { kind: PlayerActionKind::Fork }),
 				"incantation" => Ok(Self { kind: PlayerActionKind::Incantation }),
+				"beacon" => Ok(Self { kind: PlayerActionKind::Beacon }),
 				"connect" => Ok(Self { kind: PlayerActionKind::Connect }),
 				"broadcast" => Ok(Self { kind: PlayerActionKind::Broadcast(it.collect::<Vec<&str>>().join(" ")) }),
 				"prend" => {
@@ -540,6 +562,7 @@ pub enum PlayerActionKind {
 	Expulse,
 	Broadcast(String),
 	Incantation,
+	Beacon,
 	Fork,
 	Connect,
 	NoAction,

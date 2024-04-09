@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 11:48:10 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/04/09 14:02:17 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,7 @@ pub struct Game {
 	pub gui: Option<GraphicClient>,
 	pub teams: HashMap<String, Team>,
 	pub eggs: Vec<Egg>,
-	pub castings: HashMap<String, Vec<i32>>
+	pub castings: HashMap<String, (GamePosition, u8, Vec<i32>)>
 }
 
 impl Game {
@@ -82,7 +82,10 @@ impl Game {
 		let mut updated_castings: Vec<(GamePosition, u8, String)> = vec![];
 		
 		for player in self.players.iter_mut() {
-			if let Some(action) = player.execute_casting(&mut self.map, &mut self.teams, &mut self.eggs) {
+			if let Some(action) = player.execute_casting(&mut self.map,
+				&mut self.teams,
+				&mut self.eggs,
+				&self.castings) {
 				actions_to_do_after.push((player.fd, action))
 			}
 			match player.execute_queue(&self.map, &mut self.teams, &mut self.eggs, self.gui.is_some()) {
@@ -305,17 +308,17 @@ impl Game {
 	}
 	
 	fn casting_insert(
-		castings: &mut HashMap<String, Vec<i32>>,
+		castings: &mut HashMap<String, (GamePosition, u8, Vec<i32>)>,
 		key: (GamePosition, u8),
 		fd: i32) -> String {
 		let key_string = format!("{} {} {}", key.0.x, key.0.y, key.1);
 	
 		match castings.get_mut(&key_string) {
 			None => {
-				castings.insert(key_string.clone(), vec![fd]);
+				castings.insert(key_string.clone(), (key.0, key.1, vec![fd]));
 			},
 			Some(casting) => {
-				casting.push(fd);
+				casting.2.push(fd);
 			}
 		}
 		key_string

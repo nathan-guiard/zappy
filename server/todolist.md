@@ -39,8 +39,7 @@
   - [x] Make incantation start only when enough player are waiting for incantation
   - [x] People checker to start the casting
   - [x] Actually level up poeple if enough ressources
-  - [ ] Radar command
-  - [ ] "Free" broadcast on start of each incantation
+  - [x] Beacon command
   - [ ] Put less ressources on the map, more spreaded?
 - [ ] Can't see yourself on the voir command
 
