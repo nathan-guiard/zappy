@@ -1,10 +1,12 @@
 import socket
-import sys
 import argparse
 import json
 import random
 from color import color
 import copy
+import multiprocessing
+import signal
+import sys
 
 
 # Variable Globale
@@ -12,6 +14,7 @@ Debug : bool
 Client : socket
 Direction = ['N', 'E', 'S', 'W']
 Player: dict
+nouveau_processus: multiprocessing.Process
 
 levels = {
         1: {"Linemate": 1},
@@ -51,7 +54,7 @@ def server_connexion(host, port, team):
         print("Connexion...")
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.settimeout(3)
+        client.settimeout(10000)
         client.connect((host, port))
     except socket.timeout:
         sys.stderr.write("Timeout: Connexion au serveur expirée\n")
@@ -73,7 +76,7 @@ def server_connexion(host, port, team):
     Client = client
     return connexion_and_map_size.decode()
 
-def init(hostname, port, team): 
+def init(hostname, port, team, id): 
     connexion_and_map_size = server_connexion(hostname, port, team)
     global Player
     Player = {}
@@ -83,6 +86,9 @@ def init(hostname, port, team):
     Player["map_size"] = tuple(map(int, connexion_and_map_size[1].split()))
     Player["map"] = [[{} for x in range(Player["map_size"][0])] for y in range(Player["map_size"][1])]
     Player["level"] = 1
+    global nouveau_processus, Player_id
+    nouveau_processus = None
+    Player_id = id
 
 def get_player_position(vision_data):
     if vision_data and isinstance(vision_data[0], dict) and "p" in vision_data[0]:
@@ -105,26 +111,30 @@ def update_map_with_vision():
         content = {**content, **tile["p"]}
         update_tile_content(content)
         Player["map"][position[1]][position[0]] = content
-    
 
-def print_map(map):
-    print("Carte:")
-    for i, row in enumerate(map):
-        print(i, row)
-
-def send_command(command):
+def send_command(command) -> str:
     Client.send((command + '\n').encode())
-    try : 
-        response = Client.recv(1024).decode()
-    except socket.timeout:
-        sys.stderr.write("Tu es mort\n")
+    try :
+        response:str = Client.recv(1024).decode()
+    except socket.timeout or ConnectionResetError:
+        sys.stderr.write("Tu es mort timeout\n")
         Client.close()
+        if nouveau_processus is not None:
+            nouveau_processus.join()
         sys.exit(0)
     if response == "You died\n":
-        sys.stderr.write("Tu es mort\n")
+        sys.stderr.write("Tu es mort reponse de mort\n")
         Client.close()
+        if nouveau_processus is not None:
+            nouveau_processus.join()
         sys.exit(0)
-    if Debug:
+    elif response.startswith("End of game"):
+        print(end=response)
+        Client.close()
+        if nouveau_processus is not None:
+            nouveau_processus.join()
+        sys.exit(0)
+    if True:
         print(f"{color(command, "red")} : {color(" ".join(response.split()), "lightgreen")}")
     return response
 
@@ -134,12 +144,11 @@ def calculate_moves(x_dest, y_dest):
         return "moins" if choix.index(min(choix)) == 0 else "plus", min(choix)
     moves = []
     x, y, direction = Player["position"][0], Player["position"][1], Player["direction"]
-    print(color("calculate_moves:", "purple"), x, y, x_dest, y_dest, direction)
+    if Debug:
+        print(color("calculate_moves:", "purple"), x, y, x_dest, y_dest, direction)
     
     direction_x, distance_x = wrapped_distance(x, x_dest, Player["map_size"][0])
-    # print(f"vertical {direction_x} de {distance_x}")
     direction_y, distance_y = wrapped_distance(y, y_dest, Player["map_size"][1])
-    # print(f"horizontal {direction_y} de {distance_y}")
     
     # Bouger verticalement
     while distance_y:
@@ -222,11 +231,12 @@ def prendre(consommables, x, y):
             del Player["map"][y][x][focus_items]
         if Debug:
             print(color("Reste sur case:", "purple"), consommables)
-        print(Player["map"][y][x])
+            print(Player["map"][y][x])
 
-def map_print(passage, x, y, taillex=65, tailley=35):
-    print()
+def map_print(passage, x, y, taillex, tailley):
     m = [[" " for _ in range(taillex)] for i in range(tailley)]
+    print("size map", len(m), len(m[0]))
+    print("passage", passage)
     for coord in passage:
         m[coord['y']][coord['x']] = color(f"{len(coord) - 2}", "blue")
     m[y][x] = color(f'{m[y][x]}', "red_bg")
@@ -261,7 +271,8 @@ def calculate_best_move():
     max_score = float('-inf')
     best_moves = []
     
-    map_print(adjacent_positions, Player["position"][0], Player["position"][1])
+    if Debug:
+        map_print(adjacent_positions, Player["position"][0], Player["position"][1], Player["map_size"][0], Player["map_size"][1])
     
     for case in adjacent_positions:
         if [case["x"], case["y"]] == [Player["position"][0], Player["position"][1]]:
@@ -325,52 +336,71 @@ def check_level_requirements():
     return True
 
 def level_up():
-    level, inventory = Player["level"], Player["inventory"]
-    # if inventory["Food"] < 
-    requirements = levels[level]
+    requirements = levels[Player["level"]]
     for item, quantity in requirements.items():
         for _ in range(quantity):
             send_command(f"pose {item}")
-    print(send_command("incantation"))
+        Player["inventory"][item] -= quantity
+        if not Player["inventory"][item]:
+            del Player["inventory"][item]
+    response = send_command("incantation")
+    if response.startswith("ko"):
+        send_command("voir")
+        send_command("inventaire")
+        return
+    Player["level"] += 1
+    print(color(f"Succesfully level up {Player["level"]}", "blue"))
     
+def fork_capacity():
+    # Verifier si j'ai assez de nourriture pour fork, si oui, fork
+    response = send_command("connect")
+    print(response)
+    if Player["inventory"]["Food"] >= 1500:
+        return True
 
-def main():
+def fork():
+    send_command("fork")
+    if Debug:
+        print(color("Forking", "blue"))
+    nouveau_processus = multiprocessing.Process(target=main, args=(Player_id + 1, ))
+    print(type(nouveau_processus))
+    nouveau_processus.start()
+
+def sigint_handler(signal, frame):
+    if Player_id == 0:
+        print("SIGINT reçu, fermeture du client")
+    if nouveau_processus is not None:
+        nouveau_processus.terminate()
+    Client.close()
+    sys.exit(0)
+
+
+def main(id: int = 0, *args, **kwargs):
+    signal.signal(signal.SIGINT, sigint_handler)
     args = parser()
     # Initialisation du joueur
-    init(args.hostname, args.port, args.team)
+    init(args.hostname, args.port, args.team, id)
     
     # Mettre à jour la carte avec la vision
     update_map_with_vision()
-    
-    if Debug:
-        print("Player init:")
-        for i in Player:
-            print("\t", i)
-    
-    # send_command("inventaire")
-    # send_command("avance")
-    # send_command("incantation")
-    # send_command("inventaire")
-    
+        
     while True :
+    
         # Demander la vision au serveur
         update_inventory()
-        # current_level = 3
-        # if check_level_requirements():
-        #     print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
-        #     level_up()
+        if check_level_requirements():
+            if Debug:
+                print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
+            level_up()
 
-        print(color("Votre position:", "blue"), Player["position"])
+        if fork_capacity():
+            fork()
+
+        if Debug:
+            print(color("Votre position:", "blue"), Player["position"])
         
         mouvements = calculate_best_move()
-        # print(mouvements)
         for mouv in mouvements :
             send_command(mouv)
         update_map_with_vision()
-        # print("Mouvements:", moves)
-        # print("Nouvelle direction:", new_direction)
-        
-    
-    # Afficher la carte
-    # print_map(map)
 
