@@ -103,6 +103,7 @@ def update_tile_content(content):
 
 def update_map_with_vision():
     vision_data = send_command("voir")
+    print("vision data", vision_data)
     vision_data = json.loads(vision_data)
     get_player_position(vision_data)
     for tile in vision_data:
@@ -135,7 +136,7 @@ def send_command(command) -> str:
             nouveau_processus.join()
         sys.exit(0)
     if True:
-        print(f"{color(command, "red")} : {color(" ".join(response.split()), "lightgreen")}")
+        print(f"{color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
     return response
 
 def calculate_moves(x_dest, y_dest):
@@ -289,22 +290,22 @@ def calculate_best_move():
     # Calculer les mouvements pour atteindre la meilleure position
     if best_moves:
         if Debug:
-            print(f"{color("Actual:", "purple")}", actual_ressource)
-            print(f"{color("Search:", "purple")}", consommable)
+            print(f"{color('Actual:', 'purple')}", actual_ressource)
+            print(f"{color('Search:', 'purple')}", consommable)
         if actual_ressource:
             if Debug:
-                print(f"{color("Prise des ressources case actuelle", "red_bg")}", actual_ressource)
+                print(f"{color('Prise des ressources case actuelle', 'red_bg')}", actual_ressource)
             prendre(actual_ressource, Player["position"][0], Player["position"][1])
         
         elif best_moves == [Player["position"][0], Player["position"][1]]:
             if Debug:
-                print(f"{color("Same place", "red_bg")}", consommable)
+                print(f"{color('Same place', 'red_bg')}", consommable)
             prendre(consommable, *best_moves)
         return calculate_moves(best_moves[0], best_moves[1])
     else:
         # Avancer de x en fonction de la vision du joueur pour eviter de voir pour rien
         if Debug:
-            print(f"{color("Avance random", "red_bg")}", Player["direction"])
+            print(f"{color('Avance random', 'red_bg')}", Player["direction"])
         # Si aucune position adjacente n'a de ressources, rester sur place
         direction = random.choices(['avance', 'droite', 'gauche'], weights=[0.5, 0.25, 0.25], k=1)[0]
         if direction == "droite":
@@ -312,14 +313,15 @@ def calculate_best_move():
         elif direction == "gauche":
             Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
         if Debug:
-            print(f"random : {direction}\nnouvelle direction : {Player["direction"]}")
+            print(f"random : {direction}\nnouvelle direction : {Player['direction']}")
         update_map_with_vision()
         return [direction]
 
 def update_inventory():
     response = send_command("inventaire")
+    print(response)
     inventory_data = json.loads(response)
-    print(f"{color("Inventaire", "red")} : {color(" ".join(response.split()), "lightgreen")}")
+    print(f"{color('Inventaire', 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
     inventory = {}
     for item in inventory_data:
         for key, value in item.items():
@@ -349,22 +351,41 @@ def level_up():
         send_command("inventaire")
         return
     Player["level"] += 1
-    print(color(f"Succesfully level up {Player["level"]}", "blue"))
+    print(color(f"Succesfully level up {Player['level']}", "blue"))
     
 def fork_capacity():
     # Verifier si j'ai assez de nourriture pour fork, si oui, fork
     response = send_command("connect")
     print(response)
-    if Player["inventory"]["Food"] >= 1500:
+    response = int(response)
+    if response > 0:
+        # print(response)
+        # if Player["inventory"]["Food"] >= 1500:
         return True
 
 def fork():
-    send_command("fork")
+    response = send_command("fork")
     if Debug:
         print(color("Forking", "blue"))
-    nouveau_processus = multiprocessing.Process(target=main, args=(Player_id + 1, ))
+    if response.startswith("ko"):
+        return
+    nouveau_processus = multiprocessing.Process(target=main2, args=(Player_id + 1, ))
     print(type(nouveau_processus))
     nouveau_processus.start()
+
+def main2(id: int = 0, *args, **kwargs):
+    args = parser()
+    print(id, args)
+    # # Initialisation du joueur
+    # init(args.hostname, args.port, args.team, id)
+    # signal.signal(signal.SIGINT, sigint_handler)
+    
+    # update_inventory()
+    # # Mettre à jour la carte avec la vision
+    # while True :
+    #     update_map_with_vision()
+    #     if fork_capacity():
+    #         fork()
 
 def sigint_handler(signal, frame):
     if Player_id == 0:
@@ -375,32 +396,38 @@ def sigint_handler(signal, frame):
     sys.exit(0)
 
 
-def main(id: int = 0, *args, **kwargs):
-    signal.signal(signal.SIGINT, sigint_handler)
+def main(id: int = 0, **kwargs):
     args = parser()
     # Initialisation du joueur
     init(args.hostname, args.port, args.team, id)
+    signal.signal(signal.SIGINT, sigint_handler)
     
-    # Mettre à jour la carte avec la vision
-    update_map_with_vision()
-        
+    
+    # update_inventory()
+    # # Mettre à jour la carte avec la vision
     while True :
-    
-        # Demander la vision au serveur
-        update_inventory()
-        if check_level_requirements():
-            if Debug:
-                print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
-            level_up()
-
+    #     update_map_with_vision()
         if fork_capacity():
-            fork()
+            update_inventory()
+            update_map_with_vision()
+            
+    # while True :
+    
+    #     # Demander la vision au serveur
+    #     update_inventory()
+    #     if check_level_requirements():
+    #         if Debug:
+    #             print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
+    #         level_up()
 
-        if Debug:
-            print(color("Votre position:", "blue"), Player["position"])
+    #     if fork_capacity():
+    #         fork()
+
+    #     if Debug:
+    #         print(color("Votre position:", "blue"), Player["position"])
         
-        mouvements = calculate_best_move()
-        for mouv in mouvements :
-            send_command(mouv)
-        update_map_with_vision()
+    #     mouvements = calculate_best_move()
+    #     for mouv in mouvements :
+    #         send_command(mouv)
+    #     update_map_with_vision()
 
