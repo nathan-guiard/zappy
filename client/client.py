@@ -50,12 +50,13 @@ def parser():
     return args
 
 def server_connexion(host, port, team):
+    global Client
     if Debug: 
         print("Connexion...")
     try:
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.settimeout(10000)
-        client.connect((host, port))
+        Client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        Client.settimeout(10000)
+        Client.connect((host, port))
     except socket.timeout:
         sys.stderr.write("Timeout: Connexion au serveur expirée\n")
         sys.exit(1)
@@ -64,17 +65,21 @@ def server_connexion(host, port, team):
         sys.exit(1)
     if Debug:
         print(f"Connexion vers {host}:{port} reussie.")
-    client.send("".encode())
-    print(client.recv(1024).decode())
-    client.send((team + '\n').encode())
-    connexion_and_map_size =  client.recv(1024)
-    print(connexion_and_map_size)
-    if connexion_and_map_size.decode() == f"The team {team} does not exist\n":
-        sys.stderr.write(connexion_and_map_size.decode())
+    Client.send("".encode())
+    response = Client.recv(1024).decode()
+    print(response)
+    Client.send((team + '\n').encode())
+    response: str = Client.recv(1024).decode()
+    print("///////", response)
+    if response.endswith == "does not exist\n":
+        sys.stderr.write(response)
+        Client.close()
         sys.exit(1)
-    global Client
-    Client = client
-    return connexion_and_map_size.decode()
+    elif response.startswith("0\n"):
+        sys.stderr.write(f"The team {team} is full\n")
+        Client.close()
+        sys.exit(1)
+    return response
 
 def init(hostname, port, team, id): 
     connexion_and_map_size = server_connexion(hostname, port, team)
@@ -136,7 +141,7 @@ def send_command(command) -> str:
             nouveau_processus.join()
         sys.exit(0)
     if True:
-        print(f"{color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
+        print(f"ID:{Player_id} || {color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
     return response
 
 def calculate_moves(x_dest, y_dest):
@@ -353,23 +358,16 @@ def level_up():
     Player["level"] += 1
     print(color(f"Succesfully level up {Player['level']}", "blue"))
     
-def fork_capacity():
-    # Verifier si j'ai assez de nourriture pour fork, si oui, fork
-    response = send_command("connect")
-    print(response)
-    response = int(response)
-    if response > 0:
-        # print(response)
-        # if Player["inventory"]["Food"] >= 1500:
-        return True
+def check_capacity():
+    return int(send_command("connect")) > 0
 
 def fork():
-    response = send_command("fork")
-    if Debug:
-        print(color("Forking", "blue"))
-    if response.startswith("ko"):
-        return
-    nouveau_processus = multiprocessing.Process(target=main2, args=(Player_id + 1, ))
+    # response = send_command("fork")
+    # if Debug:
+    #     print(color("Forking", "blue"))
+    # if response.startswith("ko"):
+    #     return
+    nouveau_processus = multiprocessing.Process(target=main, args=(Player_id + 1, ))
     print(type(nouveau_processus))
     nouveau_processus.start()
 
@@ -399,35 +397,30 @@ def sigint_handler(signal, frame):
 def main(id: int = 0, **kwargs):
     args = parser()
     # Initialisation du joueur
+    # print(args)
     init(args.hostname, args.port, args.team, id)
     signal.signal(signal.SIGINT, sigint_handler)
-    
-    
-    # update_inventory()
-    # # Mettre à jour la carte avec la vision
-    while True :
-    #     update_map_with_vision()
-        if fork_capacity():
-            update_inventory()
-            update_map_with_vision()
             
-    # while True :
+    while True :
     
-    #     # Demander la vision au serveur
-    #     update_inventory()
-    #     if check_level_requirements():
-    #         if Debug:
-    #             print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
-    #         level_up()
+        # Demander la vision au serveur
+        update_inventory()
+        if check_level_requirements():
+            if Debug:
+                print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
+            level_up()
 
-    #     if fork_capacity():
-    #         fork()
+        if Player["inventory"]["Food"] >= 1500 and Player_id < 3:
+            send_command("fork")
 
-    #     if Debug:
-    #         print(color("Votre position:", "blue"), Player["position"])
+        if check_capacity():
+            fork()
+    
+        if Debug:
+            print(color("Votre position:", "blue"), Player["position"])
         
-    #     mouvements = calculate_best_move()
-    #     for mouv in mouvements :
-    #         send_command(mouv)
-    #     update_map_with_vision()
+        mouvements = calculate_best_move()
+        for mouv in mouvements :
+            send_command(mouv)
+        update_map_with_vision()
 
