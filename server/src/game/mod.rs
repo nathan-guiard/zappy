@@ -211,7 +211,7 @@ impl Game {
 			} else {
 				comming_from = map.comes_from(p.position, position, p.direction);
 			}
-			send_to(p.fd, format!("braodcast {comming_from}: {text}\n").as_str());
+			send_to(p.fd, format!("broadcast {comming_from}: {text}\n").as_str());
 		}
 	}
 	
