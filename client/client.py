@@ -142,7 +142,6 @@ def send_command(command) -> str:
         wait_and_exit()
     if True:
         print(f"ID:{Player_id} || {color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
-    
     return response
 
 def calculate_moves(x_dest, y_dest):
@@ -359,7 +358,9 @@ def level_up():
     Player["fork_nb"] = 0
     print(color(f"Succesfully level up {Player['level']}", "blue"))
     
-def check_capacity():
+def check_capacity(have_fork):
+    if not have_fork:
+        return False
     return int(send_command("connect")) > 0
 
 def fork():
@@ -367,10 +368,11 @@ def fork():
     nouveau_processus.start()
     nouveau_processus.join(timeout=0.2)
     if not nouveau_processus.is_alive():
-        Player["fork_nb"] += 1
         print(color("Process est pas cree", "red_bg"))
-    else :
-        list_processus.append(nouveau_processus)
+        return False
+    list_processus.append(nouveau_processus)
+    Player["fork_nb"] -= 1
+    return True
 
 
 def wait_and_exit():
@@ -383,7 +385,7 @@ def sigint_handler(signal, frame):
     if Player_id == 0:
         print("SIGINT reçu, fermeture du client")
     for nouveau_processus in list_processus:
-        nouveau_processus.terminate()
+        nouveau_processus.join()
     Client.close()
     sys.exit(0)
 
@@ -394,7 +396,8 @@ def main(id: int = 0, args=None):
     # print(args)
     init(args.hostname, args.port, args.team, id)
     signal.signal(signal.SIGINT, sigint_handler)
-            
+    
+    have_fork = False
     while True :
     
         # Demander la vision au serveur
@@ -404,14 +407,12 @@ def main(id: int = 0, args=None):
                 print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
             level_up()
             
-
-        if Player["inventory"]["Food"] >= 1500 and Player["fork_nb"]:
+        if Player["inventory"]["Food"] >= 1500 and Player["fork_nb"] > 0 and not have_fork:
             send_command("fork")
-            Player["fork_nb"] -= 1
-            
-        if check_capacity():
-            fork()
-    
+            have_fork = True
+        if check_capacity(have_fork):
+            if fork():
+                have_fork = False
         if Debug:
             print(color("Votre position:", "blue"), Player["position"])
         
