@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 15:03:46 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/05/03 11:49:50 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -292,7 +292,9 @@ impl Game {
 			let mut count = 0;
 			for player in &self.players {
 				if &player.team == team_name {
-					count += 1;
+					if count != u8::MAX {
+						count += 1;
+					}
 				}
 			}
 			players_alive.push(count)
