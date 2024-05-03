@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 05:53:29 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 11:44:05 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/05/03 15:57:42 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,7 +74,7 @@ pub fn get_data_from_fd(fd: i32) -> Result<Vec<String>, Error> {
 		}
 	}
 	let lines: Vec<String> = split_keep_newline(line);
-	Ok(lines)
+	Ok(lines.into_iter().take(10).collect())
 }
 
 pub fn split_keep_newline(to_split: String) -> Vec<String> {
