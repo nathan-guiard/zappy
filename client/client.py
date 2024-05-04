@@ -14,16 +14,16 @@ Debug : bool
 Client : socket
 Direction = ['N', 'E', 'S', 'W']
 Player: dict
-nouveau_processus: multiprocessing.Process
+list_processus: multiprocessing.Process
 
 levels = {
-        1: {"Linemate": 1},
-        2: {"Linemate": 1, "Deraumere": 1, "Sibur": 1},
-        3: {"Linemate": 2, "Sibur": 1, "Phiras": 2},
-        4: {"Linemate": 1, "Deraumere": 1, "Sibur": 2, "Phiras": 1},
-        5: {"Linemate": 1, "Deraumere": 2, "Sibur": 1, "Mendiane": 3},
-        6: {"Linemate": 1, "Deraumere": 2, "Sibur": 3, "Phiras": 1},
-        7: {"Linemate": 2, "Deraumere": 2, "Sibur": 2, "Mendiane": 2, "Phiras": 2, "Thystame": 1},
+        1: {"Player":1, "Linemate": 1},
+        2: {"Player":2, "Linemate": 1, "Deraumere": 1, "Sibur": 1},
+        3: {"Player":2, "Linemate": 2, "Sibur": 1, "Phiras": 2},
+        4: {"Player":4, "Linemate": 1, "Deraumere": 1, "Sibur": 2, "Phiras": 1},
+        5: {"Player":4, "Linemate": 1, "Deraumere": 2, "Sibur": 1, "Mendiane": 3},
+        6: {"Player":6, "Linemate": 1, "Deraumere": 2, "Sibur": 3, "Phiras": 1},
+        7: {"Player":6, "Linemate": 2, "Deraumere": 2, "Sibur": 2, "Mendiane": 2, "Phiras": 2, "Thystame": 1},
 }
 
 def parser():
@@ -55,7 +55,7 @@ def server_connexion(host, port, team):
         print("Connexion...")
     try:
         Client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        Client.settimeout(10000)
+        Client.settimeout(30)
         Client.connect((host, port))
     except socket.timeout:
         sys.stderr.write("Timeout: Connexion au serveur expirée\n")
@@ -70,7 +70,6 @@ def server_connexion(host, port, team):
     print(response)
     Client.send((team + '\n').encode())
     response: str = Client.recv(1024).decode()
-    print("///////", response)
     if response.endswith == "does not exist\n":
         sys.stderr.write(response)
         Client.close()
@@ -83,6 +82,9 @@ def server_connexion(host, port, team):
 
 def init(hostname, port, team, id): 
     connexion_and_map_size = server_connexion(hostname, port, team)
+    global list_processus, Player_id
+    list_processus = []
+    Player_id = id
     global Player
     Player = {}
     Player["direction"] = 'N'
@@ -91,14 +93,14 @@ def init(hostname, port, team, id):
     Player["map_size"] = tuple(map(int, connexion_and_map_size[1].split()))
     Player["map"] = [[{} for x in range(Player["map_size"][0])] for y in range(Player["map_size"][1])]
     Player["level"] = 1
-    global nouveau_processus, Player_id
-    nouveau_processus = None
-    Player_id = id
+    Player["fork_nb"] = 3 - Player_id if Player_id < 3 else 0
+    Player["nb_in_same_pos"] = 1
 
 def get_player_position(vision_data):
-    if vision_data and isinstance(vision_data[0], dict) and "p" in vision_data[0]:
+    if vision_data and len(vision_data) and isinstance(vision_data[0], dict) and "p" in vision_data[0]:
         # Mettre à jour la position du joueur
         Player["position"] = (vision_data[0]["p"]["x"], vision_data[0]["p"]["y"])
+        print(vision_data)
 
 def update_tile_content(content):
     if "Player" in content:
@@ -106,40 +108,111 @@ def update_tile_content(content):
         if content["Player"] == 0:
             del content["Player"]
 
-def update_map_with_vision():
-    vision_data = send_command("voir")
-    print("vision data", vision_data)
-    vision_data = json.loads(vision_data)
-    get_player_position(vision_data)
-    for tile in vision_data:
-        position = (tile["p"]["x"], tile["p"]["y"])
-        content = {k: v for d in tile["c"] for k, v in d.items()}
-        content = {**content, **tile["p"]}
-        update_tile_content(content)
-        Player["map"][position[1]][position[0]] = content
+def update_map_with_vision(priority=True):
+    v = None
+    try:
+        vision_data = send_command("voir", command_priority=priority)
+        v = vision_data
+        vision_data = json.loads(vision_data)
+        get_player_position(vision_data)
+        for tile in vision_data:
+            position = (tile["p"]["x"], tile["p"]["y"])
+            content = {k: v for d in tile["c"] for k, v in d.items()}
+            content = {**content, **tile["p"]}
+            update_tile_content(content)
+            Player["map"][position[1]][position[0]] = content
+    except json.JSONDecodeError as e:
+        sys.stderr.write(f"Erreur JSON lors de la mise à jour de la carte avec la vision : {e}\n")
 
-def send_command(command) -> str:
-    Client.send((command + '\n').encode())
+def broadcast_go(direction):
+    match direction:
+        case 1: 
+            send_command("avance", command_priority=True)
+        case 2: 
+            send_command("avance", command_priority=True)
+            send_command("gauche", command_priority=True)
+            Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
+            send_command("avance", command_priority=True)
+        case 3:
+            send_command("gauche", command_priority=True)
+            Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
+            broadcast_go(1)
+        case 4:
+            send_command("gauche", command_priority=True)
+            Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
+            broadcast_go(2)
+        case 5:
+            send_command("gauche", command_priority=True)
+            Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
+            send_command("gauche", command_priority=True)
+            Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
+            broadcast_go(1)
+        case 6:
+            send_command("droite", command_priority=True)
+            Player["direction"] = Direction[(Direction.index(Player["direction"]) + 1) % 4]
+            broadcast_go(8)
+        case 7:
+            send_command("droite", command_priority=True)
+            Player["direction"] = Direction[(Direction.index(Player["direction"]) + 1) % 4]
+            broadcast_go(1)
+        case 8:
+            send_command("avance", command_priority=True)
+            send_command("droite", command_priority=True)
+            Player["direction"] = Direction[(Direction.index(Player["direction"]) + 1) % 4]
+            send_command("avance", command_priority=True)
+        case 0:
+            return True # Je suis sur la case en question
+    return False
+
+def receive_message():
+    response:str = Client.recv(1024).decode()
+    print(end=f"en attente, {response}")
+    if response.startswith("broadcast") and response.endswith("finish\n"):
+        response = response.split()
+        direction = int(response[1][:response[1].find(':')])
+        if direction == 0:
+            return True 
+    return False
+
+def manage_broadcast(response:str):
+    response = response.split()
+    # print(response)
+    if len(response) < 3:
+        return
+    direction, messages = int(response[1][:response[1].find(':')]), response[2:]
+    print(f"ID:{Player_id} || {color(f'receive', 'red')} : {color(' '.join(response), 'lightgreen')}")
+    
+    # print(direction, messages)  
+    if messages[0].startswith("help"):
+        if broadcast_go(direction):
+            while receive_message():
+                print("j'attends")
+
+def send_command(command, in_broadcast:bool = False, command_priority=False) -> str:
+    print(command, "broad", in_broadcast, "priority", command_priority)
     try :
+        if not in_broadcast:
+            Client.send((command + '\n').encode())
         response:str = Client.recv(1024).decode()
-    except socket.timeout or ConnectionResetError:
-        sys.stderr.write("Tu es mort timeout\n")
-        Client.close()
-        if nouveau_processus is not None:
-            nouveau_processus.join()
-        sys.exit(0)
+    except socket.timeout or ConnectionResetError or BrokenPipeError:
+        sys.stderr.write("Tu es mort\n")
+        wait_and_exit()
     if response == "You died\n":
-        sys.stderr.write("Tu es mort reponse de mort\n")
-        Client.close()
-        if nouveau_processus is not None:
-            nouveau_processus.join()
-        sys.exit(0)
+        sys.stderr.write(response)
+        wait_and_exit()
     elif response.startswith("End of game"):
         print(end=response)
-        Client.close()
-        if nouveau_processus is not None:
-            nouveau_processus.join()
-        sys.exit(0)
+        wait_and_exit()
+    elif response.startswith("Disconnected"):
+        print(end=response)
+        wait_and_exit()
+    elif response.startswith("broadcast"):
+        command_response = send_command(command, in_broadcast=True, command_priority=True)
+        if not command_priority:
+            manage_broadcast(response)
+        if not in_broadcast:
+            update_map_with_vision(priority=False)
+        return command_response
     if True:
         print(f"ID:{Player_id} || {color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
     return response
@@ -147,7 +220,7 @@ def send_command(command) -> str:
 def calculate_moves(x_dest, y_dest):
     def wrapped_distance(a, b, size):
         choix = ((a - b) % size, (b - a) % size)
-        return "moins" if choix.index(min(choix)) == 0 else "plus", min(choix)
+        return -1 if choix.index(min(choix)) == 0 else 1, min(choix)
     moves = []
     x, y, direction = Player["position"][0], Player["position"][1], Player["direction"]
     if Debug:
@@ -158,7 +231,7 @@ def calculate_moves(x_dest, y_dest):
     
     # Bouger verticalement
     while distance_y:
-        if direction_y == "moins":  #monter
+        if direction_y == -1:  #monter
             if direction == 'E':
                 moves.append("gauche")
                 direction = 'N'
@@ -172,7 +245,7 @@ def calculate_moves(x_dest, y_dest):
             if direction == 'N':
                 moves.append("avance")
                 distance_y -= 1
-        elif direction_y == "plus": #descendre
+        elif direction_y == 1: #descendre
             if direction == 'W':
                 moves.append("gauche")
                 direction = 'S'
@@ -189,7 +262,7 @@ def calculate_moves(x_dest, y_dest):
 
     # Bouger verticalement
     while distance_x:
-        if direction_x == "moins":  #gauche
+        if direction_x == -1:  #gauche
             if direction == 'N':
                 moves.append("gauche")
                 direction = 'W'
@@ -203,7 +276,7 @@ def calculate_moves(x_dest, y_dest):
             if direction == 'W':
                 moves.append("avance")
                 distance_x -= 1
-        elif direction_x == "plus": #droite
+        elif direction_x == 1: #droite
             if direction == 'S':
                 moves.append("gauche")
                 direction = 'E'
@@ -256,6 +329,7 @@ def score_by_level(consommable: dict):
     # Coef
     # "Linemate": 2, "Deraumere": 3, "Sibur": 4, "Mendiane": 5, "Phiras": 6, "Thystame": 10
 
+    """Prochain objectif est de cree les coef en fonction de l'inventaire et le level actuel"""
     resource_coefficients = {
         1: {'Linemate': 2, 'Deraumere': 0, 'Sibur': 0, 'Mendiane': 0, 'Phiras': 0, 'Thystame': 0, 'Food': 1},
         2: {'Linemate': 2, 'Deraumere': 3, 'Sibur': 4, 'Mendiane': 0, 'Phiras': 0, 'Thystame': 0, 'Food': 1},
@@ -263,7 +337,8 @@ def score_by_level(consommable: dict):
         4: {'Linemate': 2, 'Deraumere': 3, 'Sibur': 8, 'Phiras': 6, 'Mendiane': 0, 'Thystame': 0, 'Food': 1},
         5: {'Linemate': 2, 'Deraumere': 6, 'Sibur': 4, 'Mendiane': 15, 'Phiras': 0, 'Thystame': 0, 'Food': 1},
         6: {'Linemate': 2, 'Deraumere': 6, 'Sibur': 12, 'Phiras': 6, 'Mendiane': 0, 'Thystame': 0, 'Food': 1},
-        7: {'Linemate': 4, 'Deraumere': 6, 'Sibur': 8, 'Mendiane': 10, 'Phiras': 12, 'Thystame': 10, 'Food': 1}
+        7: {'Linemate': 4, 'Deraumere': 6, 'Sibur': 8, 'Mendiane': 10, 'Phiras': 12, 'Thystame': 10, 'Food': 1},
+        8: {'Linemate': 1, 'Deraumere': 1, 'Sibur': 1, 'Mendiane': 1, 'Phiras': 1, 'Thystame': 1, 'Food': 1}
     }
     
     # Calculer le score en tenant compte des coefficients
@@ -312,7 +387,7 @@ def calculate_best_move():
         if Debug:
             print(f"{color('Avance random', 'red_bg')}", Player["direction"])
         # Si aucune position adjacente n'a de ressources, rester sur place
-        direction = random.choices(['avance', 'droite', 'gauche'], weights=[0.5, 0.25, 0.25], k=1)[0]
+        direction = random.choices(['avance', 'droite', 'gauche'], weights=[0.8, 0.1, 0.1], k=1)[0]
         if direction == "droite":
             Player["direction"] = Direction[(Direction.index(Player["direction"]) + 1) % 4]
         elif direction == "gauche":
@@ -324,9 +399,8 @@ def calculate_best_move():
 
 def update_inventory():
     response = send_command("inventaire")
-    print(response)
     inventory_data = json.loads(response)
-    print(f"{color('Inventaire', 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
+    # print(f"{color('Inventaire', 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
     inventory = {}
     for item in inventory_data:
         for key, value in item.items():
@@ -335,16 +409,24 @@ def update_inventory():
 
 def check_level_requirements():
     level, inventory = Player["level"], Player["inventory"]
-    
+    if level == 8:
+        return False
     requirements = levels[level]
     for item, quantity in requirements.items():
-        if item not in inventory or inventory[item] < quantity:
+        if item == "Player":
+            continue
+        elif item not in inventory or inventory[item] < quantity:
             return False
+    while Player["nb_in_same_pos"] < requirements["Player"]:
+        send_command("broadcast help")
+        update_map_with_vision()
     return True
 
 def level_up():
     requirements = levels[Player["level"]]
     for item, quantity in requirements.items():
+        if item == "Player":
+            continue
         for _ in range(quantity):
             send_command(f"pose {item}")
         Player["inventory"][item] -= quantity
@@ -356,66 +438,65 @@ def level_up():
         send_command("inventaire")
         return
     Player["level"] += 1
+    Player["fork_nb"] = 0
     print(color(f"Succesfully level up {Player['level']}", "blue"))
     
-def check_capacity():
+def check_capacity(have_fork):
+    if not have_fork:
+        return False
     return int(send_command("connect")) > 0
 
 def fork():
-    # response = send_command("fork")
-    # if Debug:
-    #     print(color("Forking", "blue"))
-    # if response.startswith("ko"):
-    #     return
-    nouveau_processus = multiprocessing.Process(target=main, args=(Player_id + 1, ))
-    print(type(nouveau_processus))
+    nouveau_processus = multiprocessing.Process(target=main, args=(Player_id + 1,))
     nouveau_processus.start()
+    nouveau_processus.join(timeout=0.2)
+    if not nouveau_processus.is_alive():
+        print(color("Process est pas cree", "red_bg"))
+        return False
+    list_processus.append(nouveau_processus)
+    Player["fork_nb"] -= 1
+    return True
 
-def main2(id: int = 0, *args, **kwargs):
-    args = parser()
-    print(id, args)
-    # # Initialisation du joueur
-    # init(args.hostname, args.port, args.team, id)
-    # signal.signal(signal.SIGINT, sigint_handler)
-    
-    # update_inventory()
-    # # Mettre à jour la carte avec la vision
-    # while True :
-    #     update_map_with_vision()
-    #     if fork_capacity():
-    #         fork()
+
+def wait_and_exit():
+    for nouveau_processus in list_processus:
+        nouveau_processus.join()
+    Client.close()
+    sys.exit(0)
 
 def sigint_handler(signal, frame):
     if Player_id == 0:
         print("SIGINT reçu, fermeture du client")
-    if nouveau_processus is not None:
-        nouveau_processus.terminate()
+    for nouveau_processus in list_processus:
+        nouveau_processus.join()
     Client.close()
     sys.exit(0)
 
-
-def main(id: int = 0, **kwargs):
+def main(id: int = 0, args=None):
     args = parser()
     # Initialisation du joueur
     # print(args)
     init(args.hostname, args.port, args.team, id)
     signal.signal(signal.SIGINT, sigint_handler)
-            
-    while True :
     
+    have_fork = False
+    while True :
+        # update_map_with_vision(priority=False)
+        # send_command("broadcast help")
+        
         # Demander la vision au serveur
         update_inventory()
         if check_level_requirements():
             if Debug:
                 print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
             level_up()
-
-        if Player["inventory"]["Food"] >= 1500 and Player_id < 3:
+            
+        if Player["fork_nb"] > 0 and not have_fork and Player["inventory"]["Food"] >= 1750:
             send_command("fork")
-
-        if check_capacity():
-            fork()
-    
+            have_fork = True
+        if check_capacity(have_fork):
+            if fork():
+                have_fork = False
         if Debug:
             print(color("Votre position:", "blue"), Player["position"])
         
@@ -423,4 +504,3 @@ def main(id: int = 0, **kwargs):
         for mouv in mouvements :
             send_command(mouv)
         update_map_with_vision()
-
