@@ -27,6 +27,11 @@ levels = {
 }
 
 def parser():
+    """Parse et check les arguments
+
+    Returns:
+        Namespace: contient les arguments 
+    """
     parser = argparse.ArgumentParser(description='Client program', add_help=False)
     parser.add_argument('-n', '--team', type=str, help='Team name', required=True)
     parser.add_argument('-p', '--port', type=int, help='Port number', required=True)
@@ -50,6 +55,16 @@ def parser():
     return args
 
 def server_connexion(host, port, team):
+    """Connection au serveur
+
+    Args:
+        host (string): _description_
+        port (string): _description_
+        team (string): _description_
+
+    Returns:
+        _type_: _description_
+    """
     global Client
     if Debug: 
         print("Connexion...")
@@ -81,6 +96,14 @@ def server_connexion(host, port, team):
     return response
 
 def init(hostname, port, team, id): 
+    """Initialise les variables et se connecte au serveur
+
+    Args:
+        hostname (string)
+        port (string)
+        team (string): Nom de l'equipe
+        id (int): Id du joueur
+    """
     connexion_and_map_size = server_connexion(hostname, port, team)
     global list_processus, Player_id
     list_processus = []
@@ -189,6 +212,16 @@ def manage_broadcast(response:str):
                 print("j'attends")
 
 def send_command(command, in_broadcast:bool = False, command_priority=False) -> str:
+    """Send command to the server
+
+    Args:
+        command (string)
+        in_broadcast (bool, optional): _description_. Defaults to False.
+        command_priority (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        str: message from the server
+    """
     print(command, "broad", in_broadcast, "priority", command_priority)
     try :
         if not in_broadcast:
@@ -218,7 +251,26 @@ def send_command(command, in_broadcast:bool = False, command_priority=False) -> 
     return response
 
 def calculate_moves(x_dest, y_dest):
+    """
+    Cree la liste des commandes permettant d'arrive a destination
+    Args:
+        x_dest (int): destination x
+        y_dest (int): destination y
+
+    Returns:
+        list: contient la liste de mouvements
+    """
     def wrapped_distance(a, b, size):
+        """Permet de preferer un tour de la carte plutot que traverser toute la carte
+
+        Args:
+            a (int): coordonne 
+            b (int): coordonne
+            size (int): taille de la carte
+
+        Returns:
+            int: La decision la plus optimisee
+        """
         choix = ((a - b) % size, (b - a) % size)
         return -1 if choix.index(min(choix)) == 0 else 1, min(choix)
     moves = []
@@ -294,6 +346,14 @@ def calculate_moves(x_dest, y_dest):
     return moves
 
 def prendre(consommables, x, y):
+    """Envoi la commande prendre au serveur et met a jour la carte en consequence
+    Si un echec survient, la mise a jour de la carte a lieu
+    
+    Args:
+        consommables (dict): contient les ressources de la case
+        x (int): coordonne x
+        y (int): coordonne y
+    """
     while consommables:
         items = [i for i in consommables]
         focus_items = random.choices(items, k=1)[0]
@@ -325,7 +385,15 @@ def map_print(passage, x, y, taillex, tailley):
     print(" " + "-" * (taillex))
     
 def score_by_level(consommable: dict): 
-    # Définir les coefficients des ressources en fonction du niveau du joueur
+    """Attribue un score en fonction des ressources trouve 
+
+    Args:
+        consommable (dict): contient les items d'une case, ainsi que leurs quantites
+
+    Returns:
+        int: Score
+    """
+    # to do : Définir les coefficients des ressources en fonction du niveau du joueur et de ce qu/il a deja dans son inventaire
     # Coef
     # "Linemate": 2, "Deraumere": 3, "Sibur": 4, "Mendiane": 5, "Phiras": 6, "Thystame": 10
 
@@ -347,13 +415,18 @@ def score_by_level(consommable: dict):
     return score
 
 def calculate_best_move():
+    """Calcule la liste des mouvements vers le filon de ressources le plus interessant
+
+    Returns:
+        list: Contient tous les mouvements pour arriver au filon
+    """
     # Liste des positions adjacentes
     adjacent_positions = [row for col in Player["map"] for row in col if row]
     max_score = float('-inf')
     best_moves = []
     
-    if Debug:
-        map_print(adjacent_positions, Player["position"][0], Player["position"][1], Player["map_size"][0], Player["map_size"][1])
+    # if Debug:
+    #     map_print(adjacent_positions, Player["position"][0], Player["position"][1], Player["map_size"][0], Player["map_size"][1])
     
     for case in adjacent_positions:
         if [case["x"], case["y"]] == [Player["position"][0], Player["position"][1]]:
@@ -398,16 +471,23 @@ def calculate_best_move():
         return [direction]
 
 def update_inventory():
+    """Met a jour l'inventaire (un envoi de commande est fait)
+    """
     response = send_command("inventaire")
     inventory_data = json.loads(response)
     # print(f"{color('Inventaire', 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
-    inventory = {}
+    Player["inventory"] = {}
     for item in inventory_data:
         for key, value in item.items():
-            inventory[key] = value
-    Player["inventory"] = inventory
+            Player["inventory"][key] = value
 
 def check_level_requirements():
+    """Check si les besoins sont satisfaits
+    Des envois de broadcast sont fait s'il manque que des joueurs
+
+    Returns:
+        bool: True si c'est le cas, False autrement
+    """
     level, inventory = Player["level"], Player["inventory"]
     if level == 8:
         return False
@@ -419,10 +499,13 @@ def check_level_requirements():
             return False
     while Player["nb_in_same_pos"] < requirements["Player"]:
         send_command("broadcast help")
-        update_map_with_vision()
+        # update_map_with_vision()
     return True
 
 def level_up():
+    """Procede au level up (depose les items et incante)
+    Si le processus echoue, la vision et l'inventaire seront mis a jour
+    """
     requirements = levels[Player["level"]]
     for item, quantity in requirements.items():
         if item == "Player":
@@ -434,14 +517,23 @@ def level_up():
             del Player["inventory"][item]
     response = send_command("incantation")
     if response.startswith("ko"):
-        send_command("voir")
-        send_command("inventaire")
+        update_map_with_vision()
+        update_inventory()
         return
     Player["level"] += 1
     Player["fork_nb"] = 0
     print(color(f"Succesfully level up {Player['level']}", "blue"))
     
 def check_capacity(have_fork):
+    """check la capacite de joindre fork le programme et rejoindre la session avec un autre joueur
+    Elle necessite le succes d'un fork au prealable 
+
+    Args:
+        have_fork (bool): Represente si un fork a reussi au prealable
+
+    Returns:
+        boolean: True si un fork du programme est possible, False autrement
+    """
     if not have_fork:
         return False
     return int(send_command("connect")) > 0
@@ -481,26 +573,25 @@ def main(id: int = 0, args=None):
     
     have_fork = False
     while True :
-        # update_map_with_vision(priority=False)
-        # send_command("broadcast help")
-        
-        # Demander la vision au serveur
+        update_map_with_vision()
         update_inventory()
+        
         if check_level_requirements():
             if Debug:
                 print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
             level_up()
             
+        # Fork le programme si les conditions sont réunies
         if Player["fork_nb"] > 0 and not have_fork and Player["inventory"]["Food"] >= 1750:
             send_command("fork")
             have_fork = True
         if check_capacity(have_fork):
             if fork():
                 have_fork = False
+
         if Debug:
             print(color("Votre position:", "blue"), Player["position"])
         
         mouvements = calculate_best_move()
         for mouv in mouvements :
             send_command(mouv)
-        update_map_with_vision()
