@@ -147,6 +147,14 @@ def update_map_with_vision(priority=True):
         sys.stderr.write(f"Erreur JSON lors de la mise à jour de la carte avec la vision : {e}\n")
 
 def broadcast_go(direction):
+    """Se deplace vers l'emetteur du broadcast
+
+    Args:
+        direction (int): Direction de l'emetteur
+
+    Returns:
+        bool: True si on arrive, False autrement
+    """
     match direction:
         case 1: 
             send_command("avance", command_priority=True)
@@ -186,17 +194,35 @@ def broadcast_go(direction):
             return True # Je suis sur la case en question
     return False
 
-def receive_message():
-    response:str = Client.recv(1024).decode()
-    print(end=f"en attente, {response}")
+def wait_incantation_finish():
+    """Attend le message de fin d'incantation
+    Il receptionne les reponses serveur
+    
+    Returns:
+        bool: True si l'incantation est fini, False autrement
+    """
+    try:
+        response:str = Client.recv(1024).decode()
+    except socket.timeout or ConnectionResetError or BrokenPipeError:
+        sys.stderr.write("Tu es mort\n")
+        wait_and_exit()
+    if response.startswith("You died"):
+        sys.stderr.write(response)
+        wait_and_exit()
+    elif response.startswith("End of game"):
+        print(end=response)
+        wait_and_exit()
+    elif response.startswith("Disconnected"):
+        print(end=response)
+        wait_and_exit()
     if response.startswith("broadcast") and response.endswith("finish\n"):
         response = response.split()
         direction = int(response[1][:response[1].find(':')])
         if direction == 0:
-            return True 
+            return True
     return False
 
-def manage_broadcast(response:str):
+def manage_broadcast(response:str, command_priority: bool):
     response = response.split()
     # print(response)
     if len(response) < 3:
@@ -204,15 +230,21 @@ def manage_broadcast(response:str):
     direction, messages = int(response[1][:response[1].find(':')]), response[2:]
     print(f"ID:{Player_id} || {color(f'receive', 'red')} : {color(' '.join(response), 'lightgreen')}")
     
-    # print(direction, messages)  
-    if messages[0].startswith("help"):
+    if not command_priority and messages[0].startswith("help"):
         if broadcast_go(direction):
-            while receive_message():
+            print(f"ID:{Player_id} ||", color(f"Je commence a attendre", "red_bg"))
+            send_command(f"broadcast position {multiprocessing.current_process().pid}", command_priority=True)
+            # Tant que le processus d'incantation n'est pas fini
+            while not wait_incantation_finish():
                 print("j'attends")
+                
+    if messages[0].startswith("position"):
+        # pouvoir check le nombre de personne dans ma case, stocker leur id et reset si un deplacement est fait
+        pass
 
 
 def broadcast_gestion(command: str, response: str, in_broadcast:bool, command_priority:bool):
-    """Gestion des broadcasts
+    """Gestion des appels a broadcast
 
     Args:
         command (str): Commande ayant ete intercepte par le broadcast
@@ -221,12 +253,11 @@ def broadcast_gestion(command: str, response: str, in_broadcast:bool, command_pr
         command_priority (bool): Permet d'empecher la creation d'un processus broadcast.
 
     Returns:
-        str: Reponse avant interuption par le broadcast
+        str: Reponse avant interruption par le broadcast
     """
     # Permet de recuperer la reponse de la commande interceptee
     command_response = send_command(command, in_broadcast=True, command_priority=True)
-    if not command_priority:
-        manage_broadcast(response)
+    manage_broadcast(response, command_priority)
     if not in_broadcast:
         update_map_with_vision(priority=False)
     return command_response
@@ -242,7 +273,7 @@ def send_command(command: str, in_broadcast:bool = False, command_priority:bool 
     Returns:
         str: Reponse du serveur
     """
-    print(command, "broad", in_broadcast, "priority", command_priority)
+    # print(command, "broad", in_broadcast, "priority", command_priority)
     try:
         if not in_broadcast:
             Client.send((command + '\n').encode())
@@ -513,7 +544,8 @@ def check_level_requirements():
         elif item not in inventory or inventory[item] < quantity:
             return False
     while Player["nb_in_same_pos"] < requirements["Player"]:
-        send_command("broadcast help")
+        # Essayer de travailler le send command broadcast pour savoir aussi cb de personne sont dans ma case
+        send_command("broadcast help", command_priority=True)
         # update_map_with_vision()
     return True
 
