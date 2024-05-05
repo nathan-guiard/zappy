@@ -212,15 +212,15 @@ def manage_broadcast(response:str):
                 print("j'attends")
 
 def send_command(command, in_broadcast:bool = False, command_priority=False) -> str:
-    """Send command to the server
-
+    """Envoi une commande au serveur
+    Il peut se faire ecraser par un processus broadcast si un broadcast est recu au moment de la reponse de la commande
     Args:
-        command (string)
-        in_broadcast (bool, optional): _description_. Defaults to False.
-        command_priority (bool, optional): _description_. Defaults to False.
+        command (string): Commande envoyee
+        in_broadcast (bool, optional): Une commande dans le processus d'un broadcast. Defaults to False.
+        command_priority (bool, optional): Permet d'empecher la creation d'un processus broadcast. Defaults to False.
 
     Returns:
-        str: message from the server
+        str: Reponse du serveur
     """
     print(command, "broad", in_broadcast, "priority", command_priority)
     try :
