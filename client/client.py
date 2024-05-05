@@ -135,7 +135,6 @@ def update_map_with_vision(priority=True):
     v = None
     try:
         vision_data = send_command("voir", command_priority=priority)
-        v = vision_data
         vision_data = json.loads(vision_data)
         get_player_position(vision_data)
         for tile in vision_data:
@@ -211,7 +210,28 @@ def manage_broadcast(response:str):
             while receive_message():
                 print("j'attends")
 
-def send_command(command, in_broadcast:bool = False, command_priority=False) -> str:
+
+def broadcast_gestion(command: str, response: str, in_broadcast:bool, command_priority:bool):
+    """Gestion des broadcasts
+
+    Args:
+        command (str): Commande ayant ete intercepte par le broadcast
+        response (str): Reponse contenant le broadcast
+        in_broadcast (bool): Une commande dans le processus d'un broadcast.
+        command_priority (bool): Permet d'empecher la creation d'un processus broadcast.
+
+    Returns:
+        str: Reponse avant interuption par le broadcast
+    """
+    # Permet de recuperer la reponse de la commande interceptee
+    command_response = send_command(command, in_broadcast=True, command_priority=True)
+    if not command_priority:
+        manage_broadcast(response)
+    if not in_broadcast:
+        update_map_with_vision(priority=False)
+    return command_response
+
+def send_command(command: str, in_broadcast:bool = False, command_priority:bool = False) -> str:
     """Envoi une commande au serveur
     Il peut se faire ecraser par un processus broadcast si un broadcast est recu au moment de la reponse de la commande
     Args:
@@ -223,14 +243,14 @@ def send_command(command, in_broadcast:bool = False, command_priority=False) -> 
         str: Reponse du serveur
     """
     print(command, "broad", in_broadcast, "priority", command_priority)
-    try :
+    try:
         if not in_broadcast:
             Client.send((command + '\n').encode())
         response:str = Client.recv(1024).decode()
     except socket.timeout or ConnectionResetError or BrokenPipeError:
         sys.stderr.write("Tu es mort\n")
         wait_and_exit()
-    if response == "You died\n":
+    if response.startswith("You died"):
         sys.stderr.write(response)
         wait_and_exit()
     elif response.startswith("End of game"):
@@ -240,12 +260,7 @@ def send_command(command, in_broadcast:bool = False, command_priority=False) -> 
         print(end=response)
         wait_and_exit()
     elif response.startswith("broadcast"):
-        command_response = send_command(command, in_broadcast=True, command_priority=True)
-        if not command_priority:
-            manage_broadcast(response)
-        if not in_broadcast:
-            update_map_with_vision(priority=False)
-        return command_response
+        response = broadcast_gestion(command, response, in_broadcast, command_priority)
     if True:
         print(f"ID:{Player_id} || {color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
     return response
