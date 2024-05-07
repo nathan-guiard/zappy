@@ -17,7 +17,7 @@ Player: dict
 list_processus: multiprocessing.Process
 
 levels = {
-        1: {"Player":1, "Linemate": 1},
+        1: {"Player":2, "Linemate": 1},
         2: {"Player":2, "Linemate": 1, "Deraumere": 1, "Sibur": 1},
         3: {"Player":2, "Linemate": 2, "Sibur": 1, "Phiras": 2},
         4: {"Player":4, "Linemate": 1, "Deraumere": 1, "Sibur": 2, "Phiras": 1},
@@ -215,6 +215,7 @@ def wait_incantation_finish():
     elif response.startswith("Disconnected"):
         print(end=response)
         wait_and_exit()
+    print(end=f"    ID:{Player_id} || attente : " + response)
     if response.startswith("broadcast") and response.endswith("finish\n"):
         response = response.split()
         direction = int(response[1][:response[1].find(':')])
@@ -236,7 +237,8 @@ def manage_broadcast(response:str, command_priority: bool):
             send_command(f"broadcast position {multiprocessing.current_process().pid}", command_priority=True)
             # Tant que le processus d'incantation n'est pas fini
             while not wait_incantation_finish():
-                print("j'attends")
+                pass
+                # print(f"ID:{Player_id} || j'attends")
                 
     if messages[0].startswith("position"):
         # pouvoir check le nombre de personne dans ma case, stocker leur id et reset si un deplacement est fait
@@ -258,8 +260,8 @@ def broadcast_gestion(command: str, response: str, in_broadcast:bool, command_pr
     # Permet de recuperer la reponse de la commande interceptee
     command_response = send_command(command, in_broadcast=True, command_priority=True)
     manage_broadcast(response, command_priority)
-    if not in_broadcast:
-        update_map_with_vision(priority=False)
+    # if not in_broadcast:
+    #     update_map_with_vision(priority=False)
     return command_response
 
 def send_command(command: str, in_broadcast:bool = False, command_priority:bool = False) -> str:
@@ -527,6 +529,47 @@ def update_inventory():
         for key, value in item.items():
             Player["inventory"][key] = value
 
+import selectors
+
+def broadcast_level_up():
+    command = "broadcast help"
+    try:
+        Client.send((command + '\n').encode())
+        # response:str = Client.recv(1024).decode()
+    except (socket.timeout, ConnectionResetError, BrokenPipeError):
+        sys.stderr.write("Tu es mort\n")
+        wait_and_exit()
+    sel = selectors.DefaultSelector()
+    # Register the client socket for reading
+    sel.register(Client, selectors.EVENT_READ)
+
+    # Check if the socket is ready for reading
+    ready = sel.select(timeout=0)
+
+    # If the socket is ready, receive the response
+    if ready:
+        try:
+            response:str = Client.recv(1024).decode()
+            if response.startswith("You died"):
+                sys.stderr.write(response)
+                wait_and_exit()
+            elif response.startswith("End of game"):
+                print(end=response)
+                wait_and_exit()
+            elif response.startswith("Disconnected"):
+                print(end=response)
+                wait_and_exit()
+            else:
+                print(f"ID:{Player_id} || {color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
+                return response
+        except (socket.timeout, ConnectionResetError, BrokenPipeError):
+            sys.stderr.write("Tu es mort\n")
+            wait_and_exit()
+    
+    # If the socket is not ready, return None
+    return None
+
+
 def check_level_requirements():
     """Check si les besoins sont satisfaits
     Des envois de broadcast sont fait s'il manque que des joueurs
@@ -545,7 +588,7 @@ def check_level_requirements():
             return False
     while Player["nb_in_same_pos"] < requirements["Player"]:
         # Essayer de travailler le send command broadcast pour savoir aussi cb de personne sont dans ma case
-        send_command("broadcast help", command_priority=True)
+        broadcast_level_up()
         # update_map_with_vision()
     return True
 
@@ -627,7 +670,7 @@ def main(id: int = 0, args=None):
             if Debug:
                 print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
             level_up()
-            
+        
         # Fork le programme si les conditions sont réunies
         if Player["fork_nb"] > 0 and not have_fork and Player["inventory"]["Food"] >= 1750:
             send_command("fork")
