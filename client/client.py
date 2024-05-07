@@ -7,6 +7,7 @@ import copy
 import multiprocessing
 import signal
 import sys
+from datetime import datetime
 
 
 # Variable Globale
@@ -17,7 +18,7 @@ Player: dict
 list_processus: multiprocessing.Process
 
 levels = {
-        1: {"Player":2, "Linemate": 1},
+        1: {"Player":1, "Linemate": 1},
         2: {"Player":2, "Linemate": 1, "Deraumere": 1, "Sibur": 1},
         3: {"Player":2, "Linemate": 2, "Sibur": 1, "Phiras": 2},
         4: {"Player":4, "Linemate": 1, "Deraumere": 1, "Sibur": 2, "Phiras": 1},
@@ -95,16 +96,14 @@ def server_connexion(host, port, team):
         sys.exit(1)
     return response
 
-def init(hostname, port, team, id): 
+def init(args, id): 
     """Initialise les variables et se connecte au serveur
 
     Args:
-        hostname (string)
-        port (string)
-        team (string): Nom de l'equipe
+        args (Namespace): contient les arguments (hostname, port et team)
         id (int): Id du joueur
     """
-    connexion_and_map_size = server_connexion(hostname, port, team)
+    connexion_and_map_size = server_connexion(args.hostname, args.port, args.team)
     global list_processus, Player_id
     list_processus = []
     Player_id = id
@@ -131,10 +130,9 @@ def update_tile_content(content):
         if content["Player"] == 0:
             del content["Player"]
 
-def update_map_with_vision(priority=True):
-    v = None
+def update_map_with_vision():
     try:
-        vision_data = send_command("voir", command_priority=priority)
+        vision_data = send_command("voir")
         vision_data = json.loads(vision_data)
         get_player_position(vision_data)
         for tile in vision_data:
@@ -144,7 +142,8 @@ def update_map_with_vision(priority=True):
             update_tile_content(content)
             Player["map"][position[1]][position[0]] = content
     except json.JSONDecodeError as e:
-        sys.stderr.write(f"Erreur JSON lors de la mise à jour de la carte avec la vision : {e}\n")
+        return
+        # sys.stderr.write(f"Erreur JSON lors de la mise à jour de la carte avec la vision : {e}\n")
 
 def broadcast_go(direction):
     """Se deplace vers l'emetteur du broadcast
@@ -223,53 +222,50 @@ def wait_incantation_finish():
             return True
     return False
 
-def manage_broadcast(response:str, command_priority: bool):
+def manage_broadcast(response:str, priority: bool):
     response = response.split()
     # print(response)
     if len(response) < 3:
         return
     direction, messages = int(response[1][:response[1].find(':')]), response[2:]
-    print(f"ID:{Player_id} || {color(f'receive', 'red')} : {color(' '.join(response), 'lightgreen')}")
+    print(f"ID:{Player_id} || {color(f'receive', 'darkgrey')} : {color(' '.join(response), 'lightgrey')} {datetime.now().strftime('%H:%M:%S.%f')}")
     
-    if not command_priority and messages[0].startswith("help"):
-        if broadcast_go(direction):
-            print(f"ID:{Player_id} ||", color(f"Je commence a attendre", "red_bg"))
-            send_command(f"broadcast position {multiprocessing.current_process().pid}", command_priority=True)
-            # Tant que le processus d'incantation n'est pas fini
-            while not wait_incantation_finish():
-                pass
-                # print(f"ID:{Player_id} || j'attends")
+    if not priority and messages[0].startswith("help"):
+        # if broadcast_go(direction):
+        #     print(f"ID:{Player_id} ||", color(f"Je commence a attendre", "red_bg"))
+        #     send_command(f"broadcast position {multiprocessing.current_process().pid}", priority=True)
+        #     # Tant que le processus d'incantation n'est pas fini
+        #     while not wait_incantation_finish():
+        #         pass
+        #         # print(f"ID:{Player_id} || j'attends")
+        pass
                 
     if messages[0].startswith("position"):
         # pouvoir check le nombre de personne dans ma case, stocker leur id et reset si un deplacement est fait
         pass
 
 
-def broadcast_gestion(command: str, response: str, in_broadcast:bool, command_priority:bool):
+def broadcast_gestion(command: str, response: str, priority:bool):
     """Gestion des appels a broadcast
 
     Args:
         command (str): Commande ayant ete intercepte par le broadcast
         response (str): Reponse contenant le broadcast
-        in_broadcast (bool): Une commande dans le processus d'un broadcast.
-        command_priority (bool): Permet d'empecher la creation d'un processus broadcast.
+        priority (bool): Permet d'empecher la creation d'un processus broadcast.
 
     Returns:
         str: Reponse avant interruption par le broadcast
     """
     # Permet de recuperer la reponse de la commande interceptee
-    command_response = send_command(command, in_broadcast=True, command_priority=True)
-    manage_broadcast(response, command_priority)
-    # if not in_broadcast:
-    #     update_map_with_vision(priority=False)
+    command_response = send_command(command, priority=True, block_send=True)
+    manage_broadcast(response, priority)
     return command_response
 
-def send_command(command: str, in_broadcast:bool = False, command_priority:bool = False) -> str:
+def send_command(command: str, priority:bool = False, block_send:bool = False) -> str:
     """Envoi une commande au serveur
     Il peut se faire ecraser par un processus broadcast si un broadcast est recu au moment de la reponse de la commande
     Args:
         command (string): Commande envoyee
-        in_broadcast (bool, optional): Une commande dans le processus d'un broadcast. Defaults to False.
         command_priority (bool, optional): Permet d'empecher la creation d'un processus broadcast. Defaults to False.
 
     Returns:
@@ -277,7 +273,7 @@ def send_command(command: str, in_broadcast:bool = False, command_priority:bool 
     """
     # print(command, "broad", in_broadcast, "priority", command_priority)
     try:
-        if not in_broadcast:
+        if not block_send:
             Client.send((command + '\n').encode())
         response:str = Client.recv(1024).decode()
     except socket.timeout or ConnectionResetError or BrokenPipeError:
@@ -293,9 +289,9 @@ def send_command(command: str, in_broadcast:bool = False, command_priority:bool 
         print(end=response)
         wait_and_exit()
     elif response.startswith("broadcast"):
-        response = broadcast_gestion(command, response, in_broadcast, command_priority)
-    if True:
-        print(f"ID:{Player_id} || {color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
+        response = broadcast_gestion(command, response, priority)
+    if not priority:
+        print(f"ID:{Player_id} || {color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')} {datetime.now().strftime('%H:%M:%S.%f')}")
     return response
 
 def calculate_moves(x_dest, y_dest):
@@ -529,47 +525,6 @@ def update_inventory():
         for key, value in item.items():
             Player["inventory"][key] = value
 
-import selectors
-
-def broadcast_level_up():
-    command = "broadcast help"
-    try:
-        Client.send((command + '\n').encode())
-        # response:str = Client.recv(1024).decode()
-    except (socket.timeout, ConnectionResetError, BrokenPipeError):
-        sys.stderr.write("Tu es mort\n")
-        wait_and_exit()
-    sel = selectors.DefaultSelector()
-    # Register the client socket for reading
-    sel.register(Client, selectors.EVENT_READ)
-
-    # Check if the socket is ready for reading
-    ready = sel.select(timeout=0)
-
-    # If the socket is ready, receive the response
-    if ready:
-        try:
-            response:str = Client.recv(1024).decode()
-            if response.startswith("You died"):
-                sys.stderr.write(response)
-                wait_and_exit()
-            elif response.startswith("End of game"):
-                print(end=response)
-                wait_and_exit()
-            elif response.startswith("Disconnected"):
-                print(end=response)
-                wait_and_exit()
-            else:
-                print(f"ID:{Player_id} || {color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
-                return response
-        except (socket.timeout, ConnectionResetError, BrokenPipeError):
-            sys.stderr.write("Tu es mort\n")
-            wait_and_exit()
-    
-    # If the socket is not ready, return None
-    return None
-
-
 def check_level_requirements():
     """Check si les besoins sont satisfaits
     Des envois de broadcast sont fait s'il manque que des joueurs
@@ -577,19 +532,14 @@ def check_level_requirements():
     Returns:
         bool: True si c'est le cas, False autrement
     """
-    level, inventory = Player["level"], Player["inventory"]
-    if level == 8:
+    if Player["level"] == 8:
         return False
-    requirements = levels[level]
+    requirements = levels[Player["level"]]
     for item, quantity in requirements.items():
         if item == "Player":
             continue
-        elif item not in inventory or inventory[item] < quantity:
+        elif item not in Player["inventory"] or Player["inventory"][item] < quantity:
             return False
-    while Player["nb_in_same_pos"] < requirements["Player"]:
-        # Essayer de travailler le send command broadcast pour savoir aussi cb de personne sont dans ma case
-        broadcast_level_up()
-        # update_map_with_vision()
     return True
 
 def level_up():
@@ -639,7 +589,6 @@ def fork():
     Player["fork_nb"] -= 1
     return True
 
-
 def wait_and_exit():
     for nouveau_processus in list_processus:
         nouveau_processus.join()
@@ -657,8 +606,7 @@ def sigint_handler(signal, frame):
 def main(id: int = 0, args=None):
     args = parser()
     # Initialisation du joueur
-    # print(args)
-    init(args.hostname, args.port, args.team, id)
+    init(args, id)
     signal.signal(signal.SIGINT, sigint_handler)
     
     have_fork = False
@@ -671,17 +619,14 @@ def main(id: int = 0, args=None):
                 print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
             level_up()
         
-        # Fork le programme si les conditions sont réunies
-        if Player["fork_nb"] > 0 and not have_fork and Player["inventory"]["Food"] >= 1750:
-            send_command("fork")
-            have_fork = True
-        if check_capacity(have_fork):
-            if fork():
-                have_fork = False
+        # # Fork le programme si les conditions sont réunies
+        # if Player["fork_nb"] > 0 and not have_fork and Player["inventory"]["Food"] >= 1750:
+        #     send_command("fork")
+        #     have_fork = True
+        # if check_capacity(have_fork):
+        #     if fork():
+        #         have_fork = False
 
-        if Debug:
-            print(color("Votre position:", "blue"), Player["position"])
-        
         mouvements = calculate_best_move()
         for mouv in mouvements :
             send_command(mouv)
