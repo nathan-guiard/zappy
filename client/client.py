@@ -117,6 +117,7 @@ def init(args, id):
     Player["level"] = 1
     Player["fork_nb"] = 3 - Player_id if Player_id < 3 else 0
     Player["nb_in_same_pos"] = 1
+    Player["ready"] = []
 
 def get_player_position(vision_data):
     if vision_data and len(vision_data) and isinstance(vision_data[0], dict) and "p" in vision_data[0]:
@@ -225,27 +226,28 @@ def manage_broadcast(command:str, response:str, priority: bool):
     response = response.split()
     if len(response) < 3:
         return
-    direction, messages = int(response[1][:response[1].find(':')]), response[2:]
-    print(f"ID:{Player_id} || {color(f'interupt {command}', 'pink')} {color(f'receive', 'darkgrey')} : {color(' '.join(response), 'lightgrey')}{color(f' {priority}', 'blue') if priority else ''} {datetime.now().strftime('%H:%M:%S.%f')}")
     
-    if not priority and messages[0].startswith("help"):
-        pass
-                
-    if messages[0].startswith("position"):
-        print(f"ID:{Player_id} || {color(f'je recois la position', 'pink')} : {color(' '.join(response), 'lightgrey')} {datetime.now().strftime('%H:%M:%S.%f')}")
-        # pouvoir check le nombre de personne dans ma case, stocker leur id et reset si un deplacement est fait
-        pass
+    direction, messages = int(response[1][:response[1].find(':')]), response[2:]
+    broadcast_param = ["command", "level", "detail", "pid", "x", "y"]
+    broadcast = {broadcast_param[index]: messages[index] for index in range(len(messages))}
+    
+    print(f"ID:{Player_id} || {color(f'interupt {command}', 'pink')} {color(f'receive', 'darkgrey')} : {color(' '.join(response), 'lightgrey')}{color(f' {priority}', 'blue') if priority else ''} {datetime.now().strftime('%H:%M:%S.%f')}")
 
-    if not priority and messages[0].startswith("incantation"):
-        level_brodcast = messages[1]
-        print(f"ID:{Player_id} || Reception incantation broadcast\n\t lvl annonce {messages[1]} | my lvl {str(Player['level'])} | same lvl {level_brodcast.startswith(str(Player['level']))}")
-        if messages[1].startswith(str(Player["level"])):
-            # Si quelqu'un de mon niveau incante 
+                
+    if broadcast["command"] == "incantation":
+        if int(broadcast["level"]) == Player["level"]:
+            if broadcast["detail"] == "ready":
+                if broadcast["pid"] not in Player["ready"]:
+                    Player["ready"].append(broadcast["pid"])
+
+    if not priority and broadcast["command"] == "incantation":
+        # Si quelqu'un de mon niveau incante 
+        if int(broadcast["level"]) == Player["level"]:
             """print(f"ID:{Player_id} || j'envoie beacon")
             response = send_command("beacon", priority=True)"""
             # Cense envoye beacon et recuperer les coords
-            x_dest = int(messages[2])
-            y_dest = int(messages[3])
+            x_dest = int(messages[4])
+            y_dest = int(messages[5])
             
             # print(f"{color(' '.join(response), 'pink')}")
             print(f"{color(str(x_dest), 'pink')}")
@@ -261,7 +263,8 @@ def manage_broadcast(command:str, response:str, priority: bool):
             for mouv in mouvements :
                 send_command(mouv, priority=True)
             response = send_command("incantation", priority=True)
-            
+            if response.startswith("ok"):
+                Player["level"] += 1
         pass 
 
 
@@ -599,9 +602,8 @@ def level_up(join=False):
             Player["inventory"][item] -= quantity
             if not Player["inventory"][item]:
                 del Player["inventory"][item]
-        
-        send_command(f"broadcast incantation {Player['level']} {Player['position'][0]} {Player['position'][1]}")
-        
+        send_command(f"broadcast incantation {Player['level']} ready {multiprocessing.current_process().pid} {Player['position'][0]} {Player['position'][1]}")
+
     response = send_command("incantation")
     if response.startswith("ko"):
         update_map_with_vision()
