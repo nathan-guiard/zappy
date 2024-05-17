@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/15 12:07:50 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 10:04:50 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/05/17 15:06:51 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,7 +37,7 @@ pub fn update_gui(game: &Game) {
 			}
 		}
 	}
-	
+
 	for p in &game.players {
 		if !p.team.is_empty() {
 			to_send.players.push(SendPlayer::from(p.clone()))
@@ -46,7 +46,16 @@ pub fn update_gui(game: &Game) {
 
 	to_send.eggs = game.eggs.clone();
 
-	send_to(gui.fd, (serde_json::to_string(&to_send).unwrap() + "\n").as_str());
+	let splitted = (serde_json::to_string(&to_send).unwrap() + "\x04")
+								.chars()
+								.collect::<Vec<char>>()
+								.chunks(4096)
+								.map(|c| c.iter().collect::<String>())
+								.collect::<Vec<String>>();
+
+	for chunk in splitted {
+		send_to(gui.fd, chunk.as_str());
+	}
 }
 
 #[derive(Serialize)]

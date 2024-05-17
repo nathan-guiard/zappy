@@ -5,7 +5,8 @@
 ### Graphical user interface
 
 On connection, the server sends the whole map as it is. <br />
-It sends an array of an array of cells, so `[[SendCell]]`
+It sends an array of an array of cells, so `[[SendCell]]`.
+This array will be splitted in chunks of 4096 bytes, and the last chunk will be ended with a `\x04` character.
 
 Then, the gui has to send `ready\n` to recieve the updates.
 

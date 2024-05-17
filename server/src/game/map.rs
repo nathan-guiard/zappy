@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 15:09:23 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/05/17 15:10:24 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -827,11 +827,18 @@ impl GameMap {
 			}
 		}
 
-		let data = serde_json::to_string(&cells_to_send).unwrap() + "\n";
+		let splitted = (serde_json::to_string(&cells_to_send).unwrap() + "\x04")
+								.chars()
+								.collect::<Vec<char>>()
+								.chunks(4096)
+								.map(|c| c.iter().collect::<String>())
+								.collect::<Vec<String>>();
 
-		println!("Size of json: {}", data.len());
+		for chunk in splitted {
+			send_to(fd, chunk.as_str());
+		}
 
-		send_to(fd, data.as_str());
+		println!("GUI connected.");
 	}
 
 	pub fn get_cell(&self, x: u8, y: u8) -> Option<&GameCell> {
