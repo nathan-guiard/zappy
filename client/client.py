@@ -115,15 +115,15 @@ def init(args, id):
     Player["map_size"] = tuple(map(int, connexion_and_map_size[1].split()))
     Player["map"] = [[{} for x in range(Player["map_size"][0])] for y in range(Player["map_size"][1])]
     Player["level"] = 1
-    Player["fork_nb"] = 3 - Player_id if Player_id < 3 else 0
+    Player["fork_nb"] = 2 - Player_id if Player_id < 2 else 0
     Player["nb_in_same_pos"] = 1
-    Player["ready"] = []
+    Player["same_lvl"] = []
 
 def get_player_position(vision_data):
     if vision_data and len(vision_data) and isinstance(vision_data[0], dict) and "p" in vision_data[0]:
         # Mettre à jour la position du joueur
         Player["position"] = (vision_data[0]["p"]["x"], vision_data[0]["p"]["y"])
-        print(vision_data)
+        # print(vision_data)
 
 def update_tile_content(content):
     if "Player" in content:
@@ -131,8 +131,9 @@ def update_tile_content(content):
         if content["Player"] == 0:
             del content["Player"]
 
-def update_map_with_vision(priority=False):
+def update_map_with_vision(priority=True):
     try:
+        # [{"p":{"x":22,"y":27},"c":[{"Linemate":1},{"Deraumere":1},{"Sibur":1}]},{"p":{"x":21,"y":26},"c":[{"Food":2}]},{"p":{"x":22,"y":26},"c":[{"Food":1}]},{"p":{"x":23,"y":26},"c":[{"Food":2}]}]
         vision_data = send_command("voir", priority=True)
         vision_data = json.loads(vision_data)
         get_player_position(vision_data)
@@ -142,7 +143,7 @@ def update_map_with_vision(priority=False):
             content = {**content, **tile["p"]}
             update_tile_content(content)
             Player["map"][position[1]][position[0]] = content
-    except json.JSONDecodeError as e:
+    except json.JSONDecodeError or KeyError as e:
         sys.stderr.write(f"Erreur JSON lors de la mise à jour de la carte avec la vision : {e}\n")
 
 def broadcast_go(direction):
@@ -221,50 +222,60 @@ def wait_incantation_finish():
         if direction == 0:
             return True
     return False
- 
+
+def help_incantation():
+    try:
+        beacon = send_command("beacon", priority=True)
+        beacon = json.loads(beacon)
+                        # [{"x":11,"y":32}]
+        if not len(beacon):
+            return False
+        beacon = beacon[0]
+    except json.JSONDecodeError as e:
+        # sys.stderr.write(f"Erreur JSON lors de la mise à jour de la carte avec la vision : {e}\n")
+        return False
+
+    # Cense envoye beacon et recuperer les coords
+    x_dest = int(beacon["x"])
+    y_dest = int(beacon["y"])
+    
+    update_map_with_vision(priority=True)
+    mouvements = calculate_moves(x_dest, y_dest)
+    # Chaque mouvements met 7 tours et j'appelle voir avant cela et une fois arrive je dois lancer incantation
+    # if not (len(mouvements) + 1) * 7 < 300: # Si trop loin
+        # return
+    for mouv in mouvements :
+        send_command(mouv, priority=True)
+    level_up(join=True)
+    update_map_with_vision(priority=True)
+    update_inventory()
+    return True
+    
+
 def manage_broadcast(command:str, response:str, priority: bool):
     response = response.split()
     if len(response) < 3:
         return
     
     direction, messages = int(response[1][:response[1].find(':')]), response[2:]
-    broadcast_param = ["command", "level", "detail", "pid", "x", "y"]
-    broadcast = {broadcast_param[index]: messages[index] for index in range(len(messages))}
+    broadcast_param = ["command", "level", "detail", "pid"]
+    broadcast = {broadcast_param[index]: messages[index] for index in range(min(len(broadcast_param), len(messages)))}
     
-    print(f"ID:{Player_id} || {color(f'interupt {command}', 'pink')} {color(f'receive', 'darkgrey')} : {color(' '.join(response), 'lightgrey')}{color(f' {priority}', 'blue') if priority else ''} {datetime.now().strftime('%H:%M:%S.%f')}")
+    # print(f"ID:{Player_id} || {color(f'interupt {command}', 'pink')} {color(f'receive', 'darkgrey')} : {color(' '.join(response), 'lightgrey')}{color(f' {priority}', 'blue') if priority else ''} {datetime.now().strftime('%H:%M:%S.%f')}")
 
-                
     if broadcast["command"] == "incantation":
         if int(broadcast["level"]) == Player["level"]:
-            if broadcast["detail"] == "ready":
-                if broadcast["pid"] not in Player["ready"]:
-                    Player["ready"].append(broadcast["pid"])
+            if broadcast["detail"] == "info":
+                send_command(f'broadcast incantation {Player["level"]} myinfo {multiprocessing.current_process().pid}', priority=True)
+            elif broadcast["detail"] == "myinfo":
+                if broadcast["pid"] not in Player["same_lvl"]:
+                    Player["same_lvl"].append(broadcast["pid"])
 
     if not priority and broadcast["command"] == "incantation":
-        # Si quelqu'un de mon niveau incante 
-        if int(broadcast["level"]) == Player["level"]:
-            """print(f"ID:{Player_id} || j'envoie beacon")
-            response = send_command("beacon", priority=True)"""
-            # Cense envoye beacon et recuperer les coords
-            x_dest = int(messages[4])
-            y_dest = int(messages[5])
-            
-            # print(f"{color(' '.join(response), 'pink')}")
-            print(f"{color(str(x_dest), 'pink')}")
-            print(f"{color(str(y_dest), 'pink')}")
-            update_map_with_vision(priority=True)
-            mouvements = calculate_moves(x_dest, y_dest)
-            
-            print(f"{color(str(y_dest), 'pink')}")
-            # Chaque mouvements met 7 tours et j'appelle voir avant cela et une fois arrive je dois lancer incantation
-            if not (len(mouvements) + 1) * 7 < 300: # Si trop loin
-                return
-
-            for mouv in mouvements :
-                send_command(mouv, priority=True)
-            response = send_command("incantation", priority=True)
-            if response.startswith("ok"):
-                Player["level"] += 1
+        if int(broadcast["level"]) == Player["level"] and int(broadcast["level"]) > 1:
+            # Broadcast +1 joueur pret a incanter
+            if broadcast["detail"] == "waiting":
+                help_incantation()
         pass 
 
 
@@ -583,36 +594,47 @@ def check_level_requirements():
     for item, quantity in requirements.items():
         if item == "Player":
             continue
-        elif item not in Player["inventory"] or Player["inventory"][item] < quantity:
+        elif item not in Player["inventory"]:
             return False
+        elif Player["inventory"][item] < quantity:
+            return False
+    if Player["level"] == 1:
+        return True
+    if not len(Player["same_lvl"]) < requirements["Player"]:
+        return False
+    # Faire un check du nombre de joueur du meme niveau que moi dans la map et voir si il y en a assez de present du meme niveau que moi
+    # Et False dans le cas contraire
     return True
 
-def level_up(join=False):
+def level_up(join = False):
     """Procede au level up (depose les items et incante)
     Si le processus echoue, la vision et l'inventaire seront mis a jour
     """
     if not join:
         requirements = levels[Player["level"]]
-        
         for item, quantity in requirements.items():
             if item == "Player":
                 continue
             for _ in range(quantity):
-                send_command(f"pose {item}")
+                send_command(f"pose {item}", priority=True)
             Player["inventory"][item] -= quantity
             if not Player["inventory"][item]:
                 del Player["inventory"][item]
-        send_command(f"broadcast incantation {Player['level']} ready {multiprocessing.current_process().pid} {Player['position'][0]} {Player['position'][1]}")
-
-    response = send_command("incantation")
+        
+    send_command(f"broadcast incantation {Player['level']} waiting {multiprocessing.current_process().pid} {Player['position'][0]} {Player['position'][1]}", priority=True)
+    response = send_command("incantation", priority=True)
     if response.startswith("ko"):
-        update_map_with_vision()
+        update_map_with_vision(priority=True)
         update_inventory()
         return
     
     Player["level"] += 1
+    Player["same_lvl"] = []
     Player["fork_nb"] = 0
+    send_command(f"broadcast incantation {Player['level']} levelup {multiprocessing.current_process().pid}", priority=True)
     print(color(f"ID:{Player_id} || Succesfully level up {Player['level']}", "blue"))
+    if not help_incantation():
+        send_command(f"broadcast incantation {Player['level']} info", priority=True)
     
 def check_capacity(have_fork):
     """check la capacite de joindre fork le programme et rejoindre la session avec un autre joueur
