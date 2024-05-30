@@ -7,6 +7,7 @@ import copy
 import multiprocessing
 import signal
 import sys
+from datetime import datetime
 
 
 # Variable Globale
@@ -27,6 +28,11 @@ levels = {
 }
 
 def parser():
+    """Parse et check les arguments
+
+    Returns:
+        Namespace: contient les arguments 
+    """
     parser = argparse.ArgumentParser(description='Client program', add_help=False)
     parser.add_argument('-n', '--team', type=str, help='Team name', required=True)
     parser.add_argument('-p', '--port', type=int, help='Port number', required=True)
@@ -50,6 +56,16 @@ def parser():
     return args
 
 def server_connexion(host, port, team):
+    """Connection au serveur
+
+    Args:
+        host (string): _description_
+        port (string): _description_
+        team (string): _description_
+
+    Returns:
+        _type_: _description_
+    """
     global Client
     if Debug: 
         print("Connexion...")
@@ -80,8 +96,14 @@ def server_connexion(host, port, team):
         sys.exit(1)
     return response
 
-def init(hostname, port, team, id): 
-    connexion_and_map_size = server_connexion(hostname, port, team)
+def init(args, id): 
+    """Initialise les variables et se connecte au serveur
+
+    Args:
+        args (Namespace): contient les arguments (hostname, port et team)
+        id (int): Id du joueur
+    """
+    connexion_and_map_size = server_connexion(args.hostname, args.port, args.team)
     global list_processus, Player_id
     list_processus = []
     Player_id = id
@@ -93,14 +115,15 @@ def init(hostname, port, team, id):
     Player["map_size"] = tuple(map(int, connexion_and_map_size[1].split()))
     Player["map"] = [[{} for x in range(Player["map_size"][0])] for y in range(Player["map_size"][1])]
     Player["level"] = 1
-    Player["fork_nb"] = 3 - Player_id if Player_id < 3 else 0
+    Player["fork_nb"] = 2 - Player_id if Player_id < 2 else 0
     Player["nb_in_same_pos"] = 1
+    Player["same_lvl"] = []
 
 def get_player_position(vision_data):
     if vision_data and len(vision_data) and isinstance(vision_data[0], dict) and "p" in vision_data[0]:
         # Mettre à jour la position du joueur
         Player["position"] = (vision_data[0]["p"]["x"], vision_data[0]["p"]["y"])
-        print(vision_data)
+        # print(vision_data)
 
 def update_tile_content(content):
     if "Player" in content:
@@ -109,10 +132,9 @@ def update_tile_content(content):
             del content["Player"]
 
 def update_map_with_vision(priority=True):
-    v = None
     try:
-        vision_data = send_command("voir", command_priority=priority)
-        v = vision_data
+        # [{"p":{"x":22,"y":27},"c":[{"Linemate":1},{"Deraumere":1},{"Sibur":1}]},{"p":{"x":21,"y":26},"c":[{"Food":2}]},{"p":{"x":22,"y":26},"c":[{"Food":1}]},{"p":{"x":23,"y":26},"c":[{"Food":2}]}]
+        vision_data = send_command("voir", priority=True)
         vision_data = json.loads(vision_data)
         get_player_position(vision_data)
         for tile in vision_data:
@@ -121,83 +143,181 @@ def update_map_with_vision(priority=True):
             content = {**content, **tile["p"]}
             update_tile_content(content)
             Player["map"][position[1]][position[0]] = content
-    except json.JSONDecodeError as e:
+    except json.JSONDecodeError or KeyError as e:
         sys.stderr.write(f"Erreur JSON lors de la mise à jour de la carte avec la vision : {e}\n")
 
 def broadcast_go(direction):
+    """Se deplace vers l'emetteur du broadcast
+
+    Args:
+        direction (int): Direction de l'emetteur
+
+    Returns:
+        bool: True si on arrive, False autrement
+    """
     match direction:
         case 1: 
-            send_command("avance", command_priority=True)
+            send_command("avance", priority=True)
         case 2: 
-            send_command("avance", command_priority=True)
-            send_command("gauche", command_priority=True)
+            send_command("avance", priority=True)
+            send_command("gauche", priority=True)
             Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
-            send_command("avance", command_priority=True)
+            send_command("avance", priority=True)
         case 3:
-            send_command("gauche", command_priority=True)
+            send_command("gauche", priority=True)
             Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
             broadcast_go(1)
         case 4:
-            send_command("gauche", command_priority=True)
+            send_command("gauche", priority=True)
             Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
             broadcast_go(2)
         case 5:
-            send_command("gauche", command_priority=True)
+            send_command("gauche", priority=True)
             Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
-            send_command("gauche", command_priority=True)
+            send_command("gauche", priority=True)
             Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
             broadcast_go(1)
         case 6:
-            send_command("droite", command_priority=True)
+            send_command("droite", priority=True)
             Player["direction"] = Direction[(Direction.index(Player["direction"]) + 1) % 4]
             broadcast_go(8)
         case 7:
-            send_command("droite", command_priority=True)
+            send_command("droite", priority=True)
             Player["direction"] = Direction[(Direction.index(Player["direction"]) + 1) % 4]
             broadcast_go(1)
         case 8:
-            send_command("avance", command_priority=True)
-            send_command("droite", command_priority=True)
+            send_command("avance", priority=True)
+            send_command("droite", priority=True)
             Player["direction"] = Direction[(Direction.index(Player["direction"]) + 1) % 4]
-            send_command("avance", command_priority=True)
+            send_command("avance", priority=True)
         case 0:
             return True # Je suis sur la case en question
     return False
 
-def receive_message():
-    response:str = Client.recv(1024).decode()
-    print(end=f"en attente, {response}")
+def wait_incantation_finish():
+    """Attend le message de fin d'incantation
+    Il receptionne les reponses serveur
+    
+    Returns:
+        bool: True si l'incantation est fini, False autrement
+    """
+    try:
+        response:str = Client.recv(1024).decode()
+    except socket.timeout or ConnectionResetError or BrokenPipeError:
+        sys.stderr.write("Tu es mort\n")
+        wait_and_exit()
+    if response.startswith("You died"):
+        sys.stderr.write(response)
+        wait_and_exit()
+    elif response.startswith("End of game"):
+        print(end=response)
+        wait_and_exit()
+    elif response.startswith("Disconnected"):
+        print(end=response)
+        wait_and_exit()
+    print(end=f"    ID:{Player_id} || attente : " + response)
     if response.startswith("broadcast") and response.endswith("finish\n"):
         response = response.split()
         direction = int(response[1][:response[1].find(':')])
         if direction == 0:
-            return True 
+            return True
     return False
 
-def manage_broadcast(response:str):
+def help_incantation():
+    try:
+        beacon = send_command("beacon", priority=True)
+        beacon = json.loads(beacon)
+                        # [{"x":11,"y":32}]
+        if not len(beacon):
+            return False
+        beacon = beacon[0]
+    except json.JSONDecodeError as e:
+        # sys.stderr.write(f"Erreur JSON lors de la mise à jour de la carte avec la vision : {e}\n")
+        return False
+
+    # Cense envoye beacon et recuperer les coords
+    x_dest = int(beacon["x"])
+    y_dest = int(beacon["y"])
+    
+    update_map_with_vision(priority=True)
+    mouvements = calculate_moves(x_dest, y_dest)
+    # Chaque mouvements met 7 tours et j'appelle voir avant cela et une fois arrive je dois lancer incantation
+    # if not (len(mouvements) + 1) * 7 < 300: # Si trop loin
+        # return
+    for mouv in mouvements :
+        send_command(mouv, priority=True)
+    level_up(join=True)
+    update_map_with_vision(priority=True)
+    update_inventory()
+    return True
+    
+
+def manage_broadcast(command:str, response:str, priority: bool):
     response = response.split()
-    # print(response)
     if len(response) < 3:
         return
-    direction, messages = int(response[1][:response[1].find(':')]), response[2:]
-    print(f"ID:{Player_id} || {color(f'receive', 'red')} : {color(' '.join(response), 'lightgreen')}")
     
-    # print(direction, messages)  
-    if messages[0].startswith("help"):
-        if broadcast_go(direction):
-            while receive_message():
-                print("j'attends")
+    direction, messages = int(response[1][:response[1].find(':')]), response[2:]
+    broadcast_param = ["command", "level", "detail", "pid"]
+    broadcast = {broadcast_param[index]: messages[index] for index in range(min(len(broadcast_param), len(messages)))}
+    
+    # print(f"ID:{Player_id} || {color(f'interupt {command}', 'pink')} {color(f'receive', 'darkgrey')} : {color(' '.join(response), 'lightgrey')}{color(f' {priority}', 'blue') if priority else ''} {datetime.now().strftime('%H:%M:%S.%f')}")
 
-def send_command(command, in_broadcast:bool = False, command_priority=False) -> str:
-    print(command, "broad", in_broadcast, "priority", command_priority)
-    try :
-        if not in_broadcast:
+    if broadcast["command"] == "incantation":
+        if int(broadcast["level"]) == Player["level"]:
+            if broadcast["detail"] == "info":
+                send_command(f'broadcast incantation {Player["level"]} myinfo {multiprocessing.current_process().pid}', priority=True)
+            elif broadcast["detail"] == "myinfo":
+                if broadcast["pid"] not in Player["same_lvl"]:
+                    Player["same_lvl"].append(broadcast["pid"])
+
+    if not priority and broadcast["command"] == "incantation":
+        if int(broadcast["level"]) == Player["level"] and int(broadcast["level"]) > 1:
+            # Broadcast +1 joueur pret a incanter
+            if broadcast["detail"] == "waiting":
+                help_incantation()
+        pass 
+
+
+def broadcast_gestion(command: str, response: str, priority:bool):
+    """Gestion des appels a broadcast
+
+    Args:
+        command (str): Commande ayant ete intercepte par le broadcast
+        response (str): Reponse contenant le broadcast
+        priority (bool): Permet d'empecher la creation d'un processus broadcast.
+
+    Returns:
+        str: Reponse avant interruption par le broadcast
+    """
+    # Permet de recuperer la reponse de la commande interceptee
+    command_response = send_command(command, priority=True, block_send=True)
+    manage_broadcast(command, response, priority)
+    return command_response
+
+def send_command(command: str, priority:bool = False, block_send:bool = False) -> str:
+    """Envoi une commande au serveur
+    Il peut se faire ecraser par un processus broadcast si un broadcast est recu au moment de la reponse de la commande
+    Args:
+        command (string): Commande envoyee
+        command_priority (bool, optional): Permet d'empecher la creation d'un processus broadcast. Defaults to False.
+
+    Returns:
+        str: Reponse du serveur
+    """
+    # print(command, "broad", in_broadcast, "priority", command_priority)
+    try:
+        if not block_send:
             Client.send((command + '\n').encode())
         response:str = Client.recv(1024).decode()
     except socket.timeout or ConnectionResetError or BrokenPipeError:
         sys.stderr.write("Tu es mort\n")
         wait_and_exit()
-    if response == "You died\n":
+    if command == "gauche" and response.startswith("ok"):
+        Player["direction"] = Direction[Direction.index(Player["direction"]) - 1]
+    elif command == "droite" and response.startswith("ok"):
+        Player["direction"] = Direction[(Direction.index(Player["direction"]) + 1) % 4]
+    if response.startswith("You died"):
         sys.stderr.write(response)
         wait_and_exit()
     elif response.startswith("End of game"):
@@ -207,18 +327,35 @@ def send_command(command, in_broadcast:bool = False, command_priority=False) -> 
         print(end=response)
         wait_and_exit()
     elif response.startswith("broadcast"):
-        command_response = send_command(command, in_broadcast=True, command_priority=True)
-        if not command_priority:
-            manage_broadcast(response)
-        if not in_broadcast:
-            update_map_with_vision(priority=False)
-        return command_response
-    if True:
-        print(f"ID:{Player_id} || {color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
+        response = broadcast_gestion(command, response, priority)
+    if not priority:
+        print(f"ID:{Player_id} || {color(command, 'red')} : {color(' '.join(response.split()), 'lightgreen')} {datetime.now().strftime('%H:%M:%S.%f')}")
+    else :
+        print(f"ID:{Player_id} || {color(command, 'lightred')} : {color(' '.join(response.split()), 'lightgreen')} {datetime.now().strftime('%H:%M:%S.%f')}")
+
     return response
 
 def calculate_moves(x_dest, y_dest):
+    """
+    Cree la liste des commandes permettant d'arrive a destination
+    Args:
+        x_dest (int): destination x
+        y_dest (int): destination y
+
+    Returns:
+        list: contient la liste de mouvements
+    """
     def wrapped_distance(a, b, size):
+        """Permet de preferer un tour de la carte plutot que traverser toute la carte
+
+        Args:
+            a (int): coordonne 
+            b (int): coordonne
+            size (int): taille de la carte
+
+        Returns:
+            int: La decision la plus optimisee
+        """
         choix = ((a - b) % size, (b - a) % size)
         return -1 if choix.index(min(choix)) == 0 else 1, min(choix)
     moves = []
@@ -290,10 +427,17 @@ def calculate_moves(x_dest, y_dest):
             if direction == 'E':
                 moves.append("avance")
                 distance_x -= 1
-    Player["direction"] = direction
     return moves
 
 def prendre(consommables, x, y):
+    """Envoi la commande prendre au serveur et met a jour la carte en consequence
+    Si un echec survient, la mise a jour de la carte a lieu
+    
+    Args:
+        consommables (dict): contient les ressources de la case
+        x (int): coordonne x
+        y (int): coordonne y
+    """
     while consommables:
         items = [i for i in consommables]
         focus_items = random.choices(items, k=1)[0]
@@ -325,11 +469,19 @@ def map_print(passage, x, y, taillex, tailley):
     print(" " + "-" * (taillex))
     
 def score_by_level(consommable: dict): 
-    # Définir les coefficients des ressources en fonction du niveau du joueur
+    """Attribue un score en fonction des ressources trouvées 
+
+    Args:
+        consommable (dict): contient les items d'une case, ainsi que leurs quantités
+
+    Returns:
+        int: Score
+    """
+    # Définir les coefficients des ressources en fonction du niveau du joueur et de ce qu'il a déjà dans son inventaire
     # Coef
     # "Linemate": 2, "Deraumere": 3, "Sibur": 4, "Mendiane": 5, "Phiras": 6, "Thystame": 10
 
-    """Prochain objectif est de cree les coef en fonction de l'inventaire et le level actuel"""
+    # Coefficients de base
     resource_coefficients = {
         1: {'Linemate': 2, 'Deraumere': 0, 'Sibur': 0, 'Mendiane': 0, 'Phiras': 0, 'Thystame': 0, 'Food': 1},
         2: {'Linemate': 2, 'Deraumere': 3, 'Sibur': 4, 'Mendiane': 0, 'Phiras': 0, 'Thystame': 0, 'Food': 1},
@@ -341,19 +493,40 @@ def score_by_level(consommable: dict):
         8: {'Linemate': 1, 'Deraumere': 1, 'Sibur': 1, 'Mendiane': 1, 'Phiras': 1, 'Thystame': 1, 'Food': 1}
     }
     
-    # Calculer le score en tenant compte des coefficients
-    score = sum(quantity * resource_coefficients[Player["level"]].get(resource, 1)
+    # Coefficients modifiés en fonction de l'inventaire du joueur
+    modified_coefficients = {}
+    for level, coefficients in resource_coefficients.items():
+        modified_coefficients[level] = {}
+        for resource, coefficient in coefficients.items():
+            # Pour la nourriture, ajuster le coefficient en fonction de la quantité déjà présente dans l'inventaire
+            if resource == 'Food':
+                modified_coefficients[level][resource] = coefficient * (Player["inventory"].get(resource, 0) + 1)
+            else:
+                modified_coefficients[level][resource] = coefficient
+
+    # Calculer le score en tenant compte des coefficients modifiés
+    score = sum(quantity * modified_coefficients[Player["level"]].get(resource, 1)
                 for resource, quantity in consommable.items())
+    
+    # Ajouter une pondération supplémentaire en fonction de la quantité de nourriture dans l'inventaire
+    food_weight = 1 / (Player["inventory"].get('Food', 0) + 1)
+    score *= food_weight
+
     return score
 
 def calculate_best_move():
+    """Calcule la liste des mouvements vers le filon de ressources le plus interessant
+
+    Returns:
+        list: Contient tous les mouvements pour arriver au filon
+    """
     # Liste des positions adjacentes
     adjacent_positions = [row for col in Player["map"] for row in col if row]
     max_score = float('-inf')
     best_moves = []
     
-    if Debug:
-        map_print(adjacent_positions, Player["position"][0], Player["position"][1], Player["map_size"][0], Player["map_size"][1])
+    # if Debug:
+    #     map_print(adjacent_positions, Player["position"][0], Player["position"][1], Player["map_size"][0], Player["map_size"][1])
     
     for case in adjacent_positions:
         if [case["x"], case["y"]] == [Player["position"][0], Player["position"][1]]:
@@ -398,50 +571,81 @@ def calculate_best_move():
         return [direction]
 
 def update_inventory():
+    """Met a jour l'inventaire (un envoi de commande est fait)
+    """
     response = send_command("inventaire")
     inventory_data = json.loads(response)
     # print(f"{color('Inventaire', 'red')} : {color(' '.join(response.split()), 'lightgreen')}")
-    inventory = {}
+    Player["inventory"] = {}
     for item in inventory_data:
         for key, value in item.items():
-            inventory[key] = value
-    Player["inventory"] = inventory
+            Player["inventory"][key] = value
 
 def check_level_requirements():
-    level, inventory = Player["level"], Player["inventory"]
-    if level == 8:
-        return False
-    requirements = levels[level]
-    for item, quantity in requirements.items():
-        if item == "Player":
-            continue
-        elif item not in inventory or inventory[item] < quantity:
-            return False
-    while Player["nb_in_same_pos"] < requirements["Player"]:
-        send_command("broadcast help")
-        update_map_with_vision()
-    return True
+    """Check si les besoins sont satisfaits
+    Des envois de broadcast sont fait s'il manque que des joueurs
 
-def level_up():
+    Returns:
+        bool: True si c'est le cas, False autrement
+    """
+    if Player["level"] == 8:
+        return False
     requirements = levels[Player["level"]]
     for item, quantity in requirements.items():
         if item == "Player":
             continue
-        for _ in range(quantity):
-            send_command(f"pose {item}")
-        Player["inventory"][item] -= quantity
-        if not Player["inventory"][item]:
-            del Player["inventory"][item]
-    response = send_command("incantation")
+        elif item not in Player["inventory"]:
+            return False
+        elif Player["inventory"][item] < quantity:
+            return False
+    if Player["level"] == 1:
+        return True
+    if not len(Player["same_lvl"]) < requirements["Player"]:
+        return False
+    # Faire un check du nombre de joueur du meme niveau que moi dans la map et voir si il y en a assez de present du meme niveau que moi
+    # Et False dans le cas contraire
+    return True
+
+def level_up(join = False):
+    """Procede au level up (depose les items et incante)
+    Si le processus echoue, la vision et l'inventaire seront mis a jour
+    """
+    if not join:
+        requirements = levels[Player["level"]]
+        for item, quantity in requirements.items():
+            if item == "Player":
+                continue
+            for _ in range(quantity):
+                send_command(f"pose {item}", priority=True)
+            Player["inventory"][item] -= quantity
+            if not Player["inventory"][item]:
+                del Player["inventory"][item]
+        
+    send_command(f"broadcast incantation {Player['level']} waiting {multiprocessing.current_process().pid} {Player['position'][0]} {Player['position'][1]}", priority=True)
+    response = send_command("incantation", priority=True)
     if response.startswith("ko"):
-        send_command("voir")
-        send_command("inventaire")
+        update_map_with_vision(priority=True)
+        update_inventory()
         return
+    
     Player["level"] += 1
+    Player["same_lvl"] = []
     Player["fork_nb"] = 0
-    print(color(f"Succesfully level up {Player['level']}", "blue"))
+    send_command(f"broadcast incantation {Player['level']} levelup {multiprocessing.current_process().pid}", priority=True)
+    print(color(f"ID:{Player_id} || Succesfully level up {Player['level']}", "blue"))
+    if not help_incantation():
+        send_command(f"broadcast incantation {Player['level']} info", priority=True)
     
 def check_capacity(have_fork):
+    """check la capacite de joindre fork le programme et rejoindre la session avec un autre joueur
+    Elle necessite le succes d'un fork au prealable 
+
+    Args:
+        have_fork (bool): Represente si un fork a reussi au prealable
+
+    Returns:
+        boolean: True si un fork du programme est possible, False autrement
+    """
     if not have_fork:
         return False
     return int(send_command("connect")) > 0
@@ -456,7 +660,6 @@ def fork():
     list_processus.append(nouveau_processus)
     Player["fork_nb"] -= 1
     return True
-
 
 def wait_and_exit():
     for nouveau_processus in list_processus:
@@ -475,32 +678,28 @@ def sigint_handler(signal, frame):
 def main(id: int = 0, args=None):
     args = parser()
     # Initialisation du joueur
-    # print(args)
-    init(args.hostname, args.port, args.team, id)
+    init(args, id)
     signal.signal(signal.SIGINT, sigint_handler)
     
     have_fork = False
     while True :
-        # update_map_with_vision(priority=False)
-        # send_command("broadcast help")
-        
-        # Demander la vision au serveur
+        update_map_with_vision()
         update_inventory()
+        
         if check_level_requirements():
             if Debug:
                 print(color("Le joueur peut passer au niveau suivant !", "blue_bg"))
             level_up()
-            
+        
+        # Fork le programme si les conditions sont réunies
         if Player["fork_nb"] > 0 and not have_fork and Player["inventory"]["Food"] >= 1750:
             send_command("fork")
             have_fork = True
         if check_capacity(have_fork):
             if fork():
                 have_fork = False
-        if Debug:
-            print(color("Votre position:", "blue"), Player["position"])
-        
+
         mouvements = calculate_best_move()
         for mouv in mouvements :
             send_command(mouv)
-        update_map_with_vision()
+            
