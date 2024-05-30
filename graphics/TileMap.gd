@@ -11,18 +11,36 @@ const Content: Dictionary = {
 	FOOD = "Food",
 }
 
-const Tile: Dictionary = {
-	LINEMATE = Vector2i(0, 6),
-	DERAUMERE = Vector2i(3, 3),
-	SIBUR = Vector2i(3, 0),
-	MENDIANE = Vector2i(10, 9),
-	PHIRAS = Vector2i(3, 9),
-	THYSTAME = Vector2i(8, 5),
-	PLAYER = Vector2i(0, 0),
-	FOOD = Vector2i(4, 5),
+# const Tile: Dictionary = {
+# 	LINEMATE = Vector2i(0, 6),
+# 	DERAUMERE = Vector2i(3, 3),
+# 	SIBUR = Vector2i(3, 0),
+# 	MENDIANE = Vector2i(10, 9),
+# 	PHIRAS = Vector2i(3, 9),
+# 	THYSTAME = Vector2i(8, 5),
+# 	PLAYER = Vector2i(0, 0),
+# 	FOOD = Vector2i(4, 5),
+# }
+
+const FloorTile: Dictionary = {
+	
 }
 
-const source_id: int = 0
+
+const Tile: Dictionary = {
+	LINEMATE = Vector2i(1,1),
+	DERAUMERE = Vector2i(3, 1),
+	SIBUR = Vector2i(0,1),
+	MENDIANE = Vector2i(2,1),
+	PHIRAS = Vector2i(6,1),
+	THYSTAME = Vector2i(4, 1),
+	PLAYER = Vector2i(0, 0),
+	FOOD = [Vector2i(2,11), Vector2i(3,11), Vector2i(4 ,11), Vector2i(5 ,11)],
+	EGG = Vector2i(4 ,10)
+}
+
+const items_source_id: int = 1
+const floors_source_id: int = 0 
 
 const MAP_JSON: JSON = preload ("res://cuicui.json")
 
@@ -38,6 +56,12 @@ func _ready() -> void:
 	pass
 
 
+enum Terrain {
+	SAND = 0,
+	LIGHT_GRASS = 1,
+	DARK_GRASS = 2
+}
+
 func init_map_tiling() -> void:
 	for col: Array in map:
 		for row: Dictionary in col:
@@ -47,38 +71,53 @@ func init_map_tiling() -> void:
 			var pos: Vector2i = Vector2i(x, y)
 			var content: Array = row.c
 			manage_cell_content(pos, content)
+	set_cells_terrain_connect(0, sand_cells, 0, Terrain.SAND, false )
+	set_cells_terrain_connect(0, light_grass_cells, 0, Terrain.LIGHT_GRASS, false )
+	#set_cells_terrain_connect(0, [Vector2i(-10, 10)], 0, Terrain.LIGHT_GRASS, false )
 
+
+var sand_cells: Array[Vector2i]
+var light_grass_cells: Array[Vector2i]
 
 func manage_cell_content(pos: Vector2i, content: Array) -> void:
 	var output: String = ""
+	if content.size() == 0:
+		#set_cell(0, pos, floors_source_id, Vector2i(1,1))
+		sand_cells.push_back(pos)
+	else:
+		light_grass_cells.push_back(pos)
 	for el: Dictionary in content:
 
 		if el.is_empty():
 			continue
-
+			
+		
+		
+		
+		var layer: int = 1
 		if el.has(Content.FOOD):
-			set_cell(0, pos, source_id, Tile.FOOD)
+			set_cell(layer, pos, items_source_id, Tile.FOOD.pick_random() as Vector2i)
 			# output += Content.FOOD + ": " + str(el[Content.FOOD]) + ", "
 		if el.has(Content.DERAUMERE):
-			set_cell(0, pos, source_id, Tile.DERAUMERE)
+			set_cell(layer, pos, items_source_id, Tile.DERAUMERE)
 			# output += Content.DERAUMERE + ": " + str(el[Content.DERAUMERE]) + ", "
 		if el.has(Content.LINEMATE):
-			set_cell(0, pos, source_id, Tile.LINEMATE)
+			set_cell(layer, pos, items_source_id, Tile.LINEMATE)
 			# output += Content.LINEMATE + ": " + str(el[Content.LINEMATE]) + ", "
 		if el.has(Content.MENDIANE):
-			set_cell(0, pos, source_id, Tile.MENDIANE)
+			set_cell(layer, pos, items_source_id, Tile.MENDIANE)
 			# output += Content.MENDIANE + ": " + str(el[Content.MENDIANE]) + ", "
 		if el.has(Content.PHIRAS):
-			set_cell(0, pos, source_id, Tile.PHIRAS)
+			set_cell(layer, pos, items_source_id, Tile.PHIRAS)
 			# output += Content.PHIRAS + ": " + str(el[Content.PHIRAS]) + ", "
 		if el.has(Content.SIBUR):
-			set_cell(0, pos, source_id, Tile.SIBUR)
+			set_cell(layer, pos, items_source_id, Tile.SIBUR)
 			# output += Content.SIBUR + ": " + str(el[Content.SIBUR]) + ", "
 		if el.has(Content.THYSTAME):
-			set_cell(0, pos, source_id, Tile.THYSTAME)
+			set_cell(layer, pos, items_source_id, Tile.THYSTAME)
 			# output += Content.THYSTAME + ": " + str(el[Content.THYSTAME]) + ", "
 		if el.has(Content.PLAYER):
-			set_cell(0, pos, source_id, Tile.PLAYER)
+			set_cell(layer, pos, items_source_id, Tile.PLAYER)
 			# output += Content.PLAYER + ": " + str(el[Content.PLAYER]) + ", "
 
 	#print(output)
@@ -87,20 +126,16 @@ func manage_cell_content(pos: Vector2i, content: Array) -> void:
 func _process(delta: float) -> void:
 	pass
 
-
-
 func _on_network_map_ready(map_p: Array) -> void:
 	map = map_p
 	init_map_tiling()
 	#print("network map: ", map_p[0])
 
-
 func update_cells(cells: Array) -> void:
 	for cell: Dictionary in cells:
 		var pos: Dictionary = cell.p
 		var content: Dictionary = cell.c
-		map[pos.x][pos.y].c = content 
-		
+		map[pos.x][pos.y].c = content
 
 func update_players(players: Array) -> void:
 	for player: Dictionary in players:
