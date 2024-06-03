@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/05/17 15:10:24 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/06/03 12:53:01 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@ use GameCellContent::*;
 
 use crate::communication::send_to;
 
-use super::{player::PlayerDirection, Game};
+use super::player::PlayerDirection;
 const DEVIDE_U32_TO_U8: u32 = 16843009;
 
 /// Indexes in the "max" tab
@@ -127,6 +127,10 @@ impl GameCellContent {
 				}
 			}
 		}
+	}
+
+	pub fn eq_amount(&self, other: &Self) -> bool {
+		self == other && self.amount() == other.amount()
 	}
 }
 
@@ -294,9 +298,14 @@ impl GameCell {
 		Food(food_amout)
 	}
 
-	pub fn diff(&self, new: &Self) -> Option<SendCell> {
-		if self != new {
-			return Some(SendCell::from(new))
+	pub fn diff_content(&self, new: &Self) -> Option<SendCell> {
+		if new.content.len() != self.content.len() {
+			return Some(SendCell::from(new));
+		}
+		for i in 0..new.content.len() {
+			if !self.content[i].eq_amount(&new.content[i]) {
+				return Some(SendCell::from(new));
+			}
 		}
 		None
 	}

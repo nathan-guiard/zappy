@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/15 12:07:50 by nguiard           #+#    #+#             */
-/*   Updated: 2024/05/17 15:06:51 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/06/03 12:39:04 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,8 +32,8 @@ pub fn update_gui(game: &Game) {
 		for y in 0..game.map.max_position.y {
 			let last_cell = &game.last_map.as_ref().unwrap().get_cell(x, y).unwrap();
 			let new_cell = &game.map.get_cell(x, y).unwrap();
-			if let Some(updated) = last_cell.diff(new_cell) {
-				to_send.cells.push(updated)
+			if let Some(updated) = last_cell.diff_content(new_cell) {
+				to_send.cells.push(updated);
 			}
 		}
 	}
