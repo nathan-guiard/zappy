@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/05/17 15:14:50 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/06/05 17:09:41 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -190,10 +190,10 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 			"Map too big, max size is X:40, Y:30"));
 	}
 	if args.team_name.is_empty() {
-		args.team_name.push("the alliance".into());
-		args.team_name.push("the assembly".into());
-		args.team_name.push("the order".into());
-		args.team_name.push("the federation".into());
+		args.team_name.push("alliance".into());
+		args.team_name.push("assembly".into());
+		args.team_name.push("order".into());
+		args.team_name.push("federation".into());
 	}
 	if args.team_name.len() > 4 || args.team_name.len() < 2{
 		return Err(Error::new(ErrorKind::InvalidInput,
