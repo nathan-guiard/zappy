@@ -18,7 +18,7 @@ var game_state: GameState = GameState.BIENVENUE
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	print("quouquoubebe")
-	if peer.connect_to_host("127.0.0.1", 4227) != OK:
+	if peer.connect_to_host("127.0.0.1", 4228) != OK:
 		print("Pair host port, not valid")
 	print("quouquoube")
 

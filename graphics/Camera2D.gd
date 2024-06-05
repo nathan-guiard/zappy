@@ -16,6 +16,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var mouse_event: InputEventMouseButton = event
 		if mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			#print("Zoom in")
+			global_position = get_global_mouse_position()			
 			desired_zoom = zoom * 1.2
 		elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			#print("Zoom out")

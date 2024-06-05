@@ -1303,8 +1303,13 @@ script = ExtResource("1_knqyb")
 [node name="TileMap" type="TileMap" parent="."]
 tile_set = SubResource("TileSet_401sn")
 format = 2
+layer_0/name = "Floor"
+layer_1/name = "food"
 layer_1/z_index = 1
 layer_1/tile_data = PackedInt32Array()
+layer_2/name = "minerals"
+layer_2/z_index = 2
+layer_2/tile_data = PackedInt32Array()
 script = ExtResource("2_cqj61")
 
 [connection signal="map_ready" from="Network" to="TileMap" method="_on_network_map_ready"]
