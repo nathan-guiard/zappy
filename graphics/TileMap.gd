@@ -62,14 +62,23 @@ enum Terrain {
 	DARK_GRASS = 2
 }
 
+var nb_col: int = 0
+var nb_row: int = 0
+
 func init_map_tiling() -> void:
 	for col: Array in map:
+		nb_col += 1
 		for row: Dictionary in col:
 			#print(row)
 			var x: int = row.p.x
 			var y: int = row.p.y
 			var pos: Vector2i = Vector2i(x, y)
 			var content: Array = row.c
+			if content.size() == 0:
+				#set_cell(0, pos, floors_source_id, Vector2i(1,1))
+				sand_cells.push_back(pos)
+			else:
+				light_grass_cells.push_back(pos)
 			manage_cell_content(pos, content)
 	set_cells_terrain_connect(0, sand_cells, 0, Terrain.SAND, false )
 	set_cells_terrain_connect(0, light_grass_cells, 0, Terrain.LIGHT_GRASS, false )
@@ -80,12 +89,14 @@ var sand_cells: Array[Vector2i]
 var light_grass_cells: Array[Vector2i]
 
 func manage_cell_content(pos: Vector2i, content: Array) -> void:
-	var output: String = ""
+	#var output: String = ""
+	var layer: int = 1
+	
 	if content.size() == 0:
-		#set_cell(0, pos, floors_source_id, Vector2i(1,1))
-		sand_cells.push_back(pos)
+		set_cell(layer, pos, - 1)
+		print("cell removed")
 	else:
-		light_grass_cells.push_back(pos)
+		print("cell add")
 	for el: Dictionary in content:
 
 		if el.is_empty():
@@ -94,7 +105,7 @@ func manage_cell_content(pos: Vector2i, content: Array) -> void:
 		
 		
 		
-		var layer: int = 1
+
 		if el.has(Content.FOOD):
 			set_cell(layer, pos, items_source_id, Tile.FOOD.pick_random() as Vector2i)
 			# output += Content.FOOD + ": " + str(el[Content.FOOD]) + ", "
@@ -133,9 +144,11 @@ func _on_network_map_ready(map_p: Array) -> void:
 
 func update_cells(cells: Array) -> void:
 	for cell: Dictionary in cells:
-		var pos: Dictionary = cell.p
-		var content: Dictionary = cell.c
+		var pos: Vector2i = Vector2i(cell.p.x as int, cell.p.y as int)
+		var content: Array = cell.c
 		map[pos.x][pos.y].c = content
+		manage_cell_content(pos, content)
+		print("content: ", content)
 
 func update_players(players: Array) -> void:
 	for player: Dictionary in players:
@@ -153,3 +166,7 @@ func _on_network_map_update(data: Dictionary) -> void:
 	update_cells(cells)
 	update_players(players)
 	update_eggs(eggs)
+	
+	print("updaye: ", data)
+	print()
+	print()

@@ -113,6 +113,7 @@ def init(args, id):
     connexion_and_map_size = connexion_and_map_size.split('\n')
     Player["connexion"] = connexion_and_map_size[0]
     Player["map_size"] = tuple(map(int, connexion_and_map_size[1].split()))
+    print("map size: ", Player["map_size"])
     Player["map"] = [[{} for x in range(Player["map_size"][0])] for y in range(Player["map_size"][1])]
     Player["level"] = 1
     Player["fork_nb"] = 2 - Player_id if Player_id < 2 else 0

@@ -36,7 +36,7 @@ func _process(delta: float) -> void:
 	var packet: String
 	if peer.get_available_bytes() > 0:
 		packet = peer.get_string(peer.get_available_bytes())
-		print("available")
+		#print("available")
 		match game_state:
 			GameState.BIENVENUE:
 				if packet == "BIENVENUE\n":
@@ -55,7 +55,7 @@ func _process(delta: float) -> void:
 				if buf and packet.to_ascii_buffer()[packet.to_ascii_buffer().size() - 1] == 4:
 					var data_parsed: Dictionary = JSON.parse_string(buf)
 					buf = ""
-					print("map_parsed: ", data_parsed)
+					#print("map_parsed: ", data_parsed)
 					map_update.emit(data_parsed)
 				
 				
