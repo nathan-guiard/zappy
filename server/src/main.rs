@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/06/05 17:09:41 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/06/06 12:18:17 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,7 +74,7 @@ fn main() -> Result<ExitCode, Error> {
 	let tick_speed = Duration::from_secs_f64(1_f64 / args.time as f64);
 
 	// Connection
-	let con_data = ServerConnection::init_socket(args.port)?;
+	let mut con_data = ServerConnection::init_socket(args.port)?;
 	let mut watcher = Watcher::new()?;
 	watcher.add(con_data.socket_fd, Events::EPOLLIN)?;
 

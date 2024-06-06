@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 14:13:08 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/06/06 12:26:30 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,10 +55,11 @@ pub struct Player {
 	pub direction: PlayerDirection,
 	pub team: String,
 	pub action: PlayerAction,
+	pub id: usize,
 }
 
 impl Player {
-	pub fn new(fd: i32) -> Self {
+	pub fn new(fd: i32, id: usize) -> Self {
 		Player {
 			fd,
 			command_queue: vec![],
@@ -72,6 +73,7 @@ impl Player {
 			direction: North,
 			team: String::new(),
 			action: PlayerAction::new(),
+			id,
 		}
 	}
 
@@ -387,6 +389,7 @@ impl Player {
 		self.state = Dead;
 		map.cells[self.position.x as usize][self.position.y as usize].remove_content(Player(1));
 		send_to(self.fd, "You died\n");
+		println!("A player from team {} died", self.team);
 		unsafe { libc::close(self.fd); }
 	}
 	
@@ -606,6 +609,7 @@ pub struct SendPlayer {
 	inventory: Vec<GameCellContent>,
 	state: PlayerState,
 	level: u8,
+	id: usize,
 }
 
 impl From<Player> for SendPlayer {
@@ -626,6 +630,7 @@ impl From<Player> for SendPlayer {
 			inventory,
 			state: player.state.clone(),
 			level: player.level,
+			id: player.id,
 		}
 	}
 }
