@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/08 09:52:14 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/06/06 12:26:08 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,7 @@ use crate::{communication::send_to, game::player::Player, watcher::Watcher};
 pub struct ServerConnection {
 	soc_addr: sockaddr_in,
 	pub socket_fd: i32,
+	current_id: usize,
 }
 
 impl ServerConnection {
@@ -58,7 +59,7 @@ impl ServerConnection {
 		Ok(result)
 	}
 	
-	pub fn get_new_connections(&self, watcher: &mut Watcher)
+	pub fn get_new_connections(&mut self, watcher: &mut Watcher)
 		-> Result<Option<Player>, Error> {
 		let new_connection = unsafe {
 			accept(self.socket_fd,
@@ -78,7 +79,12 @@ impl ServerConnection {
 		unsafe { fcntl(new_connection, F_SETFL, O_NONBLOCK) };
 		watcher.add(new_connection, Events::EPOLLIN | Events::EPOLLRDHUP)?;
 		send_to(new_connection, "BIENVENUE\n");
-		Ok(Some(Player::new(new_connection)))
+		if self.current_id == usize::MAX {
+			self.current_id = 0;
+		} else {
+			self.current_id += 1;
+		}
+		Ok(Some(Player::new(new_connection, self.current_id)))
 	}
 
 	// TODO: remove or change the Player with the associated FD
