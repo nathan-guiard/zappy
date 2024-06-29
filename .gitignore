@@ -3,3 +3,4 @@ server/*.test
 *.test
 __pycache__
 client/broadcast*
+*.txt
