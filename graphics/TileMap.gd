@@ -1,7 +1,7 @@
 extends TileMap
 
 
-var _players: Array[Player]
+var _players: Dictionary = {}
 
 const Content: Dictionary = {
 	LINEMATE = "Linemate",
@@ -201,23 +201,23 @@ func update_cells(cells: Array) -> void:
 var count: int = 0
 func update_players(players: Array) -> void:
 	count +=1
-	if count % 1 != 0:
-		return
+	if count % 10 == 0:
+		#print()
+		#print(players)
+		#print()
+		#print()
+		pass
 	#print("plaayers: ", players)
-	
-	for tmp_player: Player in _players:
-		tmp_player.queue_free()
-	_players = []
-	
-	for player: Dictionary in players:
-		var new_player: Player = construct_player_from_dictionnary(player)
-		_players.push_back(new_player)
-		add_child(new_player)
-		new_player.animate()
-		update_position_player_on_map(new_player)
-		new_player.update_action_label()
-		new_player.update_level_color()
-		print("action: ", new_player.action)
+	#prune_players(players)
+	merge_players(players)
+	for player_id: int in _players:
+		var player: Player = _players[player_id]
+		#player.animate()
+		update_position_player_on_map(player)
+		player.update_action_label()
+		player.update_level_color()
+
+		#print("action: ", new_player.action)
 	#print("_players: ", _players)
 
 func update_eggs(eggs: Array) -> void:
@@ -230,8 +230,8 @@ func _on_network_map_update(data: Dictionary) -> void:
 	var eggs: Array = data.eggs
 	
 	update_cells(cells)
-	update_players(players)
 	update_eggs(eggs)
+	update_players(players)
 	
 	#print("updaye: ", data)
 	#print()
@@ -245,11 +245,50 @@ static func construct_player_from_dictionnary(dic: Dictionary) -> Player:
 	new_player.inventory = dic.inventory
 	new_player.level = dic.level
 	new_player.action = JSON.stringify(dic.action)
+	new_player.id = dic.id
 
 	#print( new_player.direction)
 	return new_player
 	
+
+static func update_player_from_dictionnary(player: Player, dic: Dictionary) -> void:
+	player.map_pos = Vector2i(dic.position.x as int, dic.position.y as int)
+	#print("player.map_pos: ", player.map_pos)
+	player.direction = dic.direction
+	player.team = dic.team
+	player.inventory = dic.inventory
+	player.level = dic.level
+	player.action = JSON.stringify(dic.action)
+
 	
 func update_position_player_on_map(player: Player) -> void:
-	player.global_position = player.to_global( map_to_local(player.map_pos))
+	player.destination = to_global( map_to_local(player.map_pos))
 
+
+func prune_players(remote_players: Array) -> void:
+	for player_id: int in _players:
+		var player_exist: bool = false
+		for remote_player: Dictionary in remote_players:
+			if int(remote_player.id as float) == player_id:
+				player_exist = true
+		if not player_exist:
+			(_players[player_id] as Player).queue_free()
+			_players.erase(player_id)
+			
+			
+		
+func merge_players(remote_players: Array) -> void:
+	for remote_player: Dictionary in remote_players:
+		#print(type_string(typeof(remote_player.id)))
+		var remote_player_id: int = remote_player.id
+		if not _players.has(remote_player_id):
+			var new_player: Player = construct_player_from_dictionnary(remote_player)
+			_players[remote_player_id] = new_player
+			add_child(new_player)
+			print("player added")
+		var player: Player = _players[remote_player_id]
+		update_player_from_dictionnary(player, remote_player)
+
+			
+			
+	

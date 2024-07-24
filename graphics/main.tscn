@@ -1,10 +1,11 @@
-[gd_scene load_steps=9 format=3 uid="uid://c6j6oangcppih"]
+[gd_scene load_steps=10 format=3 uid="uid://c6j6oangcppih"]
 
 [ext_resource type="Script" path="res://Camera2D.gd" id="1_knqyb"]
 [ext_resource type="Texture2D" uid="uid://b3nk88kph2d1u" path="res://assets/TilesetFloor.png" id="1_q4hv5"]
 [ext_resource type="Script" path="res://TileMap.gd" id="2_cqj61"]
 [ext_resource type="Texture2D" uid="uid://ddoe5t8jqdp3j" path="res://Items.png" id="4_6ickp"]
 [ext_resource type="Script" path="res://Network.gd" id="4_b2sue"]
+[ext_resource type="PackedScene" uid="uid://bvg6orivi3vvd" path="res://player.tscn" id="6_2hnmn"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_6kdgw"]
 texture = ExtResource("1_q4hv5")
@@ -1311,6 +1312,9 @@ layer_2/name = "minerals"
 layer_2/z_index = 2
 layer_2/tile_data = PackedInt32Array()
 script = ExtResource("2_cqj61")
+
+[node name="Player" parent="TileMap" instance=ExtResource("6_2hnmn")]
+position = Vector2(500, 500)
 
 [connection signal="map_ready" from="Network" to="TileMap" method="_on_network_map_ready"]
 [connection signal="map_update" from="Network" to="TileMap" method="_on_network_map_update"]

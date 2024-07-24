@@ -114,7 +114,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"down_walk",
-"speed": 8.0
+"speed": 15.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -131,7 +131,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"left_walk",
-"speed": 8.0
+"speed": 15.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -148,7 +148,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"right_walk",
-"speed": 8.0
+"speed": 15.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -165,10 +165,11 @@ animations = [{
 }],
 "loop": true,
 "name": &"up_walk",
-"speed": 8.0
+"speed": 15.0
 }]
 
 [node name="Player" type="Node2D"]
+z_index = 10
 script = ExtResource("1_6god7")
 
 [node name="dwAnimatedSprite2D" type="AnimatedSprite2D" parent="."]

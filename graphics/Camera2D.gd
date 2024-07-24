@@ -2,7 +2,9 @@ extends Camera2D
 
 # Called when the node enters the scene tree for the first time.
 
-var desired_zoom: Vector2 = Vector2(1, 1)
+var desired_zoom: Vector2 = Vector2(2.2, 2.2)
+
+
 
 func _process(delta: float) -> void:
 	zoom = lerp(zoom, desired_zoom, 0.1)
@@ -14,11 +16,11 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mouse_event: InputEventMouseButton = event
-		if mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP:
+		if mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP or Input.is_key_label_pressed(KEY_P):
 			#print("Zoom in")
 			global_position = get_global_mouse_position()			
 			desired_zoom = zoom * 1.2
-		elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN or Input.is_key_label_pressed(KEY_O):
 			#print("Zoom out")
 			desired_zoom = zoom * 0.8
 		elif mouse_event.button_index == MOUSE_BUTTON_LEFT:

@@ -13,12 +13,12 @@ enum GameState {
 
 var game_state: GameState = GameState.BIENVENUE
 
-
+var err_count: int = 0
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	print("quouquoubebe")
-	if peer.connect_to_host("127.0.0.1", 4228) != OK:
+	if peer.connect_to_host("212.227.181.70", 4242) != OK:
 		print("Pair host port, not valid")
 	print("quouquoube")
 
@@ -52,8 +52,19 @@ func _process(delta: float) -> void:
 					peer.put_data("ready\n".to_ascii_buffer())
 			GameState.PLAY:
 				buf += packet
-				if buf and packet.to_ascii_buffer()[packet.to_ascii_buffer().size() - 1] == 4:
-					var data_parsed: Dictionary = JSON.parse_string(buf)
+				var buf_ascii: PackedByteArray = buf.to_ascii_buffer()
+				var buf_04_count: int = buf_ascii.count(4)
+				if buf_04_count > 0:
+					var splited_buf: String = buf_ascii.slice(0, buf_ascii.find(4)).get_string_from_ascii()
+					if JSON.parse_string(splited_buf) == null:
+						err_count += 1
+						push_error("err_count: ", err_count)
+						#print()
+						#print("JSON error: ", buf)
+						#print()
+						buf = ""
+						return
+					var data_parsed: Dictionary = JSON.parse_string(splited_buf)
 					buf = ""
 					#print("map_parsed: ", data_parsed)
 					map_update.emit(data_parsed)
