@@ -15,6 +15,9 @@ class_name Player
 
 var id: int = 0
 
+const INITIAL_LERP_SPEED: float = 3
+var lerp_speed: float = INITIAL_LERP_SPEED
+
 var destination: Vector2
 
 const Direction: Dictionary = {
@@ -100,11 +103,11 @@ func update_level_color() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	global_position = global_position.lerp(destination, 3 * delta)
+	global_position = global_position.lerp(destination, clampf(lerp_speed * delta, 0.0, 1.0))
 	if global_position.distance_to(destination) > 2:
 		animate_walk()
 		#print("animation playing")
-		print(global_position.distance_to(destination))
+		#print(global_position.distance_to(destination))
 	elif WalkAnimArray.has(animations.animation):
 		animations.stop()
 		#print("animation stopped ")
@@ -112,10 +115,16 @@ func _physics_process(delta: float) -> void:
 var tween_scale: Tween
 
 func _ready() -> void:
-	scale = Vector2(5, 5)
-	tween_scale = Tween.new()
-
-	tween_scale.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC).tween_property(self, "scale", Vector2(1, 1), 0.5)
-
+	lerp_speed = 100.0
+	visible = false
+	tween_scale = get_tree().create_tween()
+	tween_scale.tween_callback(func() -> void:
+		visible = true
+	)
+	tween_scale.tween_property(self, "scale", Vector2(5, 5), 0.2).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_LINEAR).set_delay(0.2)
+	tween_scale.tween_callback(func() -> void:
+		lerp_speed = INITIAL_LERP_SPEED	
+	)
+	tween_scale.tween_property(self, "scale", Vector2(1, 1), 2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 	
