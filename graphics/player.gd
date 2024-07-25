@@ -9,9 +9,13 @@ class_name Player
 	# "state": string or object, // see below
 	# "level": number,
 	
-@onready var animations: AnimatedSprite2D = $AnimatedSprite2D
+@onready var animations: Array[AnimatedSprite2D] = [$level_1, $level_2, $level_3, $level_4, $level_5, $level_6, $level_7, $level_8]
 @onready var action_label: RichTextLabel = %ActionLabel
 @onready var polygon_2d: Polygon2D = %Polygon2D
+
+@onready var anim: AnimatedSprite2D:
+	get:
+		return animations[clamp(level - 1, 0, 7)]
 
 var id: int = 0
 
@@ -36,7 +40,11 @@ var map_pos: Vector2i
 				
 var team: String
 var inventory: Array
-var level: int
+var level: int = 1:
+	set(val):
+		(get_node("level_" + str(level)) as AnimatedSprite2D).visible = false
+		level = val
+		(get_node("level_" + str(level)) as AnimatedSprite2D).visible = true
 var action: String
 
 #func move(direction: Vector2i) -> void:
@@ -54,13 +62,13 @@ var WalkAnimArray: Array = [ WalkAnim.UP, WalkAnim.DOWN, WalkAnim.RIGHT, WalkAni
 func animate_walk() -> void:
 	match direction:
 		"North":
-			animations.play(WalkAnim.UP as StringName)
+			anim.play(WalkAnim.UP as StringName)
 		"South":
-			animations.play(WalkAnim.DOWN as StringName)
+			anim.play(WalkAnim.DOWN as StringName)
 		"East":
-			animations.play(WalkAnim.RIGHT as StringName)
+			anim.play(WalkAnim.RIGHT as StringName)
 		"West":
-			animations.play(WalkAnim.LEFT as StringName)
+			anim.play(WalkAnim.LEFT as StringName)
 
 func update_action_label() -> void:
 	action_label.text = "[center]" + action + "[/center]"
@@ -108,8 +116,8 @@ func _physics_process(delta: float) -> void:
 		animate_walk()
 		#print("animation playing")
 		#print(global_position.distance_to(destination))
-	elif WalkAnimArray.has(animations.animation):
-		animations.stop()
+	elif WalkAnimArray.has(anim.animation):
+		anim.stop()
 		#print("animation stopped ")
 
 var tween_scale: Tween

@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://wycxd1vxiwnm"]
+
+[ext_resource type="Script" path="res://Egg.gd" id="1_xce0k"]
+[ext_resource type="Texture2D" uid="uid://ddoe5t8jqdp3j" path="res://Items.png" id="2_s27vo"]
+
+[node name="Egg" type="Node2D"]
+position = Vector2(1032, 588)
+scale = Vector2(16.24, 16.24)
+script = ExtResource("1_xce0k")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture_filter = 1
+texture = ExtResource("2_s27vo")
+region_enabled = true
+region_rect = Rect2(66, 160, 12, 12)

@@ -149,6 +149,7 @@ func manage_cell_content(pos: Vector2i, content: Array) -> void:
 				set_cell(minerals_layer, pos, - 1)
 		else:
 			set_cell(food_layer, pos, - 1)
+		
 			
 			# output += Content.FOOD + ": " + str(el[Content.FOOD]) + ", "
 		if el.has(Content.DERAUMERE):
@@ -221,6 +222,7 @@ func update_players(players: Array) -> void:
 	#print("_players: ", _players)
 
 func update_eggs(eggs: Array) -> void:
+	print("eggs: ", eggs)
 	for egg: Dictionary in eggs:
 		pass
 
@@ -259,6 +261,8 @@ static func update_player_from_dictionnary(player: Player, dic: Dictionary) -> v
 	player.inventory = dic.inventory
 	player.level = dic.level
 	player.action = JSON.stringify(dic.action)
+	
+	print("level: ", player.level)
 
 	
 func update_position_player_on_map(player: Player) -> void:
