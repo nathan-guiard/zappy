@@ -1,5 +1,7 @@
 extends TileMap
 
+@onready var hover_square: Node2D = $"HoverSquare"
+
 
 var _players: Dictionary = {}
 
@@ -14,6 +16,18 @@ const Content: Dictionary = {
 	FOOD = "Food",
 }
 
+#var _tiles_minerals_data: Array[Array]
+var _tiles_data: Dictionary
+#_tiles_minerals_data[0][1] = [
+	#{
+		#content =  "Linemate",
+		#amount = 3
+	#},
+	#{
+		#content = "Thystame",
+		#amount = 4
+	#}
+#]
 # const Tile: Dictionary = {
 # 	LINEMATE = Vector2i(0, 6),
 # 	DERAUMERE = Vector2i(3, 3),
@@ -56,7 +70,12 @@ var map: Array
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	pass
+	var timer_notify: Timer = Timer.new()
+	timer_notify.one_shot = false
+	timer_notify.autostart = true
+	timer_notify.wait_time = 2
+	timer_notify.timeout.connect(_on_timer_notify_timeout)
+	add_child(timer_notify)
 
 
 enum Terrain {
@@ -67,6 +86,15 @@ enum Terrain {
 
 var nb_col: int = 0
 var nb_row: int = 0
+
+func _use_tile_data_runtime_update(layer: int, coords: Vector2i) -> bool:
+	if layer > 0:
+		return true
+	return false
+	
+func _tile_data_runtime_update(layer: int, coords: Vector2i, tile_data: TileData) -> void:
+	#print("_tile_data_runtime_update")
+	return 
 
 func init_map_tiling() -> void:
 	for col: Array in map:
@@ -121,34 +149,44 @@ func init_outside_map() -> void:
 		
 
 
+func is_there_food(content: Array) -> bool:
+	for el: Dictionary in content:
+		if el.has(Content.FOOD):
+			return true
+	return false
+
+func is_there_minerals(content: Array) -> bool:
+	for el: Dictionary in content:
+		if el.has(Content.DERAUMERE) or el.has(Content.LINEMATE) or el.has(Content.MENDIANE) or el.has(Content.PHIRAS) or el.has(Content.SIBUR) or el.has(Content.THYSTAME):
+			return true
+	return false
+
+
+func update_tiles_data(pos: Vector2i, content: Array) -> void:
+	_tiles_data[pos] = content
 
 func manage_cell_content(pos: Vector2i, content: Array) -> void:
 	#var output: String = ""
 	var food_layer: int = 1
 	var minerals_layer: int = 2
+	#print(content)
+	update_tiles_data(pos, content)
 	
-	
-	if content.size() == 0:
+	if not is_there_food(content):
 		set_cell(food_layer, pos, - 1)
-		#print("cell removed")
-	else:
-		#print("cell add")
-		pass
+	if not is_there_minerals(content):
+		set_cell(minerals_layer, pos, - 1)
+		
+
+	#print("content: ", content)
+	#print()
 	for el: Dictionary in content:
 
 		if el.is_empty():
 			continue
-			
-		
-		
-		
 
 		if el.has(Content.FOOD):
 			set_cell(food_layer, pos, items_source_id, Tile.FOOD.pick_random() as Vector2i)
-			if content.size() == 1:
-				set_cell(minerals_layer, pos, - 1)
-		else:
-			set_cell(food_layer, pos, - 1)
 		
 			
 			# output += Content.FOOD + ": " + str(el[Content.FOOD]) + ", "
@@ -174,8 +212,6 @@ func manage_cell_content(pos: Vector2i, content: Array) -> void:
 			#set_cell(layer + 1, pos, items_source_id, Tile.PLAYER)
 			
 			# output += Content.PLAYER + ": " + str(el[Content.PLAYER]) + ", "
-
-	#print(output)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
@@ -222,7 +258,7 @@ func update_players(players: Array) -> void:
 	#print("_players: ", _players)
 
 func update_eggs(eggs: Array) -> void:
-	print("eggs: ", eggs)
+	#print("eggs: ", eggs)
 	for egg: Dictionary in eggs:
 		pass
 
@@ -262,7 +298,7 @@ static func update_player_from_dictionnary(player: Player, dic: Dictionary) -> v
 	player.level = dic.level
 	player.action = JSON.stringify(dic.action)
 	
-	print("level: ", player.level)
+	#print("level: ", player.level)
 
 	
 func update_position_player_on_map(player: Player) -> void:
@@ -293,6 +329,55 @@ func merge_players(remote_players: Array) -> void:
 		var player: Player = _players[remote_player_id]
 		update_player_from_dictionnary(player, remote_player)
 
-			
-			
+
+func _on_timer_notify_timeout() -> void:
+	#print("timer !")
+	#notify_runtime_tile_data_update(0)
+	pass
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	var hovered_cell: Vector2i = local_to_map(get_local_mouse_position())
+	if not _tiles_data.has(hovered_cell):
+		return
+	var data: Array = _tiles_data[hovered_cell]
+	if event is InputEventMouseMotion:
+		var ev: InputEventMouseMotion = event
+		hover_square.position = map_to_local(hovered_cell)
+	if event is InputEventKey and event.is_pressed():
+		var ev: InputEventKey = event
+		print("butttont")
+		if ev.keycode == KEY_I:
+			print(data)
+		#print(ev.as_text_keycode())
 	
+
+
+
+
+
+
+#var hovered_cell_data: TileData
+#func _unhandled_input(event: InputEvent) -> void:
+	#var hovered_cell: Vector2i = local_to_map(get_local_mouse_position())
+	#var data: TileData = get_cell_tile_data(1, hovered_cell)
+	#if not data:
+		#return
+	#if event is InputEventMouseMotion:
+	#
+		#var ev: InputEventMouseMotion = event
+		#if hovered_cell_data:
+			#hovered_cell_data.modulate = Color(1, 1, 1, 1)
+		#
+		#hovered_cell_data = data
+		#hovered_cell_data.modulate = Color(1, 0, 0, 1)
+		#print(data)
+	#if event is InputEventMouseButton:
+		#var ev: InputEventMouseButton = event
+		#if ev.button_index == MOUSE_BUTTON_LEFT:
+			#data.get_custom_data_by_layer_id(1)
+	#if event is InputEventKey and event.is_pressed():
+		#var ev: InputEventKey = event
+		#data.set_custom_data_by_layer_id(1, ev.as_text_keycode())
+		#print(ev.as_text_keycode())
+	#

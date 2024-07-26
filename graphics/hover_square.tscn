@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://b35toih8wxky3"]
+
+[node name="HoverSquare" type="Node2D"]
+modulate = Color(1, 1, 1, 0.352941)
+z_index = 4
+
+[node name="Polygon2D" type="Polygon2D" parent="."]
+position = Vector2(0.338766, -1.25303)
+scale = Vector2(0.159609, 0.226691)
+polygon = PackedVector2Array(-51.0424, -29.7629, -51.4039, 38.0764, 48, 38, 46.8488, -29.0145)
