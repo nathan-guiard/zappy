@@ -1,0 +1,36 @@
+[gd_scene load_steps=3 format=3 uid="uid://bprbrovnsq4xi"]
+
+[ext_resource type="Script" path="res://content_info_row.gd" id="1_bq2d6"]
+[ext_resource type="Texture2D" path="res://linemate_texture.res" id="1_foluh"]
+
+[node name="ContentInfoRow" type="HBoxContainer"]
+script = ExtResource("1_bq2d6")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_top = 24
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer"]
+texture_filter = 1
+custom_minimum_size = Vector2(2.08165e-12, 90)
+layout_mode = 2
+texture = ExtResource("1_foluh")
+expand_mode = 2
+stretch_mode = 5
+
+[node name="LabelContentName" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "Linemate"
+
+[node name="MarginContainer2" type="MarginContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 10
+theme_override_constants/margin_left = 60
+theme_override_constants/margin_right = 8
+
+[node name="LabelAmount" type="Label" parent="MarginContainer2"]
+layout_mode = 2
+size_flags_horizontal = 10
+theme_override_font_sizes/font_size = 64
+text = "3"

@@ -1,9 +1,14 @@
 extends TileMap
+@onready var v_box_container: VBoxContainer = $CanvasLayer/PanelContainer/MarginContainer/VBoxContainer
+@onready var panel_container: PanelContainer = $CanvasLayer/PanelContainer
 
 @onready var hover_square: Node2D = $"HoverSquare"
-
+const content_info_row_scene: PackedScene = preload("res://ContentInfoRow.tscn")
+#@onready var sprite_2d: Sprite2D = $CanvasLayer/Sprite2D
+#@onready var texture_rect: TextureRect = $CanvasLayer/PanelContainer/MarginContainer/GridContainer/TextureRect
 
 var _players: Dictionary = {}
+#@onready var grid_container: GridContainer = $CanvasLayer/PanelContainer/MarginContainer/GridContainer
 
 const Content: Dictionary = {
 	LINEMATE = "Linemate",
@@ -14,6 +19,7 @@ const Content: Dictionary = {
 	THYSTAME = "Thystame",
 	PLAYER = "Player",
 	FOOD = "Food",
+	EGG = "Egg",
 }
 
 #var _tiles_minerals_data: Array[Array]
@@ -56,6 +62,10 @@ const Tile: Dictionary = {
 	EGG = Vector2i(4 ,10)
 }
 
+var _tiles_texture: Dictionary = {
+	
+}
+
 const items_source_id: int = 1
 const floors_source_id: int = 0 
 
@@ -69,13 +79,39 @@ var map: Array
 	#print(CUICUI)
 
 # Called when the node enters the scene tree for the first time.
+
+
 func _ready() -> void:
-	var timer_notify: Timer = Timer.new()
-	timer_notify.one_shot = false
-	timer_notify.autostart = true
-	timer_notify.wait_time = 2
-	timer_notify.timeout.connect(_on_timer_notify_timeout)
-	add_child(timer_notify)
+	const TILESET: TileSet = preload("res://tileset.tres")
+	
+	var atlas: TileSetAtlasSource = TILESET.get_source(1) as TileSetAtlasSource
+	var atlas_image: Image = atlas.texture.get_image()
+	#var tileImage: Image = atlasImage.get_region(atlas.get_tile_texture_region(Vector2i(0,2)))
+	#var tiletexture: ImageTexture = ImageTexture.create_from_image(tileImage) 
+	
+	for k: String in Content:
+		if k == "FOOD" or k == "PLAYER" or k == "EGG":
+			continue
+		var tile_image: Image = atlas_image.get_region(atlas.get_tile_texture_region(Tile[k] as Vector2i))
+		var tile_texture: ImageTexture = ImageTexture.create_from_image(tile_image) 
+		_tiles_texture[Content[k]] = tile_texture
+	
+	print(_tiles_texture)
+	#sprite_2d.texture = _tiles_texture["Sibur"]
+	#texture_rect.texture = _tiles_texture["Sibur"]
+	var texture_rect2: TextureRect = TextureRect.new()
+	texture_rect2.texture = _tiles_texture["Linemate"]
+	#ResourceSaver.save(_tiles_texture["Linemate"] as ImageTexture, "linemate_texture.res", 1)
+	#grid_container.add_child(texture_rect2)
+	
+	var label_mineral: Label = Label.new()
+	label_mineral.text = "Sibur"
+	#grid_container.add_child(label_mineral)
+	
+	var label_amount: Label = Label.new()
+	label_amount.text = "3"
+	#grid_container.add_child(label_amount)
+
 
 
 enum Terrain {
@@ -213,9 +249,7 @@ func manage_cell_content(pos: Vector2i, content: Array) -> void:
 			
 			# output += Content.PLAYER + ": " + str(el[Content.PLAYER]) + ", "
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass
+
 
 func _on_network_map_ready(map_p: Array) -> void:
 	map = map_p
@@ -344,13 +378,30 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		var ev: InputEventMouseMotion = event
 		hover_square.position = map_to_local(hovered_cell)
-	if event is InputEventKey and event.is_pressed():
-		var ev: InputEventKey = event
-		print("butttont")
-		if ev.keycode == KEY_I:
-			print(data)
+	#if event is InputEventKey and event.is_pressed():
+		#var ev: InputEventKey = event
+		#print("butttont")
+		if true:#ev.keycode == KEY_I:
+			print("data: ", data, "size: ", data.size())
+			for child: Node in v_box_container.get_children():
+				child.free()
+			var data_filtered: Array = data_without_player(data)
+			for content: Dictionary in data_filtered:
+				for key: String in content:
+					if key == Content.FOOD  or key == Content.EGG:
+						continue
+					if v_box_container.get_child_count() > 0:
+						var h_separator: HSeparator = HSeparator.new()
+						h_separator["theme_override_styles/separator"] = preload("res://sep_style.tres")
+						v_box_container.add_child(h_separator)
+					
+					var content_info_row: ContentInfoRow = content_info_row_scene.instantiate()
+					v_box_container.add_child(content_info_row)					
+					content_info_row.icon = _tiles_texture[key]
+					content_info_row.key = key
+					content_info_row.value = str(content[key])
+				
 		#print(ev.as_text_keycode())
-	
 
 
 
@@ -380,4 +431,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		#var ev: InputEventKey = event
 		#data.set_custom_data_by_layer_id(1, ev.as_text_keycode())
 		#print(ev.as_text_keycode())
-	#
+
+func data_without_player(data: Array) -> Array:
+	var new_data: Array[Dictionary] = []
+	for el: Dictionary in data:
+		if not el.has(Content.PLAYER):
+			new_data.push_back(el)
+	return new_data

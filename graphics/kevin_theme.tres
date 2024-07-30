@@ -1,0 +1,8 @@
+[gd_resource type="Theme" load_steps=2 format=3 uid="uid://cvw71dhcnx67d"]
+
+[sub_resource type="StyleBoxLine" id="StyleBoxLine_ggbnw"]
+color = Color(0.941176, 0, 0, 1)
+thickness = 8
+
+[resource]
+HSeparator/styles/kevin_separator = SubResource("StyleBoxLine_ggbnw")

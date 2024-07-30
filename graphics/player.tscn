@@ -1125,6 +1125,7 @@ script = ExtResource("1_6god7")
 
 [node name="level_1" type="AnimatedSprite2D" parent="."]
 texture_filter = 1
+position = Vector2(0, -4)
 sprite_frames = SubResource("SpriteFrames_4e8mm")
 animation = &"left_walk"
 
