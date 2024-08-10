@@ -2,6 +2,9 @@ extends TileMap
 @onready var v_box_container: VBoxContainer = $CanvasLayer/PanelContainer/MarginContainer/VBoxContainer
 @onready var panel_container: PanelContainer = $CanvasLayer/PanelContainer
 
+@onready var v_box_container_players: VBoxContainer = %VBoxContainerPlayers
+const player_info_btn_scene: PackedScene = preload("res://PlayerInfoBtn.tscn")
+
 @onready var hover_square: Node2D = $"HoverSquare"
 const content_info_row_scene: PackedScene = preload("res://ContentInfoRow.tscn")
 #@onready var sprite_2d: Sprite2D = $CanvasLayer/Sprite2D
@@ -280,6 +283,8 @@ func update_players(players: Array) -> void:
 		pass
 	#print("plaayers: ", players)
 	#prune_players(players)
+	for player_info_btn: Node in v_box_container_players.get_children():
+		player_info_btn.queue_free()
 	merge_players(players)
 	for player_id: int in _players:
 		var player: Player = _players[player_id]
@@ -287,7 +292,12 @@ func update_players(players: Array) -> void:
 		update_position_player_on_map(player)
 		player.update_action_label()
 		player.update_level_color()
-
+		
+		var player_info_btn: PlayerInfoBtn = player_info_btn_scene.instantiate()
+		v_box_container_players.add_child(player_info_btn)
+		player_info_btn.info = "Level " + str(player.level)
+		player_info_btn.logo = player.anim.sprite_frames.get_frame_texture("down_walk", 0)
+		player_info_btn.button_down.connect(_on_player_info_btn_button_down)
 		#print("action: ", new_player.action)
 	#print("_players: ", _players)
 
@@ -359,7 +369,7 @@ func merge_players(remote_players: Array) -> void:
 			var new_player: Player = construct_player_from_dictionnary(remote_player)
 			_players[remote_player_id] = new_player
 			add_child(new_player)
-			print("player added")
+			#print("player added")
 		var player: Player = _players[remote_player_id]
 		update_player_from_dictionnary(player, remote_player)
 
@@ -382,7 +392,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		#var ev: InputEventKey = event
 		#print("butttont")
 		if true:#ev.keycode == KEY_I:
-			print("data: ", data, "size: ", data.size())
+			#print("data: ", data, "size: ", data.size())
 			for child: Node in v_box_container.get_children():
 				child.free()
 			var data_filtered: Array = data_without_player(data)
@@ -438,3 +448,7 @@ func data_without_player(data: Array) -> Array:
 		if not el.has(Content.PLAYER):
 			new_data.push_back(el)
 	return new_data
+
+
+func _on_player_info_btn_button_down() -> void:
+	print("button pressed !")
