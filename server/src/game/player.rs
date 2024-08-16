@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/06/06 12:26:30 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/08/16 15:20:13 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -105,6 +105,7 @@ impl Player {
 		map: &mut GameMap,
 		teams: &mut HashMap<String, Team>,
 		eggs: &mut Vec<Egg>,
+		egg_id: &mut u128,
 		castings: &HashMap<String, (GamePosition, u8, Vec<i32>)>) -> Option<PlayerActionKind> {
 		match self.state {
 			Idle | Dead | LevelMax | WaitingIncantation => return None,
@@ -123,7 +124,7 @@ impl Player {
 						Expulse => send_to(self.fd, "ok\n"), // handled after this function ends
 						Broadcast(_) => self.exec_broadcast(),
 						Incantation => return Some(self.action.kind.clone()), // handled after this function ends
-						Fork => self.exec_fork(eggs),
+						Fork => self.exec_fork(eggs, egg_id),
 						Connect => self.exec_connect(teams),
 						Beacon => self.exec_beacon(castings),
 					}
@@ -270,8 +271,9 @@ impl Player {
 		}
 	}
 
-	fn exec_fork(&self, eggs: &mut Vec<Egg>) {
-		eggs.push(Egg::new(self.position, self.team.clone()));
+	fn exec_fork(&self, eggs: &mut Vec<Egg>, current_egg_id: &mut u128) {
+		*current_egg_id += 1;
+		eggs.push(Egg::new(self.position, self.team.clone(), *current_egg_id));
 		send_to(self.fd, "ok\n");
 	}
 

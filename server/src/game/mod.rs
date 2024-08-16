@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/05/03 11:49:50 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/08/16 15:15:08 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,7 @@ pub struct Game {
 	pub gui: Option<GraphicClient>,
 	pub teams: HashMap<String, Team>,
 	pub eggs: Vec<Egg>,
+	current_egg_id: u128,
 	pub castings: HashMap<String, (GamePosition, u8, Vec<i32>)>
 }
 
@@ -63,6 +64,7 @@ impl Game {
 			gui: None,
 			teams: teams_map,
 			eggs: vec!(),
+			current_egg_id: 0,
 			castings: HashMap::new(),
 		})
 	}
@@ -85,6 +87,7 @@ impl Game {
 			if let Some(action) = player.execute_casting(&mut self.map,
 				&mut self.teams,
 				&mut self.eggs,
+				&mut self.current_egg_id,
 				&self.castings) {
 				actions_to_do_after.push((player.fd, action))
 			}

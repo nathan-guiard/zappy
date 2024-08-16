@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/22 09:50:38 by nguiard           #+#    #+#             */
-/*   Updated: 2024/03/22 10:45:06 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/08/16 15:12:09 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,14 +21,16 @@ pub struct Egg {
 	position: GamePosition,
 	team: String,
 	timer: u16,
+	id: u128,
 }
 
 impl Egg {
-	pub fn new(position: GamePosition, team: String) -> Self {
+	pub fn new(position: GamePosition, team: String, id: u128) -> Self {
 		Egg {
 			position,
 			team,
 			timer: 0,
+			id,
 		}
 	}
 
