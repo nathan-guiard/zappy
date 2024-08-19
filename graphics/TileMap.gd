@@ -1,4 +1,5 @@
 extends TileMap
+class_name  EnhancedTileMap
 @onready var v_box_container_contents: VBoxContainer = %CanvasLayer/PanelContainer/MarginContainer/VBoxContainerContents
 @onready var panel_container: PanelContainer = %CanvasLayer/PanelContainer
 @onready var panel_players: PanelContainer = $"../CanvasLayer/PanelContainer2"
@@ -14,6 +15,9 @@ const content_info_row_scene: PackedScene = preload("res://ContentInfoRow.tscn")
 
 var _players: Dictionary = {}
 #@onready var grid_container: GridContainer = $CanvasLayer/PanelContainer/MarginContainer/GridContainer
+@onready var main: Node2D = $".."
+const trace_square: PackedScene = preload("res://trace_square.tscn")
+@onready var traces_square: Node2D = $TracesSquare
 
 const Content: Dictionary = {
 	LINEMATE = "Linemate",
@@ -351,6 +355,16 @@ static func update_player_from_dictionnary(player: Player, dic: Dictionary) -> v
 	
 func update_position_player_on_map(player: Player) -> void:
 	player.destination = to_global( map_to_local(player.map_pos))
+	player.map_position_history.push_back(player.map_pos)
+	if camera.focused_player == player:
+		clear_traces_square()
+		for pos: Vector2i in player.map_position_history:
+			var trace_square_instance: Node2D = trace_square.instantiate()
+			trace_square_instance.position = map_to_local(pos)
+			traces_square.add_child(trace_square_instance)
+		# line_2d.points = []
+		# for pos: Vector2 in player.position_history:
+			# line_2d.add_point(main.to_local(pos))
 
 
 func prune_players(remote_players: Array) -> void:
@@ -469,4 +483,6 @@ func _on_player_info_btn_button_down(player_id: int) -> void:
 		
 		
 
-
+func clear_traces_square() -> void:
+	for child: Node2D in traces_square.get_children():
+		child.queue_free()

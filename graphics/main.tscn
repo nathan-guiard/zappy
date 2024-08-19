@@ -61,7 +61,7 @@ scale = Vector2(0.5, 0.5)
 theme_override_styles/panel = SubResource("StyleBoxFlat_mjxie")
 
 [node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/PanelContainer2"]
-custom_minimum_size = Vector2(2.08165e-12, 500)
+custom_minimum_size = Vector2(2.08165e-12, 600)
 layout_mode = 2
 
 [node name="VBoxContainerPlayers" type="VBoxContainer" parent="CanvasLayer/PanelContainer2/ScrollContainer"]
@@ -102,6 +102,8 @@ position = Vector2(500, 500)
 
 [node name="HoverSquare" parent="TileMap" instance=ExtResource("7_flrrs")]
 position = Vector2(66, 305)
+
+[node name="TracesSquare" type="Node2D" parent="TileMap"]
 
 [connection signal="button_down" from="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers/PlayerInfoBtn" to="TileMap" method="_on_player_info_btn_button_down"]
 [connection signal="map_ready" from="Network" to="TileMap" method="_on_network_map_ready"]

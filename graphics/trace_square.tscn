@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://n5bjno2t3h6c"]
+
+[node name="TraceSquare" type="Node2D"]
+modulate = Color(1, 1, 1, 0.0470588)
+z_index = 4
+
+[node name="Polygon2D" type="Polygon2D" parent="."]
+position = Vector2(-0.0384456, 0.138092)
+scale = Vector2(0.162965, 0.239832)
+polygon = PackedVector2Array(-51.0424, -29.7629, -51.4039, 38.0764, 48, 38, 48, -29.7629)

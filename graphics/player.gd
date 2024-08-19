@@ -24,7 +24,14 @@ var id: int = 0
 const INITIAL_LERP_SPEED: float = 3
 var lerp_speed: float = INITIAL_LERP_SPEED
 
-var destination: Vector2
+var position_history: PackedVector2Array = PackedVector2Array()
+
+var map_position_history: PackedVector2Array = PackedVector2Array()
+
+var destination: Vector2:
+	set(new_dest):
+		destination = new_dest
+		position_history.push_back(destination)
 
 const Direction: Dictionary = {
 	"North": "North",
@@ -144,3 +151,4 @@ func toggle_outline(toggle: bool) -> void:
 		material = outline_shader
 	else:
 		material = null
+
