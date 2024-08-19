@@ -1,6 +1,7 @@
 extends TileMap
-@onready var v_box_container: VBoxContainer = $CanvasLayer/PanelContainer/MarginContainer/VBoxContainer
-@onready var panel_container: PanelContainer = $CanvasLayer/PanelContainer
+@onready var v_box_container_contents: VBoxContainer = %CanvasLayer/PanelContainer/MarginContainer/VBoxContainerContents
+@onready var panel_container: PanelContainer = %CanvasLayer/PanelContainer
+@onready var panel_players: PanelContainer = $"../CanvasLayer/PanelContainer2"
 
 @onready var v_box_container_players: VBoxContainer = %VBoxContainerPlayers
 const player_info_btn_scene: PackedScene = preload("res://PlayerInfoBtn.tscn")
@@ -9,6 +10,7 @@ const player_info_btn_scene: PackedScene = preload("res://PlayerInfoBtn.tscn")
 const content_info_row_scene: PackedScene = preload("res://ContentInfoRow.tscn")
 #@onready var sprite_2d: Sprite2D = $CanvasLayer/Sprite2D
 #@onready var texture_rect: TextureRect = $CanvasLayer/PanelContainer/MarginContainer/GridContainer/TextureRect
+@onready var camera: EnhancedCamera2D = $"../Camera2D"
 
 var _players: Dictionary = {}
 #@onready var grid_container: GridContainer = $CanvasLayer/PanelContainer/MarginContainer/GridContainer
@@ -85,6 +87,7 @@ var map: Array
 
 
 func _ready() -> void:
+
 	const TILESET: TileSet = preload("res://tileset.tres")
 	
 	var atlas: TileSetAtlasSource = TILESET.get_source(1) as TileSetAtlasSource
@@ -290,14 +293,15 @@ func update_players(players: Array) -> void:
 		var player: Player = _players[player_id]
 		#player.animate()
 		update_position_player_on_map(player)
-		player.update_action_label()
-		player.update_level_color()
+		player.refresh_action_label()
+		player.refresh_level_color()
 		
 		var player_info_btn: PlayerInfoBtn = player_info_btn_scene.instantiate()
 		v_box_container_players.add_child(player_info_btn)
 		player_info_btn.info = "Level " + str(player.level)
 		player_info_btn.logo = player.anim.sprite_frames.get_frame_texture("down_walk", 0)
-		player_info_btn.button_down.connect(_on_player_info_btn_button_down)
+		player_info_btn.player_id =  player.id
+		player_info_btn.button_down.connect(_on_player_info_btn_button_down.bind(player.id))
 		#print("action: ", new_player.action)
 	#print("_players: ", _players)
 
@@ -381,6 +385,7 @@ func _on_timer_notify_timeout() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	#print(event)
 	var hovered_cell: Vector2i = local_to_map(get_local_mouse_position())
 	if not _tiles_data.has(hovered_cell):
 		return
@@ -393,25 +398,27 @@ func _unhandled_input(event: InputEvent) -> void:
 		#print("butttont")
 		if true:#ev.keycode == KEY_I:
 			#print("data: ", data, "size: ", data.size())
-			for child: Node in v_box_container.get_children():
+			for child: Node in v_box_container_contents.get_children():
 				child.free()
 			var data_filtered: Array = data_without_player(data)
 			for content: Dictionary in data_filtered:
 				for key: String in content:
 					if key == Content.FOOD  or key == Content.EGG:
 						continue
-					if v_box_container.get_child_count() > 0:
+					if v_box_container_contents.get_child_count() > 0:
 						var h_separator: HSeparator = HSeparator.new()
 						h_separator["theme_override_styles/separator"] = preload("res://sep_style.tres")
-						v_box_container.add_child(h_separator)
+						v_box_container_contents.add_child(h_separator)
 					
 					var content_info_row: ContentInfoRow = content_info_row_scene.instantiate()
-					v_box_container.add_child(content_info_row)					
+					v_box_container_contents.add_child(content_info_row)					
 					content_info_row.icon = _tiles_texture[key]
 					content_info_row.key = key
 					content_info_row.value = str(content[key])
 				
 		#print(ev.as_text_keycode())
+	#camera.manage_camera_input(event)
+	
 
 
 
@@ -450,5 +457,16 @@ func data_without_player(data: Array) -> Array:
 	return new_data
 
 
-func _on_player_info_btn_button_down() -> void:
-	print("button pressed !")
+func _on_player_info_btn_button_down(player_id: int) -> void:
+	print("button pressed ! player_id: ", player_id)
+	for curr_player_id: int in _players:
+		(_players[curr_player_id] as Player).toggle_outline(false)
+	if _players.has(player_id):
+		var player: Player = _players[player_id]
+		camera.focus_player(player)
+		player.toggle_outline(true)
+		#get_viewport().set_input_as_handled()
+		
+		
+
+

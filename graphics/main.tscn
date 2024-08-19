@@ -21,17 +21,68 @@ corner_detail = 12
 [node name="Main" type="Node2D"]
 script = ExtResource("1_0wmlj")
 
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+unique_name_in_owner = true
+layer = 6
+
+[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer"]
+modulate = Color(1, 1, 1, 0.776471)
+offset_left = 1554.0
+offset_top = 37.0
+offset_right = 2160.0
+offset_bottom = 289.0
+scale = Vector2(0.5, 0.5)
+theme_override_styles/panel = SubResource("StyleBoxFlat_mjxie")
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/PanelContainer"]
+layout_mode = 2
+mouse_force_pass_scroll_events = false
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainerContents" type="VBoxContainer" parent="CanvasLayer/PanelContainer/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="CanvasLayer/PanelContainer/MarginContainer"]
+visible = false
+layout_mode = 2
+theme_override_styles/separator = ExtResource("8_xm0ke")
+
+[node name="PanelContainer2" type="PanelContainer" parent="CanvasLayer"]
+modulate = Color(1, 1, 1, 0.776471)
+offset_left = 42.0
+offset_top = 35.0
+offset_right = 518.0
+offset_bottom = 159.0
+scale = Vector2(0.5, 0.5)
+theme_override_styles/panel = SubResource("StyleBoxFlat_mjxie")
+
+[node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/PanelContainer2"]
+custom_minimum_size = Vector2(2.08165e-12, 500)
+layout_mode = 2
+
+[node name="VBoxContainerPlayers" type="VBoxContainer" parent="CanvasLayer/PanelContainer2/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PlayerInfoBtn" parent="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers" instance=ExtResource("9_w5ku1")]
+layout_mode = 2
+
 [node name="Network" type="Node" parent="."]
 script = ExtResource("4_b2sue")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(504, 273)
-limit_left = -100
-limit_top = -100
-limit_right = 1200
-limit_bottom = 800
+limit_left = -400
+limit_top = -401
+limit_right = 1500
+limit_bottom = 1100
 position_smoothing_enabled = true
-position_smoothing_speed = 3.0
+position_smoothing_speed = 6.0
 script = ExtResource("1_knqyb")
 
 [node name="TileMap" type="TileMap" parent="."]
@@ -52,53 +103,6 @@ position = Vector2(500, 500)
 [node name="HoverSquare" parent="TileMap" instance=ExtResource("7_flrrs")]
 position = Vector2(66, 305)
 
-[node name="CanvasLayer" type="CanvasLayer" parent="TileMap"]
-
-[node name="PanelContainer" type="PanelContainer" parent="TileMap/CanvasLayer"]
-modulate = Color(1, 1, 1, 0.776471)
-offset_left = 1554.0
-offset_top = 37.0
-offset_right = 2160.0
-offset_bottom = 289.0
-scale = Vector2(0.5, 0.5)
-theme_override_styles/panel = SubResource("StyleBoxFlat_mjxie")
-
-[node name="MarginContainer" type="MarginContainer" parent="TileMap/CanvasLayer/PanelContainer"]
-layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 10
-
-[node name="VBoxContainer" type="VBoxContainer" parent="TileMap/CanvasLayer/PanelContainer/MarginContainer"]
-layout_mode = 2
-
-[node name="HSeparator" type="HSeparator" parent="TileMap/CanvasLayer/PanelContainer/MarginContainer"]
-visible = false
-layout_mode = 2
-theme_override_styles/separator = ExtResource("8_xm0ke")
-
-[node name="PanelContainer2" type="PanelContainer" parent="TileMap/CanvasLayer"]
-modulate = Color(1, 1, 1, 0.776471)
-offset_left = 42.0
-offset_top = 35.0
-offset_right = 518.0
-offset_bottom = 159.0
-scale = Vector2(0.5, 0.5)
-theme_override_styles/panel = SubResource("StyleBoxFlat_mjxie")
-
-[node name="ScrollContainer" type="ScrollContainer" parent="TileMap/CanvasLayer/PanelContainer2"]
-custom_minimum_size = Vector2(2.08165e-12, 500)
-layout_mode = 2
-
-[node name="VBoxContainerPlayers" type="VBoxContainer" parent="TileMap/CanvasLayer/PanelContainer2/ScrollContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="PlayerInfoBtn" parent="TileMap/CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers" instance=ExtResource("9_w5ku1")]
-layout_mode = 2
-
+[connection signal="button_down" from="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers/PlayerInfoBtn" to="TileMap" method="_on_player_info_btn_button_down"]
 [connection signal="map_ready" from="Network" to="TileMap" method="_on_network_map_ready"]
 [connection signal="map_update" from="Network" to="TileMap" method="_on_network_map_update"]
-[connection signal="button_down" from="TileMap/CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers/PlayerInfoBtn" to="TileMap" method="_on_player_info_btn_button_down"]

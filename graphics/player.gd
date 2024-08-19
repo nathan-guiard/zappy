@@ -8,7 +8,9 @@ class_name Player
 	# "inventory": [GameCellContent],
 	# "state": string or object, // see below
 	# "level": number,
-	
+
+@onready var outline_shader: ShaderMaterial = preload("res://player_shader.tres")	
+
 @onready var animations: Array[AnimatedSprite2D] = [$level_1, $level_2, $level_3, $level_4, $level_5, $level_6, $level_7, $level_8]
 @onready var action_label: RichTextLabel = %ActionLabel
 @onready var polygon_2d: Polygon2D = %Polygon2D
@@ -70,10 +72,10 @@ func animate_walk() -> void:
 		"West":
 			anim.play(WalkAnim.LEFT as StringName)
 
-func update_action_label() -> void:
+func refresh_action_label() -> void:
 	action_label.text = "[center]" + action + "[/center]"
 	
-func update_level_color() -> void:
+func refresh_level_color() -> void:
 # 	1 - ffffff
 
 # 2 - 000000
@@ -135,4 +137,10 @@ func _ready() -> void:
 	)
 	tween_scale.tween_property(self, "scale", Vector2(1, 1), 2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
-	
+
+
+func toggle_outline(toggle: bool) -> void:
+	if toggle:
+		material = outline_shader
+	else:
+		material = null
