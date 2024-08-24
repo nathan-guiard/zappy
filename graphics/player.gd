@@ -44,7 +44,11 @@ const Action: Dictionary = {
 	"Avance": "aod"
 }
 
-var map_pos: Vector2i
+var map_pos: Vector2i:
+	set(new_pos):
+		map_pos = new_pos
+		if map_position_history.size() == 0 or Vector2i(map_position_history[map_position_history.size() - 1]) != map_pos:
+			map_position_history.push_back(map_pos)
 @onready var direction: String
 				
 var team: String
@@ -151,4 +155,5 @@ func toggle_outline(toggle: bool) -> void:
 		material = outline_shader
 	else:
 		material = null
+
 

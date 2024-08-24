@@ -84,11 +84,14 @@ var __NOmap: Array = MAP_JSON.data
 
 var map: Array
 
-#func map_json_string() -> String:
-	#print(CUICUI)
 
-# Called when the node enters the scene tree for the first time.
+var traces_square_overlaps_count: Dictionary = {}
+#{
+#	Vector2i(1,2) = 5
 
+#}
+
+var see_traces_of_players: bool = false
 
 func _ready() -> void:
 
@@ -355,16 +358,28 @@ static func update_player_from_dictionnary(player: Player, dic: Dictionary) -> v
 	
 func update_position_player_on_map(player: Player) -> void:
 	player.destination = to_global( map_to_local(player.map_pos))
-	player.map_position_history.push_back(player.map_pos)
+	# player.map_position_history.push_back(player.map_pos)
 	if camera.focused_player == player:
 		clear_traces_square()
 		for pos: Vector2i in player.map_position_history:
-			var trace_square_instance: Node2D = trace_square.instantiate()
+			add_trace_square_to_overlaps_count(pos)
+		for pos: Vector2i in traces_square_overlaps_count:
+			var trace_square_instance: TraceSquare = trace_square.instantiate()
+			trace_square_instance.overlaps_count = traces_square_overlaps_count[pos]
 			trace_square_instance.position = map_to_local(pos)
 			traces_square.add_child(trace_square_instance)
-		# line_2d.points = []
-		# for pos: Vector2 in player.position_history:
-			# line_2d.add_point(main.to_local(pos))
+	elif camera.focused_player == null:
+		if see_traces_of_players:
+			clear_traces_square()
+			for curr_player_id: int in  _players:
+				for pos: Vector2i in _players[curr_player_id].map_position_history:
+					add_trace_square_to_overlaps_count(pos)
+			for pos: Vector2i in traces_square_overlaps_count:
+				var trace_square_instance: TraceSquare = trace_square.instantiate()
+				trace_square_instance.overlaps_count = traces_square_overlaps_count[pos]
+				trace_square_instance.position = map_to_local(pos)
+				traces_square.add_child(trace_square_instance)
+		
 
 
 func prune_players(remote_players: Array) -> void:
@@ -432,11 +447,11 @@ func _unhandled_input(event: InputEvent) -> void:
 				
 		#print(ev.as_text_keycode())
 	#camera.manage_camera_input(event)
-	
-
-
-
-
+	if event is InputEventKey:
+		var ev: InputEventKey = event
+		if ev.is_pressed() and ev.keycode == KEY_A:
+			see_traces_of_players = !see_traces_of_players
+			camera.focused_player = null
 
 
 #var hovered_cell_data: TileData
@@ -480,9 +495,15 @@ func _on_player_info_btn_button_down(player_id: int) -> void:
 		camera.focus_player(player)
 		player.toggle_outline(true)
 		#get_viewport().set_input_as_handled()
-		
-		
+
 
 func clear_traces_square() -> void:
 	for child: Node2D in traces_square.get_children():
 		child.queue_free()
+	traces_square_overlaps_count = {}
+
+func add_trace_square_to_overlaps_count(map_position: Vector2i, count_add: int = 1) -> void:
+	if not traces_square_overlaps_count.has(map_position):
+		traces_square_overlaps_count[map_position] = 0
+	else:
+		traces_square_overlaps_count[map_position] += count_add
