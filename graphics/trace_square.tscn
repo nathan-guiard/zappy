@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://n5bjno2t3h6c"]
+
+[ext_resource type="Script" path="res://trace_square.gd" id="1_t4nqv"]
+
+[node name="TraceSquare" type="Node2D"]
+z_index = 4
+script = ExtResource("1_t4nqv")
+
+[node name="Polygon2D" type="Polygon2D" parent="."]
+position = Vector2(-0.0384456, 0.138092)
+scale = Vector2(0.162965, 0.239832)
+polygon = PackedVector2Array(-51.0424, -29.7629, -51.4039, 38.0764, 48, 38, 48, -29.7629)

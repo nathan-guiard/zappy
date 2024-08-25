@@ -1,8 +1,7 @@
 [gd_scene format=3 uid="uid://b35toih8wxky3"]
 
 [node name="HoverSquare" type="Node2D"]
-modulate = Color(1, 1, 1, 0.352941)
-z_index = 4
+modulate = Color(1, 1, 1, 0.431373)
 
 [node name="Polygon2D" type="Polygon2D" parent="."]
 position = Vector2(0.338766, -1.25303)

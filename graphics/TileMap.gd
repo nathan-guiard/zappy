@@ -1,14 +1,23 @@
 extends TileMap
-@onready var v_box_container: VBoxContainer = $CanvasLayer/PanelContainer/MarginContainer/VBoxContainer
-@onready var panel_container: PanelContainer = $CanvasLayer/PanelContainer
+class_name  EnhancedTileMap
+@onready var v_box_container_contents: VBoxContainer = %CanvasLayer/PanelContainer/MarginContainer/VBoxContainerContents
+@onready var panel_container: PanelContainer = %CanvasLayer/PanelContainer
+@onready var panel_players: PanelContainer = $"../CanvasLayer/PanelContainer2"
+
+@onready var v_box_container_players: VBoxContainer = %VBoxContainerPlayers
+const player_info_btn_scene: PackedScene = preload("res://PlayerInfoBtn.tscn")
 
 @onready var hover_square: Node2D = $"HoverSquare"
 const content_info_row_scene: PackedScene = preload("res://ContentInfoRow.tscn")
 #@onready var sprite_2d: Sprite2D = $CanvasLayer/Sprite2D
 #@onready var texture_rect: TextureRect = $CanvasLayer/PanelContainer/MarginContainer/GridContainer/TextureRect
+@onready var camera: EnhancedCamera2D = $"../Camera2D"
 
 var _players: Dictionary = {}
 #@onready var grid_container: GridContainer = $CanvasLayer/PanelContainer/MarginContainer/GridContainer
+@onready var main: Node2D = $".."
+const trace_square: PackedScene = preload("res://trace_square.tscn")
+@onready var traces_square: Node2D = $TracesSquare
 
 const Content: Dictionary = {
 	LINEMATE = "Linemate",
@@ -75,13 +84,17 @@ var __NOmap: Array = MAP_JSON.data
 
 var map: Array
 
-#func map_json_string() -> String:
-	#print(CUICUI)
 
-# Called when the node enters the scene tree for the first time.
+var traces_square_overlaps_count: Dictionary = {}
+#{
+#	Vector2i(1,2) = 5
 
+#}
+
+var see_traces_of_players: bool = false
 
 func _ready() -> void:
+
 	const TILESET: TileSet = preload("res://tileset.tres")
 	
 	var atlas: TileSetAtlasSource = TILESET.get_source(1) as TileSetAtlasSource
@@ -280,14 +293,22 @@ func update_players(players: Array) -> void:
 		pass
 	#print("plaayers: ", players)
 	#prune_players(players)
+	for player_info_btn: Node in v_box_container_players.get_children():
+		player_info_btn.queue_free()
 	merge_players(players)
 	for player_id: int in _players:
 		var player: Player = _players[player_id]
 		#player.animate()
 		update_position_player_on_map(player)
-		player.update_action_label()
-		player.update_level_color()
-
+		player.refresh_action_label()
+		player.refresh_level_color()
+		
+		var player_info_btn: PlayerInfoBtn = player_info_btn_scene.instantiate()
+		v_box_container_players.add_child(player_info_btn)
+		player_info_btn.info = "Level " + str(player.level)
+		player_info_btn.logo = player.anim.sprite_frames.get_frame_texture("down_walk", 0)
+		player_info_btn.player_id =  player.id
+		player_info_btn.button_down.connect(_on_player_info_btn_button_down.bind(player.id))
 		#print("action: ", new_player.action)
 	#print("_players: ", _players)
 
@@ -337,6 +358,28 @@ static func update_player_from_dictionnary(player: Player, dic: Dictionary) -> v
 	
 func update_position_player_on_map(player: Player) -> void:
 	player.destination = to_global( map_to_local(player.map_pos))
+	# player.map_position_history.push_back(player.map_pos)
+	if camera.focused_player == player:
+		clear_traces_square()
+		for pos: Vector2i in player.map_position_history:
+			add_trace_square_to_overlaps_count(pos)
+		for pos: Vector2i in traces_square_overlaps_count:
+			var trace_square_instance: TraceSquare = trace_square.instantiate()
+			trace_square_instance.overlaps_count = traces_square_overlaps_count[pos]
+			trace_square_instance.position = map_to_local(pos)
+			traces_square.add_child(trace_square_instance)
+	elif camera.focused_player == null:
+		if see_traces_of_players:
+			clear_traces_square()
+			for curr_player_id: int in  _players:
+				for pos: Vector2i in _players[curr_player_id].map_position_history:
+					add_trace_square_to_overlaps_count(pos)
+			for pos: Vector2i in traces_square_overlaps_count:
+				var trace_square_instance: TraceSquare = trace_square.instantiate()
+				trace_square_instance.overlaps_count = traces_square_overlaps_count[pos]
+				trace_square_instance.position = map_to_local(pos)
+				traces_square.add_child(trace_square_instance)
+		
 
 
 func prune_players(remote_players: Array) -> void:
@@ -359,7 +402,7 @@ func merge_players(remote_players: Array) -> void:
 			var new_player: Player = construct_player_from_dictionnary(remote_player)
 			_players[remote_player_id] = new_player
 			add_child(new_player)
-			print("player added")
+			#print("player added")
 		var player: Player = _players[remote_player_id]
 		update_player_from_dictionnary(player, remote_player)
 
@@ -371,6 +414,7 @@ func _on_timer_notify_timeout() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	#print(event)
 	var hovered_cell: Vector2i = local_to_map(get_local_mouse_position())
 	if not _tiles_data.has(hovered_cell):
 		return
@@ -382,30 +426,32 @@ func _unhandled_input(event: InputEvent) -> void:
 		#var ev: InputEventKey = event
 		#print("butttont")
 		if true:#ev.keycode == KEY_I:
-			print("data: ", data, "size: ", data.size())
-			for child: Node in v_box_container.get_children():
+			#print("data: ", data, "size: ", data.size())
+			for child: Node in v_box_container_contents.get_children():
 				child.free()
 			var data_filtered: Array = data_without_player(data)
 			for content: Dictionary in data_filtered:
 				for key: String in content:
 					if key == Content.FOOD  or key == Content.EGG:
 						continue
-					if v_box_container.get_child_count() > 0:
+					if v_box_container_contents.get_child_count() > 0:
 						var h_separator: HSeparator = HSeparator.new()
 						h_separator["theme_override_styles/separator"] = preload("res://sep_style.tres")
-						v_box_container.add_child(h_separator)
+						v_box_container_contents.add_child(h_separator)
 					
 					var content_info_row: ContentInfoRow = content_info_row_scene.instantiate()
-					v_box_container.add_child(content_info_row)					
+					v_box_container_contents.add_child(content_info_row)					
 					content_info_row.icon = _tiles_texture[key]
 					content_info_row.key = key
 					content_info_row.value = str(content[key])
 				
 		#print(ev.as_text_keycode())
-
-
-
-
+	#camera.manage_camera_input(event)
+	if event is InputEventKey:
+		var ev: InputEventKey = event
+		if ev.is_pressed() and ev.keycode == KEY_A:
+			see_traces_of_players = !see_traces_of_players
+			camera.focused_player = null
 
 
 #var hovered_cell_data: TileData
@@ -438,3 +484,26 @@ func data_without_player(data: Array) -> Array:
 		if not el.has(Content.PLAYER):
 			new_data.push_back(el)
 	return new_data
+
+
+func _on_player_info_btn_button_down(player_id: int) -> void:
+	print("button pressed ! player_id: ", player_id)
+	for curr_player_id: int in _players:
+		(_players[curr_player_id] as Player).toggle_outline(false)
+	if _players.has(player_id):
+		var player: Player = _players[player_id]
+		camera.focus_player(player)
+		player.toggle_outline(true)
+		#get_viewport().set_input_as_handled()
+
+
+func clear_traces_square() -> void:
+	for child: Node2D in traces_square.get_children():
+		child.queue_free()
+	traces_square_overlaps_count = {}
+
+func add_trace_square_to_overlaps_count(map_position: Vector2i, count_add: int = 1) -> void:
+	if not traces_square_overlaps_count.has(map_position):
+		traces_square_overlaps_count[map_position] = 0
+	else:
+		traces_square_overlaps_count[map_position] += count_add
