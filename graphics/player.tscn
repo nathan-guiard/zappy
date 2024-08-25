@@ -1125,6 +1125,7 @@ script = ExtResource("1_6god7")
 
 [node name="level_1" type="AnimatedSprite2D" parent="."]
 texture_filter = 1
+use_parent_material = true
 position = Vector2(0, -4)
 sprite_frames = SubResource("SpriteFrames_4e8mm")
 animation = &"left_walk"
@@ -1132,42 +1133,49 @@ animation = &"left_walk"
 [node name="level_2" type="AnimatedSprite2D" parent="."]
 visible = false
 texture_filter = 1
+use_parent_material = true
 sprite_frames = SubResource("SpriteFrames_x5por")
 animation = &"up_walk"
 
 [node name="level_3" type="AnimatedSprite2D" parent="."]
 visible = false
 texture_filter = 1
+use_parent_material = true
 sprite_frames = SubResource("SpriteFrames_ikgp5")
 animation = &"up_walk"
 
 [node name="level_4" type="AnimatedSprite2D" parent="."]
 visible = false
 texture_filter = 1
+use_parent_material = true
 sprite_frames = SubResource("SpriteFrames_4j8yp")
 animation = &"up_walk"
 
 [node name="level_5" type="AnimatedSprite2D" parent="."]
 visible = false
 texture_filter = 1
+use_parent_material = true
 sprite_frames = SubResource("SpriteFrames_failk")
 animation = &"up_walk"
 
 [node name="level_6" type="AnimatedSprite2D" parent="."]
 visible = false
 texture_filter = 1
+use_parent_material = true
 sprite_frames = SubResource("SpriteFrames_1t1cv")
 animation = &"down_walk"
 
 [node name="level_7" type="AnimatedSprite2D" parent="."]
 visible = false
 texture_filter = 1
+use_parent_material = true
 sprite_frames = SubResource("SpriteFrames_ekeig")
 animation = &"up_walk"
 
 [node name="level_8" type="AnimatedSprite2D" parent="."]
 visible = false
 texture_filter = 1
+use_parent_material = true
 sprite_frames = SubResource("SpriteFrames_5nocm")
 animation = &"up_walk"
 

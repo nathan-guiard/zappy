@@ -8,7 +8,9 @@ class_name Player
 	# "inventory": [GameCellContent],
 	# "state": string or object, // see below
 	# "level": number,
-	
+
+@onready var outline_shader: ShaderMaterial = preload("res://player_shader.tres")	
+
 @onready var animations: Array[AnimatedSprite2D] = [$level_1, $level_2, $level_3, $level_4, $level_5, $level_6, $level_7, $level_8]
 @onready var action_label: RichTextLabel = %ActionLabel
 @onready var polygon_2d: Polygon2D = %Polygon2D
@@ -22,7 +24,14 @@ var id: int = 0
 const INITIAL_LERP_SPEED: float = 3
 var lerp_speed: float = INITIAL_LERP_SPEED
 
-var destination: Vector2
+var position_history: PackedVector2Array = PackedVector2Array()
+
+var map_position_history: PackedVector2Array = PackedVector2Array()
+
+var destination: Vector2:
+	set(new_dest):
+		destination = new_dest
+		position_history.push_back(destination)
 
 const Direction: Dictionary = {
 	"North": "North",
@@ -35,7 +44,11 @@ const Action: Dictionary = {
 	"Avance": "aod"
 }
 
-var map_pos: Vector2i
+var map_pos: Vector2i:
+	set(new_pos):
+		map_pos = new_pos
+		if map_position_history.size() == 0 or Vector2i(map_position_history[map_position_history.size() - 1]) != map_pos:
+			map_position_history.push_back(map_pos)
 @onready var direction: String
 				
 var team: String
@@ -70,10 +83,10 @@ func animate_walk() -> void:
 		"West":
 			anim.play(WalkAnim.LEFT as StringName)
 
-func update_action_label() -> void:
+func refresh_action_label() -> void:
 	action_label.text = "[center]" + action + "[/center]"
 	
-func update_level_color() -> void:
+func refresh_level_color() -> void:
 # 	1 - ffffff
 
 # 2 - 000000
@@ -135,4 +148,12 @@ func _ready() -> void:
 	)
 	tween_scale.tween_property(self, "scale", Vector2(1, 1), 2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
-	
+
+
+func toggle_outline(toggle: bool) -> void:
+	if toggle:
+		material = outline_shader
+	else:
+		material = null
+
+
