@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/06/06 12:18:17 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/08/25 19:46:46 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,8 @@ use crate::communication::send_to;
 use crate::game::player::{get_player_from_fd, PlayerState};
 
 static mut EXIT: AtomicBool = AtomicBool::new(false);
+
+const TURN_TO_REGENERATE: usize = 3000;
 
 #[derive(StructOpt, Debug)]
 struct Args {
@@ -108,9 +110,9 @@ fn main() -> Result<ExitCode, Error> {
 				return Err(e);
 			}
 		};
-		
+
 		let mut ready_to_read: Vec<i32> = vec![];
-		
+
 		for event in new_events {
 			if event.data == con_data.socket_fd as u64 &&
 			event.events == EPOLLIN as u32 {
@@ -133,10 +135,10 @@ fn main() -> Result<ExitCode, Error> {
 				game.players.retain(|p| p.fd != event.data as i32);
 			}
 		}
-		
+
 		let data = get_all_data(&ready_to_read)?;
 		process_data(&data, &mut game.players, &mut game.gui);
-		
+
 		game.execute();
 		if let Some(s) = game.win_check() {
 			for p in &game.players {
@@ -151,12 +153,20 @@ fn main() -> Result<ExitCode, Error> {
 		update_gui(&game);
 		game.last_map = Some(game.map.clone());
 
+		if turn_nb % TURN_TO_REGENERATE == 0 {
+			game.regenerate_ressources(args.seed);
+		}
+
 		if unsafe { EXIT.load(std::sync::atomic::Ordering::Relaxed) } {
 			println!("Last turn finished.");
 			break;
 		}
-		
+
 		turn_nb += 1;
+		if turn_nb == usize::MAX {
+			println!("Max number of turn reached, stopping the server.");
+			break;
+		}
 		time_check(&tick_speed, &mut exec_time, &mut before, &mut last_sleep, turn_nb);
 		std::thread::sleep(last_sleep);
 		before = Instant::now();

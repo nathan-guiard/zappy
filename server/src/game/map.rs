@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:04:32 by nguiard           #+#    #+#             */
-/*   Updated: 2024/06/03 12:53:01 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/08/25 19:46:11 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,8 @@ use crate::communication::send_to;
 
 use super::player::PlayerDirection;
 const DEVIDE_U32_TO_U8: u32 = 16843009;
+
+use crate::TURN_TO_REGENERATE;
 
 /// Indexes in the "max" tab
 const LINEMATE_INDEX: usize = 0;
@@ -481,6 +483,98 @@ impl GameMap {
 		player_positions
 	}
 
+	pub fn regenerate_ressources(&mut self,
+		rng: &mut StdRng,
+		x: u8,
+		y: u8) {
+		let mut interest_points = vec![
+			GamePosition::default();
+			(1 + rng.next_u32() % 2 + (x > 80) as u32 + (y > 55) as u32) as usize
+		];
+		let start = GamePosition {
+			x: rand_u8(rng) % x,
+			y: rand_u8(rng) % y,
+		};
+
+		for point_number in 0..interest_points.len() {
+			interest_points[point_number] = GamePosition {
+				x: rand_u8(rng) % x,
+				y: rand_u8(rng) % y,
+			};
+		}
+
+		let mut max: Vec<GameCellContent> = vec![
+			Linemate(10),
+			Deraumere(9),
+			Sibur(8),
+			Mendiane(7),
+			Phiras(5),
+			Thystame(3),
+			Food(TURN_TO_REGENERATE as u16 * (8 + (rand_u8(rng) % 5)) as u16), // enough food for 8~13 players
+		];
+
+		fn everything_placed(max: &Vec<GameCellContent>) -> bool {
+			for item in max {
+				if item.amount() > 0 {
+					return false;
+				}
+			};
+			true
+		}
+
+		while !everything_placed(&max) {
+			for vecx in 0..self.cells.len() {
+				for vecy in 0..self.cells[0].len() {
+					let current_cell = &mut self.cells
+						[move_to_pos(x, vecx as u8, start.x as i16)]
+						[move_to_pos(y, vecy as u8, start.y as i16)];
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[THYSTAME_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[PHIRAS_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[MENDIANE_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[SIBUR_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[DERAUMERE_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[LINEMATE_INDEX],
+						&GamePosition { x, y },
+					);
+					Self::place_single_ressource(&interest_points,
+						rng,
+						current_cell,
+						&mut max[FOOD_INDEX],
+						&GamePosition { x, y },
+					);
+				}
+			}
+		};
+	}
+
 	fn place_single_ressource(
 		ipts: &[GamePosition],
 		rng: &mut StdRng,
@@ -488,6 +582,9 @@ impl GameMap {
 		to_place: &mut GameCellContent,
 		max_pos: &GamePosition
 	) {
+		if to_place.amount() == 0 {
+			return;
+		}
 		match to_place {
 			Linemate(_) => Self::place_linemate(ipts, to_place, max_pos, rng, curr),
 			Deraumere(_) => Self::place_deraumere(ipts, to_place, max_pos, rng, curr),

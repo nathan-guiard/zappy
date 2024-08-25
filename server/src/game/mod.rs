@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/08/16 15:15:08 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/08/25 19:45:41 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,8 @@ pub mod teams;
 pub mod egg;
 
 use std::{collections::HashMap, io::{Error, ErrorKind::InvalidInput}};
+
+use rand::{rngs::StdRng, SeedableRng};
 
 use crate::communication::send_to;
 use crate::PlayerState::WaitingIncantation;
@@ -42,7 +44,7 @@ pub struct Game {
 
 impl Game {
 	pub fn new(x: u8, y: u8, teams: Vec<String>, clients: u8, seed: usize) -> Result<Self, std::io::Error> {
-		let (map,mut positions) = GameMap::new(x, y, teams.len() as u8, clients, seed);
+		let (map, mut positions) = GameMap::new(x, y, teams.len() as u8, clients, seed);
 		let mut teams_map: HashMap<String, Team>= HashMap::new();
 		for t in teams {
 			let mut new_team = Team::new(t.clone());
@@ -82,7 +84,7 @@ impl Game {
 		let mut actions_to_do_after: Vec<(i32, PlayerActionKind)> = vec![];
 		let mut dead_players: Vec<i32> = vec![];
 		let mut updated_castings: Vec<(GamePosition, u8, String)> = vec![];
-		
+
 		for player in self.players.iter_mut() {
 			if let Some(action) = player.execute_casting(&mut self.map,
 				&mut self.teams,
@@ -154,6 +156,12 @@ impl Game {
 		})
 	}
 
+	pub fn regenerate_ressources(&mut self, seed: usize) {
+		self.map.regenerate_ressources(&mut StdRng::seed_from_u64(seed as u64),
+			self.map.max_position.x,
+			self.map.max_position.y);
+	}
+
 	fn handle_incantation(players: &mut Vec<Player>, map: &mut GameMap, fd: i32) {
 		let player = get_player_from_fd(players, fd).unwrap();
 		let pos = player.position.clone();
@@ -161,7 +169,7 @@ impl Game {
 		let cell = map.get_cell_mut(pos.x, pos.y).unwrap();
 		let mut same_level = 0;
 		let mut to_level_up: Vec<i32> = vec![];
-	
+
 		for p in players.clone() {
 			if p.position == pos && p.level == level {
 				same_level += 1;
