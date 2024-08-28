@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/08/16 15:20:13 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/08/28 17:13:45 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,6 +56,7 @@ pub struct Player {
 	pub team: String,
 	pub action: PlayerAction,
 	pub id: usize,
+	pub recieved_this_turn: bool,
 }
 
 impl Player {
@@ -74,6 +75,7 @@ impl Player {
 			team: String::new(),
 			action: PlayerAction::new(),
 			id,
+			recieved_this_turn: false,
 		}
 	}
 
@@ -121,7 +123,7 @@ impl Player {
 						Inventaire => self.exec_inventaire(),
 						Prend(_) => self.exec_prend(map),
 						Pose(_) => self.exec_pose(map),
-						Expulse => send_to(self.fd, "ok\n"), // handled after this function ends
+						Expulse => { send_to(self.fd, "ok\n"); self.recieved_this_turn = true}, // handled after this function ends
 						Broadcast(_) => self.exec_broadcast(),
 						Incantation => return Some(self.action.kind.clone()), // handled after this function ends
 						Fork => self.exec_fork(eggs, egg_id),
@@ -155,6 +157,7 @@ impl Player {
 		map.add_content_cell(new_pos, GameCellContent::Player(1));
 		self.position = new_pos;
 		send_to(self.fd, "ok\n");
+		self.recieved_this_turn = true;
 	}
 
 	fn exec_gauche(&mut self) {
@@ -165,6 +168,7 @@ impl Player {
 			East => self.direction = North,
 		}
 		send_to(self.fd, "ok\n");
+		self.recieved_this_turn = true;
 	}
 
 	fn exec_droite(&mut self) {
@@ -175,14 +179,17 @@ impl Player {
 			West => self.direction = North,
 		}
 		send_to(self.fd, "ok\n");
+		self.recieved_this_turn = true;
 	}
 	
-	fn exec_voir(&self, map: &GameMap) {
-		send_to(self.fd, &map.voir_data(self.position, self.direction.clone(), self.level))
+	fn exec_voir(&mut self, map: &GameMap) {
+		send_to(self.fd, &map.voir_data(self.position, self.direction.clone(), self.level));
+		self.recieved_this_turn = true;
 	}
 	
-	fn exec_inventaire(&self) {
+	fn exec_inventaire(&mut self) {
 		send_to(self.fd, (serde_json::to_string(&self.inventory).unwrap() + "\n").as_str());
+		self.recieved_this_turn = true;
 	}
 
 	fn exec_prend(&mut self, map: &mut GameMap) {
@@ -200,31 +207,37 @@ impl Player {
 					"food" => Food(1),
 					other => {
 						send_to(self.fd, format!("ko: {other} not reckognised\n").as_str());
+						self.recieved_this_turn = true;
 						return;
 					}
 				}
 			}
 			_ => {
 				send_to(self.fd, "ko\n");
+				self.recieved_this_turn = true;
 				return;
 			} // error was not taking something (?)
 		};
 		if ressource_taken == Food(1) {
 			if map.remove_content_cell(self.position, ressource_taken) {
 				send_to(self.fd, "ok: took food\n");
+				self.recieved_this_turn = true;
 				self.add_food(FOOD_PER_COLLECT);
 			}
 			else {
 				send_to(self.fd, "ko: no food on cell\n");
+				self.recieved_this_turn = true;
 			}
 			return;
 		}
 		if map.remove_content_cell(self.position, ressource_taken) {
 			send_to(self.fd, format!("ok: took {ressource_name}\n").as_str());
+			self.recieved_this_turn = true;
 			self.add_to_inventory(ressource_taken);
 		}
 		else {
 			send_to(self.fd, format!("ko: no {ressource_name} on cell\n").as_str());
+			self.recieved_this_turn = true;
 		}
 	}
 
@@ -242,46 +255,54 @@ impl Player {
 					"thystame" => Thystame(1),
 					"food" => {
 						send_to(self.fd,"ko: cannot drop food\n");
+						self.recieved_this_turn = true;
 						return;
 					}
 					other => {
 						send_to(self.fd, format!("ko: {other} not reckognised\n").as_str());
+						self.recieved_this_turn = true;
 						return;
 					}
 				}
 			}
 			_ => {
 				send_to(self.fd, "ko\n");
+				self.recieved_this_turn = true;
 				return;
 			} // error was not taking something (?)
 		};
 		if self.remove_from_inventory(ressource_dropped) {
 			map.add_content_cell(self.position, ressource_dropped);
 			send_to(self.fd, format!("ok: dropped {ressource_name}\n").as_str());
+			self.recieved_this_turn = true;
 		}
 		else {
 			send_to(self.fd, format!("ko: no {ressource_name} on your inventory\n").as_str());
+			self.recieved_this_turn = true;
 		}
 	}
 
-	fn exec_connect(&self, teams: &HashMap<String, Team>) {
+	fn exec_connect(&mut self, teams: &HashMap<String, Team>) {
 		match teams.get(&self.team) {
 			Some(t) => send_to(self.fd, &(t.available_connections().to_string() + "\n")),
 			None => send_to(self.fd, "0\n"),
 		}
+		self.recieved_this_turn = true;
 	}
 
-	fn exec_fork(&self, eggs: &mut Vec<Egg>, current_egg_id: &mut u128) {
+	fn exec_fork(&mut self, eggs: &mut Vec<Egg>, current_egg_id: &mut u128) {
 		*current_egg_id += 1;
 		eggs.push(Egg::new(self.position, self.team.clone(), *current_egg_id));
 		send_to(self.fd, "ok\n");
+		self.recieved_this_turn = true;
 	}
 
-	fn exec_broadcast(&self) {
+	fn exec_broadcast(&mut self) {
 		send_to(self.fd, "ok\n");
+		self.recieved_this_turn = true;
 	}
 
-	fn exec_beacon(&self, castings: &HashMap<String, (GamePosition, u8, Vec<i32>)>) {
+	fn exec_beacon(&mut self, castings: &HashMap<String, (GamePosition, u8, Vec<i32>)>) {
 		let mut positions = vec![];
 		for (pos, level, _) in castings.values() {
 			if *level == self.level {
@@ -293,9 +314,11 @@ impl Player {
 		
 		if json.is_err() {
 			send_to(self.fd, "ko\n");
+			self.recieved_this_turn = true;
 		}
 		
 		send_to(self.fd, format!("{}\n", json.unwrap()).as_str());
+		self.recieved_this_turn = true;
 	}
 
 	pub fn add_to_inventory(&mut self, to_add: GameCellContent) {
@@ -354,6 +377,7 @@ impl Player {
 				}
 				Err(e) => {
 					send_to(self.fd, e.as_str());
+					self.recieved_this_turn = true;
 					self.execute_queue(map, teams, eggs, has_gui)
 				}
 			}
@@ -390,7 +414,8 @@ impl Player {
 		map: &mut GameMap,) {
 		self.state = Dead;
 		map.cells[self.position.x as usize][self.position.y as usize].remove_content(Player(1));
-		send_to(self.fd, "You died\n");
+		send_to(self.fd, "You died\n\x04");
+		self.recieved_this_turn = true;
 		println!("A player from team {} died", self.team);
 		unsafe { libc::close(self.fd); }
 	}
