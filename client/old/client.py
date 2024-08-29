@@ -18,13 +18,13 @@ Player: dict
 list_processus: multiprocessing.Process
 
 levels = {
-        1: {"Player":1, "Linemate": 1},
-        2: {"Player":2, "Linemate": 1, "Deraumere": 1, "Sibur": 1},
-        3: {"Player":2, "Linemate": 2, "Sibur": 1, "Phiras": 2},
-        4: {"Player":4, "Linemate": 1, "Deraumere": 1, "Sibur": 2, "Phiras": 1},
-        5: {"Player":4, "Linemate": 1, "Deraumere": 2, "Sibur": 1, "Mendiane": 3},
-        6: {"Player":6, "Linemate": 1, "Deraumere": 2, "Sibur": 3, "Phiras": 1},
-        7: {"Player":6, "Linemate": 2, "Deraumere": 2, "Sibur": 2, "Mendiane": 2, "Phiras": 2, "Thystame": 1},
+        2: {"Player":1, "Linemate": 1},
+        3: {"Player":2, "Linemate": 1, "Deraumere": 1, "Sibur": 1},
+        4: {"Player":2, "Linemate": 2, "Sibur": 1, "Phiras": 2},
+        5: {"Player":4, "Linemate": 1, "Deraumere": 1, "Sibur": 2, "Phiras": 1},
+        6: {"Player":4, "Linemate": 1, "Deraumere": 2, "Sibur": 1, "Mendiane": 3},
+        7: {"Player":6, "Linemate": 1, "Deraumere": 2, "Sibur": 3, "Phiras": 1},
+        8: {"Player":6, "Linemate": 2, "Deraumere": 2, "Sibur": 2, "Mendiane": 2, "Phiras": 2, "Thystame": 1},
 }
 
 def parser():

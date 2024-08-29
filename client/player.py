@@ -1,44 +1,47 @@
 import socket
 import json
+from states.state import Idle
 
 connexion_error = "Erreur : la connexion au serveur n'est pas établie."
+Direction = ['N', 'E', 'S', 'W']
 
-# def send_message(sock, message):
-#     """Envoie un message au serveur via le socket donné et retourne la réponse."""
-#     try:
-#         # Envoie le message au serveur
-#         sock.sendall((message + "\n").encode('utf-8'))
-#         # Lire la réponse du serveur
-#         response = []
-#         while True:
-#             part = sock.recv(1024).decode('utf-8')
-#             if not part:
-#                 break
-#             response.append(part)
-#         # Combine les parties reçues en une seule chaîne
-#         full_response = ''.join(response).strip()
-#         return full_response
-#     except socket.error as e:
-#         return f"Erreur lors de l'envoi du message : {e}"
 
 def send_message(sock, message):
-    """Envoie un message au serveur via le socket donné et retourne la réponse."""
+    """Envoie un message au serveur via le socket donné et retourne la réponse complète jusqu'à réception du caractère de fin \x04."""
     if sock is None:
         print(connexion_error)
         return None
+    
     try:
         # Envoie le message au serveur
         sock.sendall(message.encode('utf-8'))
         
-        # Reçoit la réponse du serveur en une seule fois
-        response = sock.recv(1024).decode('utf-8').strip()
-        response_list = response.split('\n')
+        # Réception des données en plusieurs parties jusqu'à rencontrer \x04
+        response = []
+        while True:
+            part: str = sock.recv(1024).decode('utf-8')
+            if not part:
+                # Connexion perdue ou fin de transmission inattendue
+                print("Connexion perdue ou transmission incomplète.")
+                return None
+            response.append(part)
+            
+            # Vérifie si le caractère de fin est dans la partie reçue
+            if '\x04' in part:
+                break
+        
+        # Combine les parties reçues en une seule chaîne
+        full_response = ''.join(response).strip()
+        # Retirer le caractère de fin \x04
+        full_response = full_response.removesuffix("\n\x04")
+        response_list = list(filter(None, full_response.split('\n')))
+        
         if "You died" in response_list:
-            print(response)
+            print(full_response)
             print("Player is dead")
             return None
-        return response
-        
+        return full_response
+
     except socket.error as e:
         print(f"Erreur lors de l'envoi du message : {e}")
         return None
@@ -53,13 +56,19 @@ class Player:
         self.timeout = 5
         self.inventory = {}
         self.num_players = 0
-        self.map_coordinates = (0, 0)
+        self.coordinates = (0, 0)
+        self.direction = Direction[0]
         self.map_size = (0, 0)
         self.team_name = team_name
+        self.level = 1
+        self.state = Idle(self)  # Débuter en état Idle
+        
         self.connect_to_server()
-        print("Connexion etablie")
         self.check_inventory()
+        self.voir()
+        self.display_info()
         self.routine()
+        
         
     def check_inventory(self):
         """Demande l'inventaire au serveur et le stocke sous forme de dictionnaire."""
@@ -70,7 +79,7 @@ class Player:
             try:
                 # Convertir la réponse JSON en dictionnaire
                 inventory_data = json.loads(response)
-                self.inventory = inventory_data
+                self.inventory = inventory_data[0]
                 print(f"Inventaire mis à jour : {self.inventory}")
             except json.JSONDecodeError:
                 self.close_connection("Erreur : Impossible de décoder la réponse JSON du serveur.")
@@ -128,12 +137,15 @@ class Player:
 
             else:
                 self.close_connection("Erreur de connexion")
-                
+                    
         except socket.timeout:
             self.close_connection(f"Connexion échouée : délai d'attente dépassé ({self.timeout} secondes)")
         
         except socket.error as e:
             self.close_connection(f"Erreur lors de la connexion au serveur: {e}")
+            
+        print("Connexion etablie")
+
 
     def close_connection(self, error_message: str = None):
         if error_message:
@@ -144,42 +156,46 @@ class Player:
             print("Connexion fermée.")
         exit(0)
 
+
     def display_info(self):
         """Affiche les informations du joueur."""
         print("\n--- Informations du Joueur ---")
         print(f"Nom de l'équipe : {self.team_name}")
         print(f"Nombre de joueurs dans l'équipe : {self.num_players}")
-        print(f"Coordonnées de la carte : {self.map_coordinates}")
+        print(f"Coordonnées de la carte : {self.coordinates}")
+        print(f"Direction: {self.direction}")
         print(f"Inventaire: {self.inventory}")
+        print(f"Memoire: {self.view}")
         print("------------------------------\n")
         
+        
     def routine(self):
+        """Boucle principale pour gérer les actions du joueur."""
         while self.socket:
-            self.voir()
-            self.check_inventory()
-            self.droite()
-            self.gauche()
-            self.avance()
-            self.voir()
-            self.connect()
-            self.broadcast()
+            self.update()  
+
 
     def droite(self):
         response = send_message(self.socket, "droite")
         if response != "ok":
-            self.close_connection("Reponse invalide 'droite'")
+            self.close_connection(f"Reponse invalide 'droite': {response}")
+        current_index = Direction.index(self.direction)
+        self.direction = Direction[(current_index + 1) % len(Direction)]
         print(f"Réponse du serveur à la commande 'droite' : {response}")
 
     def gauche(self):
         response = send_message(self.socket, "gauche")
         if response != "ok":
-            self.close_connection("Reponse invalide 'gauche'")
+            self.close_connection(f"Reponse invalide 'gauche': {response}")
+        current_index = Direction.index(self.direction)
+        self.direction = Direction[(current_index - 1) % len(Direction)]
         print(f"Réponse du serveur à la commande 'gauche' : {response}")
+
 
     def avance(self):
         response = send_message(self.socket, "avance")
         if response != "ok":
-            self.close_connection("Reponse invalide 'avance'")
+            self.close_connection(f"Reponse invalide 'avance': {response}")
         print(f"Réponse du serveur à la commande 'avance' : {response}")
 
 
@@ -187,31 +203,96 @@ class Player:
         response = send_message(self.socket, "voir")
         
         if response is None:
-            self.close_connection("Reponse invalide 'voir'")
+            self.close_connection(f"Réponse invalide 'voir' : {response}")
             return
 
         try:
             # Tenter de charger la réponse en tant que JSON
             view_data = json.loads(response)
-            self.view = view_data
             print(f"Réponse du serveur à la commande 'voir' : {json.dumps(self.view)}")
         except json.JSONDecodeError:
             # Si la réponse n'est pas un JSON valide, fermer la connexion
             print("Erreur : La réponse du serveur n'est pas en format JSON.")
-            self.close_connection("Reponse invalide 'droite'")
+            self.close_connection("Réponse invalide 'voir'")
+            
+        # Update la position du joueur
+        player_tile = view_data[0]
+        self.coordinates = (player_tile['p']['x'], player_tile['p']['y'])
+        for tile in view_data:
+            tile_coords = (tile['p']['x'], tile['p']['y'])
+            self.view[tile_coords] = tile['c'][0]
+
 
     def connect(self):
         response: str = send_message(self.socket, "connect")
         if not response.isdigit():
-            self.close_connection("Reponse invalide 'connect'")
+            self.close_connection(f"Reponse invalide 'connect': {response}")
         print(f"Réponse du serveur à la commande 'connect' : {response}")
 
-    def broadcast(self):
-        response = send_message(self.socket, "broadcast coucou")
+
+    def broadcast(self, message):
+        response = send_message(self.socket, f"broadcast {message}")
         if response != "ok":
-            self.close_connection("Reponse invalide 'broadcast'")
+            self.close_connection(f"Reponse invalide 'broadcast' : {response}")
         print(f"Réponse du serveur à la commande 'broadcast' : {response}")
 
 
+    def fork(self):
+        response: str = send_message(self.socket, "fork")
+        if response.startswith("ok"):
+            print(f"Réponse du serveur à la commande 'fork' : {response}")
+            return 0
+        elif response.startswith("ko"):
+            print(f"Réponse du serveur à la commande 'fork' : {response}")
+            return 1
+        self.close_connection(f"Reponse invalide 'fork': {response}")
+            
+    
+    def incantation(self):
+        response: str = send_message(self.socket, "incantation")
+        if response.startswith("ok"):
+            print(f"Réponse du serveur à la commande 'incantation' : {response}")
+            print("Level Up")
+            self.level += 1
+            return 0
+        elif response.startswith("ko"):
+            print(f"Réponse du serveur à la commande 'incantation' : {response}")
+            return 1
+        self.close_connection(f"Reponse invalide 'incantation': {response}")
 
-player = Player("localhost", 4227, "billy")  
+    def prend(self, ressource):
+        response = send_message(self.socket, f"prend {ressource}")
+        if response.startswith("ok"):
+            print(f"Réponse du serveur à la commande 'prend' : {response}")
+        elif response.startswith("ko"):
+            self.voir()
+        else: 
+            self.close_connection(f"Reponse invalide 'prend' : {response}")
+
+    def pose(self, ressource):
+        response = send_message(self.socket, f"pose {ressource}")
+        if response.startswith("ok"):
+            print(f"Réponse du serveur à la commande 'pose' : {response}")
+        elif response.startswith("ko"):
+            self.voir()
+        else: 
+            self.close_connection(f"Reponse invalide 'pose' : {response}")
+        
+    
+
+    def update(self):
+        """Appelée à chaque cycle de jeu pour mettre à jour l'état."""
+        if self.state:
+            new_state = self.state.update()
+            if new_state:
+                self.transition_to(new_state)
+
+    def transition_to(self, new_state):
+        """Gère la transition entre états."""
+        if self.state:
+            self.state.exit_state()
+        self.state = new_state
+        if self.state:
+            self.state.enter_state()
+
+player = Player("localhost", 4228, "bobby")  

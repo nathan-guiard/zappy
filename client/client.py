@@ -1,4 +1,4 @@
-from state import State, Idle, Recherche, Incantation
+from client.states.state import State, Idle, Recherche, Incantation
 from player import Player
 
 
