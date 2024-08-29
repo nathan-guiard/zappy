@@ -33,7 +33,7 @@ class Recherche(State):
             return None
         else:
             return Incantation()
-        
+
 
 class Incantation(State):
     def enter_state(self):
