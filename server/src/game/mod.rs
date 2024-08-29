@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/08/25 19:45:41 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/08/28 17:09:55 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -140,6 +140,10 @@ impl Game {
 				dead_players.push(player.fd);
 			}
 			player.increment_casting();
+			if player.recieved_this_turn {
+				send_to(player.fd, "\x04");
+				player.recieved_this_turn = false;
+			}
 		}
 
 		self.players.retain(|p| !dead_players.contains(&p.fd));
@@ -185,12 +189,14 @@ impl Game {
 				p.state = PlayerState::Idle;
 				println!("Player leveled up!");
 				send_to(p.fd, "ok\n");
+				p.recieved_this_turn = true;
 			}
 		} else {
 			for fd in to_level_up {
 				let p = get_player_from_fd_mut(players, fd).unwrap();
 				p.state = PlayerState::Idle;
 				send_to(p.fd, "ko\n");
+				p.recieved_this_turn = true;
 			}
 		}
 	}
@@ -215,14 +221,15 @@ impl Game {
 			return;
 		}
 
-		for p in other {
+		for p in &mut other {
 			let comming_from: u8;
 			if p.position == position {
 				comming_from = 0;
 			} else {
-				comming_from = map.comes_from(p.position, position, p.direction);
+				comming_from = map.comes_from(p.position, position, p.direction.clone());
 			}
 			send_to(p.fd, format!("broadcast {comming_from}: {text}\n").as_str());
+			p.recieved_this_turn = true;
 		}
 	}
 	
@@ -268,6 +275,7 @@ impl Game {
 		map.add_content_cell(pos, map::GameCellContent::Player(1));
 		player.position = pos;
 		send_to(player.fd, format!("deplacement {}\n", direction).as_str());
+		player.recieved_this_turn = true;
 	}
 	
 	pub fn win_check(&mut self) -> Option<String> {
