@@ -11,6 +11,9 @@ class State:
         7: {"Player": 6, "Linemate": 1, "Deraumere": 2, "Sibur": 3, "Phiras": 1},
         8: {"Player": 6, "Linemate": 2, "Deraumere": 2, "Sibur": 2, "Mendiane": 2, "Phiras": 2, "Thystame": 1},
     }
+    player = None
+    target_coords = None
+    required_ressources = None
     
     def enter_state(self):
         pass
@@ -33,31 +36,20 @@ class Idle(State):
         print("Je suis sorti de l'état IDLE")
 
     def update(self) -> State:
-        return Recherche(self.player)
-
-class Recherche(State):
-    def __init__(self, player):
-        self.player = player
-        self.required_ressources = None
-        self.target_coords = None
-
-    def enter_state(self):
-        print("Je suis en état RECHERCHE")
         self.required_ressources = self.missing_ressources()
-        print(self.required_ressources)
         self.target_coords = self.choisir_meilleure_case()
-
-    def exit_state(self):
-        print("Je suis sorti de l'état RECHERCHE")
-
-    def update(self) -> State:
-        # Logique pour décider s'il y a un partenaire pour l'incantation
+        self.player.check_inventory()
+        self.player.voir()
         if self.required_ressources is None:
             return Incantation(self.player)
-        if self.target_coords is None:
-            return Exploration(self.player)
-        return None
-
+        elif self.player.inventory.get("Food", 0) < 200:
+            return Nourrir(self.player)
+        elif self.player.coordinates == self.target_coords:
+            return Recolte(self.player)
+        elif self.target_coords:
+            return Deplacement(self.player, self.target_coords)
+        return Exploration(self.player)
+    
     def missing_ressources(self) -> str:
         """Détermine la prochaine ressource manquante pour le level up."""
         next_level = self.player.level + 1
@@ -79,11 +71,12 @@ class Recherche(State):
             return None
         for coords, resources in self.player.view.items():
             score = self.evaluate_tile(resources)
-
             if score > best_score:
                 best_score = score
                 best_tile = coords
-
+                self.player.focus = resources
+        if best_score == 0:
+            return None
         return best_tile
 
     def evaluate_tile(self, resources):
@@ -94,6 +87,7 @@ class Recherche(State):
                 available_quantity = resources[resource.lower()]
                 score += min(needed_quantity, available_quantity) * 10  # Pondération par ressource
         return score
+
 
 class Exploration(State):
     def __init__(self, player):
@@ -107,9 +101,77 @@ class Exploration(State):
     
     def update(self) -> State:
         if self.player.coordinates == self.target_coords:
-            return Recherche(self.player)  # Retour à l'état précédent (Recherche ou autre)
-
+            return Idle(self.player)  # Retour à l'état précédent (Recherche ou autre)
         return self  # Reste dans l'état Deplacement jusqu'à atteindre la cible
+
+
+class Recolte(State):
+    def __init__(self, player):
+        self.player = player
+
+    def enter_state(self):
+        print("Je suis en état RECOLTE")
+    
+    def exit_state(self):
+        self.player.display_info()
+        print("Je suis sorti de l'état RECOLTE")
+
+    def update(self) -> State:
+        """Essaye de récolter les ressources de la case actuelle"""
+        for ressource, quantity in self.player.focus.items():
+            for _ in range(quantity):
+                if self.player.prend(ressource):
+                    return Idle(self.player)
+        return self
+
+
+class Nourrir(State):
+    def __init__(self, player):
+        self.player = player
+
+    def enter_state(self):
+        print("Je suis en état Nourrir")
+        self.target_coords = self.choisir_meilleure_case()
+    
+    def exit_state(self):
+        print("Je suis sorti de l'état Nourrir")
+    
+    def update(self) -> State:
+        """Si le joueur a assez de nourriture, retourne à l'état précédent.
+        Sinon continue de chercher de la nourriture.
+        Et de la recolter si possible."""
+        
+        if self.player.inventory.get("Food", 0) >= 1000:
+            return Idle(self.player)
+        
+        if self.target_coords is None:
+            return Exploration(self.player)
+        
+        if self.target_coords is not None:
+            self.deplacer_vers(self.target_coords)
+            if self.player.coordinates == self.target_coords:
+                self.player.collect_food()
+                self.target_coords = self.choisir_meilleure_case()
+        return self
+    
+    def choisir_meilleure_case(self):
+        """Choisit la meilleure case en fonction des ressources manquantes"""
+        best_tile = None
+        best_score = -1
+        for coords, resources in self.player.view.items():
+            score = self.evaluate_tile(resources)
+            if score > best_score:
+                best_score = score
+                best_tile = coords
+        return best_tile
+    
+    def evaluate_tile(self, resources):
+        """Évalue une case en fonction des ressources manquantes et retourne un score."""
+        score = 0
+        for resource, quantity in resources.items():
+            if resource == "food":
+                score += quantity
+        return score
 
 class Deplacement(State):
     def __init__(self, player, target_coords):

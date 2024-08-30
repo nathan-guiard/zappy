@@ -61,12 +61,15 @@ class Player:
         self.map_size = (0, 0)
         self.team_name = team_name
         self.level = 1
+        self.focus = None
         self.state = Idle(self)  # Débuter en état Idle
         
         self.connect_to_server()
         self.check_inventory()
         self.voir()
         self.display_info()
+        
+        self.state.enter_state()
         self.routine()
         
         
@@ -209,10 +212,13 @@ class Player:
         try:
             # Tenter de charger la réponse en tant que JSON
             view_data = json.loads(response)
-            print(f"Réponse du serveur à la commande 'voir' : {json.dumps(self.view)}")
+            print(f"Réponse du serveur à la commande 'voir' : {view_data}")
         except json.JSONDecodeError:
             # Si la réponse n'est pas un JSON valide, fermer la connexion
-            print("Erreur : La réponse du serveur n'est pas en format JSON.")
+            print(f"Erreur JSONDecodeError: La réponse du serveur n'est pas en format JSON : {response}")
+            self.close_connection("Réponse invalide 'voir'")
+        except TypeError:
+            print(f"Erreur TypeError: La réponse du serveur n'est pas en format JSON : {view_data}")
             self.close_connection("Réponse invalide 'voir'")
             
         # Update la position du joueur
@@ -220,7 +226,10 @@ class Player:
         self.coordinates = (player_tile['p']['x'], player_tile['p']['y'])
         for tile in view_data:
             tile_coords = (tile['p']['x'], tile['p']['y'])
-            self.view[tile_coords] = tile['c'][0]
+            if tile['c']:
+                self.view[tile_coords] = tile['c'][0]
+            else:
+                self.view[tile_coords] = {}
 
 
     def connect(self):
@@ -264,8 +273,15 @@ class Player:
         response = send_message(self.socket, f"prend {ressource}")
         if response.startswith("ok"):
             print(f"Réponse du serveur à la commande 'prend' : {response}")
+            if ressource == "Food":
+                self.inventory[ressource] += 126
+            else:
+                self.inventory[ressource] += 1
+            self.view[self.coordinates][ressource] -= 1
+            return 0
         elif response.startswith("ko"):
             self.voir()
+            return 1
         else: 
             self.close_connection(f"Reponse invalide 'prend' : {response}")
 
@@ -294,5 +310,9 @@ class Player:
         self.state = new_state
         if self.state:
             self.state.enter_state()
+            
+    def has_enough_food(self):
+        """Vérifie si le joueur a assez de nourriture."""
+        return self.inventory.get("Food", 0) >= 200
 
 player = Player("localhost", 4228, "bobby")  
