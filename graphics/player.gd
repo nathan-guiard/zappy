@@ -52,7 +52,10 @@ var map_pos: Vector2i:
 @onready var direction: String
 				
 var team: String
-var inventory: Array
+var inventory: Array:
+	set(new_arr):
+		inventory = new_arr
+		print("inventory: ", inventory)
 var level: int = 1:
 	set(val):
 		(get_node("level_" + str(level)) as AnimatedSprite2D).visible = false

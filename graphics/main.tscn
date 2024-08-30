@@ -1,8 +1,9 @@
-[gd_scene load_steps=11 format=3 uid="uid://c6j6oangcppih"]
+[gd_scene load_steps=13 format=3 uid="uid://c6j6oangcppih"]
 
 [ext_resource type="Script" path="res://main.gd" id="1_0wmlj"]
 [ext_resource type="Script" path="res://Camera2D.gd" id="1_knqyb"]
 [ext_resource type="Script" path="res://TileMap.gd" id="2_cqj61"]
+[ext_resource type="PackedScene" uid="uid://bs2ptwstok7ly" path="res://team_name.tscn" id="4_5gvmr"]
 [ext_resource type="TileSet" uid="uid://1yc0pq1j0wb" path="res://tileset.tres" id="4_asfbm"]
 [ext_resource type="Script" path="res://Network.gd" id="4_b2sue"]
 [ext_resource type="PackedScene" uid="uid://bvg6orivi3vvd" path="res://player.tscn" id="6_2hnmn"]
@@ -12,6 +13,14 @@
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mjxie"]
 bg_color = Color(0.145098, 0.156863, 0.239216, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+corner_detail = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jreuv"]
+bg_color = Color(0.0352941, 0, 0.0823529, 0.490196)
 corner_radius_top_left = 20
 corner_radius_top_right = 20
 corner_radius_bottom_right = 20
@@ -28,9 +37,9 @@ layer = 6
 [node name="PanelContainer" type="PanelContainer" parent="CanvasLayer"]
 modulate = Color(1, 1, 1, 0.776471)
 offset_left = 1554.0
-offset_top = 37.0
+offset_top = 42.0
 offset_right = 2160.0
-offset_bottom = 289.0
+offset_bottom = 294.0
 scale = Vector2(0.5, 0.5)
 theme_override_styles/panel = SubResource("StyleBoxFlat_mjxie")
 
@@ -63,6 +72,8 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_mjxie")
 [node name="ScrollContainer" type="ScrollContainer" parent="CanvasLayer/PanelContainer2"]
 custom_minimum_size = Vector2(2.08165e-12, 600)
 layout_mode = 2
+mouse_filter = 0
+mouse_force_pass_scroll_events = false
 
 [node name="VBoxContainerPlayers" type="VBoxContainer" parent="CanvasLayer/PanelContainer2/ScrollContainer"]
 unique_name_in_owner = true
@@ -71,6 +82,46 @@ size_flags_horizontal = 3
 
 [node name="PlayerInfoBtn" parent="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers" instance=ExtResource("9_w5ku1")]
 layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers"]
+layout_mode = 2
+
+[node name="PlayerInfoBtn2" parent="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers" instance=ExtResource("9_w5ku1")]
+layout_mode = 2
+
+[node name="TeamName" parent="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers" instance=ExtResource("4_5gvmr")]
+modulate = Color(1, 0.517647, 0.670588, 1)
+layout_mode = 2
+color = Color(1, 0.517647, 0.670588, 1)
+
+[node name="PlayerInfoBtn3" parent="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers" instance=ExtResource("9_w5ku1")]
+layout_mode = 2
+
+[node name="PanelContainerInventory" type="PanelContainer" parent="CanvasLayer"]
+modulate = Color(1, 1, 1, 0.776471)
+offset_left = 837.0
+offset_top = 42.0
+offset_right = 1443.0
+offset_bottom = 294.0
+scale = Vector2(0.5, 0.5)
+theme_override_styles/panel = SubResource("StyleBoxFlat_jreuv")
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/PanelContainerInventory"]
+layout_mode = 2
+mouse_force_pass_scroll_events = false
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainerInventory" type="VBoxContainer" parent="CanvasLayer/PanelContainerInventory/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="CanvasLayer/PanelContainerInventory/MarginContainer"]
+visible = false
+layout_mode = 2
+theme_override_styles/separator = ExtResource("8_xm0ke")
 
 [node name="Network" type="Node" parent="."]
 script = ExtResource("4_b2sue")
@@ -106,5 +157,7 @@ position = Vector2(66, 305)
 [node name="TracesSquare" type="Node2D" parent="TileMap"]
 
 [connection signal="button_down" from="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers/PlayerInfoBtn" to="TileMap" method="_on_player_info_btn_button_down"]
+[connection signal="button_down" from="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers/PlayerInfoBtn2" to="TileMap" method="_on_player_info_btn_button_down"]
+[connection signal="button_down" from="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers/PlayerInfoBtn3" to="TileMap" method="_on_player_info_btn_button_down"]
 [connection signal="map_ready" from="Network" to="TileMap" method="_on_network_map_ready"]
 [connection signal="map_update" from="Network" to="TileMap" method="_on_network_map_update"]

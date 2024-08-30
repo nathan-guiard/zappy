@@ -16,6 +16,7 @@ var focused_player: Player = null:
 			if focused_player:
 				focused_player.toggle_outline(false)
 			tile_map.clear_traces_square()
+			tile_map.close_inventory()
 		focused_player = new_val
 
 

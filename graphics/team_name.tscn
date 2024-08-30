@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://bs2ptwstok7ly"]
+
+[ext_resource type="Script" path="res://team_name.gd" id="1_fw3bc"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_t76vb"]
+content_margin_top = 20.0
+
+[node name="TeamName" type="Label"]
+modulate = Color(0.94902, 0, 0.211765, 1)
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 50
+theme_override_styles/normal = SubResource("StyleBoxEmpty_t76vb")
+text = "Tea,mOne"
+script = ExtResource("1_fw3bc")
