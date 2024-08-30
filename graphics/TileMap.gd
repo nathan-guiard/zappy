@@ -3,9 +3,11 @@ class_name  EnhancedTileMap
 @onready var v_box_container_contents: VBoxContainer = %CanvasLayer/PanelContainer/MarginContainer/VBoxContainerContents
 @onready var panel_container: PanelContainer = %CanvasLayer/PanelContainer
 @onready var panel_players: PanelContainer = $"../CanvasLayer/PanelContainer2"
+@onready var panel_container_inventory: PanelContainer = $"../CanvasLayer/PanelContainerInventory"
 
 @onready var v_box_container_players: VBoxContainer = %VBoxContainerPlayers
 const player_info_btn_scene: PackedScene = preload("res://PlayerInfoBtn.tscn")
+@onready var v_box_container_inventory: VBoxContainer = %VBoxContainerInventory
 
 @onready var hover_square: Node2D = $"HoverSquare"
 const content_info_row_scene: PackedScene = preload("res://ContentInfoRow.tscn")
@@ -18,6 +20,17 @@ var _players: Dictionary = {}
 @onready var main: Node2D = $".."
 const trace_square: PackedScene = preload("res://trace_square.tscn")
 @onready var traces_square: Node2D = $TracesSquare
+
+const TEAM_COLORS: Array = [
+	Color(255, 0, 0),
+	Color(0, 255, 0),
+	Color(0, 0, 255),
+]
+
+#teamone = Color(255,0,0)
+var teams_color: Dictionary = {
+	
+}
 
 const Content: Dictionary = {
 	LINEMATE = "Linemate",
@@ -67,7 +80,9 @@ const Tile: Dictionary = {
 	PHIRAS = Vector2i(6,1),
 	THYSTAME = Vector2i(4, 1),
 	PLAYER = Vector2i(4, 6),
-	FOOD = [Vector2i(2,11), Vector2i(3,11), Vector2i(4 ,11), Vector2i(5 ,11)],
+	#FOOD = [Vector2i(1, 11), Vector2i(2,11), Vector2i(3,11), Vector2i(4 ,11), Vector2i(5 ,11)],
+		FOOD = [Vector2i(4 ,11), Vector2i(5 ,11)],
+	FOOD_1 = Vector2i(1, 11),
 	EGG = Vector2i(4 ,10)
 }
 
@@ -103,9 +118,9 @@ func _ready() -> void:
 	#var tiletexture: ImageTexture = ImageTexture.create_from_image(tileImage) 
 	
 	for k: String in Content:
-		if k == "FOOD" or k == "PLAYER" or k == "EGG":
+		if k == "PLAYER":
 			continue
-		var tile_image: Image = atlas_image.get_region(atlas.get_tile_texture_region(Tile[k] as Vector2i))
+		var tile_image: Image = atlas_image.get_region(atlas.get_tile_texture_region(Tile[k if k != "FOOD" else "FOOD_1"] as Vector2i))
 		var tile_texture: ImageTexture = ImageTexture.create_from_image(tile_image) 
 		_tiles_texture[Content[k]] = tile_texture
 	
@@ -292,7 +307,7 @@ func update_players(players: Array) -> void:
 		#print()
 		pass
 	#print("plaayers: ", players)
-	#prune_players(players)
+	prune_players(players)
 	for player_info_btn: Node in v_box_container_players.get_children():
 		player_info_btn.queue_free()
 	merge_players(players)
@@ -302,6 +317,12 @@ func update_players(players: Array) -> void:
 		update_position_player_on_map(player)
 		player.refresh_action_label()
 		player.refresh_level_color()
+		
+		if camera.focused_player == player:
+			update_contents_in_v_box_ctn(v_box_container_inventory, player.inventory)
+		if not teams_color.has(player.team):
+			teams_color[player.team] = TEAM_COLORS[teams_color.size()]
+		
 		
 		var player_info_btn: PlayerInfoBtn = player_info_btn_scene.instantiate()
 		v_box_container_players.add_child(player_info_btn)
@@ -427,23 +448,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		#print("butttont")
 		if true:#ev.keycode == KEY_I:
 			#print("data: ", data, "size: ", data.size())
-			for child: Node in v_box_container_contents.get_children():
-				child.free()
 			var data_filtered: Array = data_without_player(data)
-			for content: Dictionary in data_filtered:
-				for key: String in content:
-					if key == Content.FOOD  or key == Content.EGG:
-						continue
-					if v_box_container_contents.get_child_count() > 0:
-						var h_separator: HSeparator = HSeparator.new()
-						h_separator["theme_override_styles/separator"] = preload("res://sep_style.tres")
-						v_box_container_contents.add_child(h_separator)
-					
-					var content_info_row: ContentInfoRow = content_info_row_scene.instantiate()
-					v_box_container_contents.add_child(content_info_row)					
-					content_info_row.icon = _tiles_texture[key]
-					content_info_row.key = key
-					content_info_row.value = str(content[key])
+			update_contents_in_v_box_ctn(v_box_container_contents, data_filtered)
 				
 		#print(ev.as_text_keycode())
 	#camera.manage_camera_input(event)
@@ -507,3 +513,31 @@ func add_trace_square_to_overlaps_count(map_position: Vector2i, count_add: int =
 		traces_square_overlaps_count[map_position] = 0
 	else:
 		traces_square_overlaps_count[map_position] += count_add
+
+func update_contents_in_v_box_ctn(v_box_container: VBoxContainer, contents: Array) -> void:
+
+	clear_contents_in_v_box_ctn(v_box_container)
+	if camera.focused_player:
+		panel_container_inventory.visible = true
+	for content: Dictionary in contents:
+		for key: String in content:
+			if v_box_container.get_child_count() > 0:
+				var h_separator: HSeparator = HSeparator.new()
+				h_separator["theme_override_styles/separator"] = preload("res://sep_style.tres")
+				v_box_container.add_child(h_separator)
+			
+			var content_info_row: ContentInfoRow = content_info_row_scene.instantiate()
+			v_box_container.add_child(content_info_row)					
+			content_info_row.icon = _tiles_texture[key]
+			content_info_row.key = key
+			content_info_row.value = str(content[key])
+
+func clear_contents_in_v_box_ctn(v_box_container: VBoxContainer) -> void:
+	for child: Node in v_box_container.get_children():
+		child.free()
+
+func close_inventory() -> void:
+	clear_contents_in_v_box_ctn(v_box_container_inventory)
+	panel_container_inventory.visible = false
+	
+

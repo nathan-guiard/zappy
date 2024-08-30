@@ -1181,7 +1181,6 @@ animation = &"up_walk"
 
 [node name="ActionLabel" type="RichTextLabel" parent="."]
 unique_name_in_owner = true
-visible = false
 z_index = 6
 offset_left = -106.0
 offset_top = -43.0

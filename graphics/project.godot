@@ -26,8 +26,9 @@ gdscript/warnings/unsafe_call_argument=2
 
 [display]
 
-window/size/viewport_width=1900
-window/size/viewport_height=1200
+window/size/viewport_width=1000
+window/size/viewport_height=600
+window/stretch/scale=0.5
 
 [physics]
 
@@ -35,4 +36,4 @@ common/physics_ticks_per_second=120
 
 [rendering]
 
-renderer/rendering_method="mobile"
+renderer/rendering_method="gl_compatibility"
