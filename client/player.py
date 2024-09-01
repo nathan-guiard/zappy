@@ -61,7 +61,8 @@ class Player:
         self.map_size = (0, 0)
         self.team_name = team_name
         self.level = 1
-        self.focus = None
+        self.focus_ressources = None
+        self.focus_coords = None
         self.state = Idle(self)  # Débuter en état Idle
         
         self.connect_to_server()
@@ -199,6 +200,14 @@ class Player:
         response = send_message(self.socket, "avance")
         if response != "ok":
             self.close_connection(f"Reponse invalide 'avance': {response}")
+        if self.direction == 'N':
+            self.coordinates = (self.coordinates[0], (self.coordinates[1] - 1) % self.map_size[1])
+        elif self.direction == 'E':
+            self.coordinates = ((self.coordinates[0] + 1) % self.map_size[0], self.coordinates[1])
+        elif self.direction == 'S':
+            self.coordinates = (self.coordinates[0], (self.coordinates[1] + 1) % self.map_size[1])
+        elif self.direction == 'W':
+            self.coordinates = ((self.coordinates[0] - 1) % self.map_size[0], self.coordinates[1])
         print(f"Réponse du serveur à la commande 'avance' : {response}")
 
 
