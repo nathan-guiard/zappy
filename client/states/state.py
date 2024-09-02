@@ -55,20 +55,21 @@ class Idle(State):
         print(f"Je suis sorti de l'état {color('IDLE', 'green')}")
 
     def update(self) -> State:
+        self.player.check_inventory()
         self.required_ressources = self.missing_ressources()
+        print(f"Ressources manquantes : {color(self.required_ressources, 'red')}")
+        
         if self.player.focus_coords is None:
             self.target_coords = self.choisir_meilleure_case()
             self.player.focus_coords = self.target_coords
-            
-        self.player.check_inventory()
         
-        if self.player.inventory.get("Food", 0) < 200 and self.player.focus_ressources is None:
+        if self.player.inventory.get("Food", 0) < 1000:
             return Nourrir(self.player)
         elif self.required_ressources is None and self.player.focus_coords is None:
             return Incantation(self.player)
         elif self.player.focus_coords and self.player.focus_coords != self.player.coordinates:
             return Deplacement(self.player, self.player.focus_coords)
-        elif self.player.coordinates == self.target_coords:
+        elif self.player.coordinates == self.player.focus_coords:
             return Recolte(self.player)
         return Exploration(self.player)
     
@@ -80,7 +81,9 @@ class Idle(State):
         for ressource, quantity in self.levels.get(next_level, {}).items():
             if ressource == "Player":
                 continue
-            required_ressources[ressource] = max(0, quantity - self.player.inventory.get(ressource.lower(), 0))
+            required_ressources[ressource] = max(0, quantity - self.player.inventory.get(ressource, 0))
+            if required_ressources[ressource] == 0:
+                del required_ressources[ressource]
         if required_ressources:
             return required_ressources
         return None
@@ -88,38 +91,40 @@ class Idle(State):
     def choisir_meilleure_case(self):
         """Choisit la meilleure case en fonction des ressources manquantes"""
         best_tile = None
-        best_score = -1
+        best_score = 0
         if self.required_ressources is None:
             return None
         for coords, resources in self.player.view.items():
             score = self.evaluate_tile(resources)
-            if score > best_score:
+            if score > best_score and self.player.has_enough_food(self.distance_toric(coords)):
                 best_score = score
                 best_tile = coords
                 self.player.focus_ressources = resources
-        if best_score == 0:
-            return None
+        # print(f"Meilleure case : {color(best_tile if best_score else 'None', 'red')} avec un score de {color(str(best_score), 'red')}")
         return best_tile
 
     def evaluate_tile(self, resources):
         """Évalue une case en fonction des ressources manquantes et retourne un score."""
         score = 0
         for resource, needed_quantity in self.required_ressources.items():
-            if resource.lower() in resources:
-                available_quantity = resources[resource.lower()]
+            if resource in resources:
+                available_quantity = resources[resource]
                 score += min(needed_quantity, available_quantity) * 10  # Pondération par ressource
         return score
 
 class Exploration(State):
     def __init__(self, player, grid_size=5):
         self.player = player
-        self.grid_size = grid_size
+        self.grid_size = 2 + player.level
         self.grids = self.generate_grids()
         self.current_grid = None
         self.middle_coords = None
 
     def enter_state(self):
         print(f"Je suis en état {color('Exploration', 'blue')}")
+        if self.player.focus_coords:
+            self.middle_coords = self.player.focus_coords
+            return
         self.current_grid = self.find_next_grid()
         if self.current_grid:
             self.middle_coords = self.get_middle_of_grid(self.current_grid)
@@ -131,9 +136,8 @@ class Exploration(State):
     
     def update(self) -> State:
         """Update pour le cycle d'exploration."""
-        if self.player.coordinates == self.middle_coords and self.player.focus_coords:
+        if self.player.coordinates not in self.player.view:
             self.explore_grid_center()
-            self.player.focus_coords = None
             return Idle(self.player)
         return Deplacement(self.player, self.middle_coords)
 
@@ -149,12 +153,24 @@ class Exploration(State):
         return grids
 
     def find_next_grid(self):
-        """Trouve la prochaine grille non explorée."""
-        random.shuffle(self.grids)
+        """Trouve la prochaine grille non explorée en tenant compte de la distance."""
+        best_grid = None
+        best_distance = float('inf')
+
+        explorable_grids = []
+        
         for grid_start in self.grids:
+            distance = self.distance_toric(grid_start)
+            if self.player.has_enough_food(distance):
+                explorable_grids.append(grid_start)
+                
+        random.shuffle(explorable_grids)
+        
+        for grid_start in explorable_grids:
             if not self.is_grid_explored(grid_start):
                 return grid_start
-        return None
+        
+        return best_grid
 
     def is_grid_explored(self, grid_start):
         """Vérifie si une grille entière est explorée."""
@@ -164,6 +180,7 @@ class Exploration(State):
                 if (x, y) not in self.player.view:
                     return False  # Il reste des cases non explorées
         return True  # Toute la grille est explorée
+
 
     def get_middle_of_grid(self, grid_start):
         """Calcule les coordonnées du milieu de la grille et vérifie si elles sont explorées."""
@@ -177,11 +194,6 @@ class Exploration(State):
                 if (x, y) not in self.player.view:
                     return (x, y)
         return None
-
-    def move_to(self, target_coords):
-        """Déplace le joueur vers les coordonnées cibles."""
-        if target_coords != self.player.coordinates:
-            Deplacement(self.player, target_coords).enter_state()
 
     def explore_grid_center(self):
         """Explore le centre de la grille en tournant sur soi-même."""
@@ -202,6 +214,7 @@ class Recolte(State):
     
     def exit_state(self):
         self.player.display_info()
+        self.player.focus_coords = None
         print(f"Je suis sorti de l'état {color('RECOLTE', 'lightgreen')}")
 
     def update(self) -> State:
@@ -209,8 +222,9 @@ class Recolte(State):
         for ressource, quantity in self.player.focus_ressources.items():
             for _ in range(quantity):
                 if self.player.prend(ressource):
-                    return Idle(self.player)
-        return self
+                    break
+        self.player.focus_ressources = None
+        return Idle(self.player)
 
 
 class Nourrir(State):
@@ -220,46 +234,58 @@ class Nourrir(State):
     def enter_state(self):
         print("Je suis en état Nourrir")
         self.target_coords = self.choisir_meilleure_case()
+        self.player.focus_coords = self.target_coords
     
     def exit_state(self):
         print("Je suis sorti de l'état Nourrir")
     
     def update(self) -> State:
-        """Si le joueur a assez de nourriture, retourne à l'état précédent.
-        Sinon continue de chercher de la nourriture.
-        Et de la recolter si possible."""
+        """Update pour le cycle de nourrissage."""
         
-        if self.player.inventory.get("Food", 0) >= 1000:
+        # Si le joueur a assez de nourriture, retourne à l'état Idle
+        if self.player.inventory.get("Food", 0) >= 3000:
+            self.player.focus_coords = None
             return Idle(self.player)
         
+        # Si la case cible n'est pas définie, retourne à l'état Exploration
         if self.target_coords is None:
             return Exploration(self.player)
         
-        if self.target_coords is not None:
-            self.deplacer_vers(self.target_coords)
-            if self.player.coordinates == self.target_coords:
-                self.player.collect_food()
-                self.target_coords = self.choisir_meilleure_case()
-        return self
+        # Si le joueur est sur la case cible, prend de la nourriture
+        if self.player.coordinates == self.target_coords:
+            if not self.player.prend("Food"):
+                return Nourrir(self.player)
+            return None
+        
+        # Sinon, se déplace vers la case cible
+        return Deplacement(self.player, self.target_coords)
     
     def choisir_meilleure_case(self):
-        """Choisit la meilleure case en fonction des ressources manquantes"""
+        """Choisit la meilleure case en fonction des ressources manquantes et de la distance."""
         best_tile = None
         best_score = -1
         for coords, resources in self.player.view.items():
-            score = self.evaluate_tile(resources)
-            if score > best_score:
+            score = self.evaluate_tile(resources, coords)
+            if score > best_score and self.player.has_enough_food(self.distance_toric(coords)):
                 best_score = score
                 best_tile = coords
         return best_tile
-    
-    def evaluate_tile(self, resources):
-        """Évalue une case en fonction des ressources manquantes et retourne un score."""
+
+    def evaluate_tile(self, resources, coords):
+        """Évalue une case en fonction des ressources et de la distance."""
         score = 0
-        for resource, quantity in resources.items():
-            if resource == "food":
-                score += quantity
+        # Pondération par ressource
+        score = resources.get("Food", 0)
+
+        # Calcul de la distance par rapport au joueur
+        distance = self.distance_toric(coords)
+
+        # Ajout d'un coefficient de distance (plus la distance est grande, plus le score est réduit)
+        distance_coefficient = 1 / (distance + 1)  # Ajout de 1 pour éviter la division par zéro
+        score *= distance_coefficient
+
         return score
+
 
 class Deplacement(State):
     def __init__(self, player, target_coords):
@@ -269,13 +295,19 @@ class Deplacement(State):
 
     def enter_state(self):
         print(f"Je suis en état {color('DEPLACEMENT', 'pink')} vers {self.player.focus_coords}")
+        if not self.player.has_enough_food(self.distance_toric(self.player.focus_coords)):
+            self.player.focus_coords = None
 
     def exit_state(self):
         print(f"J'ai atteint la cible {self.player.focus_coords}, sorti de l'état {color('DEPLACEMENT', 'pink')}")
+        self.player.focus_coords = None
     
     def update(self) -> State:
+        if self.player.focus_coords is None:
+            return Idle(self.player)
+        
         if self.player.coordinates == self.player.focus_coords:
-            print(f"Joueur arrivé à la destination {self.player.focus_coords}")
+            # print(f"Joueur arrivé à la destination {self.player.focus_coords}")
             return Idle(self.player)  # Retour à l'état précédent ou un autre état
         
         self.move_to_target()
@@ -285,12 +317,12 @@ class Deplacement(State):
         """Se déplace vers les coordonnées cibles en prenant en compte la carte torique."""
         current_x, current_y = self.player.coordinates
         target_x, target_y = self.player.focus_coords
-        print(f"Joueur en ({current_x}, {current_y}), cible en ({target_x}, {target_y})")
+        # print(f"Joueur en ({current_x}, {current_y}), cible en ({target_x}, {target_y})")
          
         # Calcul du déplacement optimal en tenant compte de la carte torique
         delta_x = self.calculate_toric_distance(current_x, target_x, self.map_width)
         delta_y = self.calculate_toric_distance(current_y, target_y, self.map_height)
-        print(f"Déplacement optimal : ({delta_x}, {delta_y})")
+        # print(f"Déplacement optimal : ({delta_x}, {delta_y})")
         
         # Déplacement horizontal
         if delta_x > 0:
@@ -305,21 +337,16 @@ class Deplacement(State):
             elif delta_y < 0:
                 self.orienter_vers('N')
         
+        # 30% chance d'appeler self.player.voir
+        if random.random() <= 0.3:
+            self.player.voir()
+        
         # Une fois orienté, avance
         self.player.avance()
 
-    def calculate_toric_distance(self, current, target, dimension_size):
-        """Calcule la distance torique la plus courte entre deux points."""
-        direct_distance = target - current
-        if direct_distance > dimension_size // 2:
-            return direct_distance - dimension_size
-        elif direct_distance < -dimension_size // 2:
-            return direct_distance + dimension_size
-        return direct_distance
-
     def orienter_vers(self, direction):
         """Oriente le joueur vers la direction désirée en choisissant le sens de rotation optimal."""
-        print(f"Orientation du joueur vers {direction}")
+        # print(f"Orientation du joueur vers {direction}")
         directions = ['N', 'E', 'S', 'W']  # Ordre des directions
         current_index = directions.index(self.player.direction)
         target_index = directions.index(direction)
@@ -336,7 +363,7 @@ class Deplacement(State):
             for _ in range(rotations_gauche):
                 self.player.gauche()
 
-        print(f"Joueur orienté vers {direction}")
+        # print(f"Joueur orienté vers {direction}")
 
 class Incantation(State):
     def __init__(self, player):
@@ -349,6 +376,11 @@ class Incantation(State):
         print("Je suis sorti de l'état INCANTATION")
 
     def update(self) -> State:
+        for k, v in self.levels[self.player.level + 1].items():
+            if k == "Player":
+                continue
+            for _ in range(v):
+                self.player.pose(k)
         self.player.incantation()
         # Implémentez la logique de l'incantation ici
-        return None
+        return Idle(self.player)

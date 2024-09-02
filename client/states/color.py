@@ -41,6 +41,7 @@ class colors:
 		lightgrey_bg = '\033[47m'
 
 def color(text, color:str):
+    text = f"{text}"
     if hasattr(colors.fg, color.lower()):
         return getattr(colors.fg, color.lower()) + text + colors.reset
     elif hasattr(colors.bg, color.lower()):

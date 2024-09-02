@@ -1,5 +1,6 @@
 import socket
 import json
+import argparse
 from states.state import Idle
 
 connexion_error = "Erreur : la connexion au serveur n'est pas établie."
@@ -54,7 +55,15 @@ class Player:
         self.view = {}
         self.socket = None
         self.timeout = 5
-        self.inventory = {}
+        self.inventory = {
+            "Food": 0,
+            "Linemate": 0,
+            "Deraumere": 0,
+            "Sibur": 0,
+            "Mendiane": 0,
+            "Phiras": 0,
+            "Thystame": 0
+        }
         self.num_players = 0
         self.coordinates = (0, 0)
         self.direction = Direction[0]
@@ -76,23 +85,28 @@ class Player:
         
     def check_inventory(self):
         """Demande l'inventaire au serveur et le stocke sous forme de dictionnaire."""
-        if self.socket is not None:
-            # Envoyer la commande pour demander l'inventaire
-            response = send_message(self.socket, "inventaire")
-            
-            try:
-                # Convertir la réponse JSON en dictionnaire
-                inventory_data = json.loads(response)
-                self.inventory = inventory_data[0]
-                print(f"Inventaire mis à jour : {self.inventory}")
-            except json.JSONDecodeError:
-                self.close_connection("Erreur : Impossible de décoder la réponse JSON du serveur.")
-        else:
-            print(connexion_error)
+        # Envoyer la commande pour demander l'inventaire
+        response = send_message(self.socket, "inventaire")
+        if response is None:
+            self.close_connection()
+        
+        try:
+            # Convertir la réponse JSON en dictionnaire
+            inventory_data = json.loads(response)
+            tile_inventory = inventory_data[0]
+            for key, value in tile_inventory.items():
+                self.inventory[key] = value
+            print(f"Inventaire mis à jour : {self.inventory}")
+        except json.JSONDecodeError:
+            self.close_connection("Erreur : Impossible de décoder la réponse JSON du serveur.")
+        except TypeError:
+            self.close_connection("Erreur : Type de données invalide pour l'inventaire.:", response)
 
 
     def connect_to_server(self):
         try:
+            print(f"Tentative de connexion au serveur {self.hostname}:{self.port}...")
+            
             # Crée un socket TCP/IP
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             
@@ -181,23 +195,29 @@ class Player:
 
     def droite(self):
         response = send_message(self.socket, "droite")
+        if response is None:
+            self.close_connection()
         if response != "ok":
             self.close_connection(f"Reponse invalide 'droite': {response}")
         current_index = Direction.index(self.direction)
         self.direction = Direction[(current_index + 1) % len(Direction)]
-        print(f"Réponse du serveur à la commande 'droite' : {response}")
+        # print(f"Réponse du serveur à la commande 'droite' : {response}")
 
     def gauche(self):
         response = send_message(self.socket, "gauche")
+        if response is None:
+            self.close_connection()
         if response != "ok":
             self.close_connection(f"Reponse invalide 'gauche': {response}")
         current_index = Direction.index(self.direction)
         self.direction = Direction[(current_index - 1) % len(Direction)]
-        print(f"Réponse du serveur à la commande 'gauche' : {response}")
+        # print(f"Réponse du serveur à la commande 'gauche' : {response}")
 
 
     def avance(self):
         response = send_message(self.socket, "avance")
+        if response is None:
+            self.close_connection()
         if response != "ok":
             self.close_connection(f"Reponse invalide 'avance': {response}")
         if self.direction == 'N':
@@ -208,11 +228,13 @@ class Player:
             self.coordinates = (self.coordinates[0], (self.coordinates[1] + 1) % self.map_size[1])
         elif self.direction == 'W':
             self.coordinates = ((self.coordinates[0] - 1) % self.map_size[0], self.coordinates[1])
-        print(f"Réponse du serveur à la commande 'avance' : {response}")
+        # print(f"Réponse du serveur à la commande 'avance' : {response}")
 
 
     def voir(self):
         response = send_message(self.socket, "voir")
+        if response is None:
+            self.close_connection()
         
         if response is None:
             self.close_connection(f"Réponse invalide 'voir' : {response}")
@@ -221,7 +243,7 @@ class Player:
         try:
             # Tenter de charger la réponse en tant que JSON
             view_data = json.loads(response)
-            print(f"Réponse du serveur à la commande 'voir' : {view_data}")
+            # print(f"Réponse du serveur à la commande 'voir' : {view_data}")
         except json.JSONDecodeError:
             # Si la réponse n'est pas un JSON valide, fermer la connexion
             print(f"Erreur JSONDecodeError: La réponse du serveur n'est pas en format JSON : {response}")
@@ -242,46 +264,65 @@ class Player:
 
 
     def connect(self):
-        response: str = send_message(self.socket, "connect")
+        response = send_message(self.socket, "connect")
+        if response is None:
+            self.close_connection()
         if not response.isdigit():
             self.close_connection(f"Reponse invalide 'connect': {response}")
-        print(f"Réponse du serveur à la commande 'connect' : {response}")
+        # print(f"Réponse du serveur à la commande 'connect' : {response}")
 
 
     def broadcast(self, message):
         response = send_message(self.socket, f"broadcast {message}")
+        if response is None:
+            self.close_connection()
         if response != "ok":
             self.close_connection(f"Reponse invalide 'broadcast' : {response}")
-        print(f"Réponse du serveur à la commande 'broadcast' : {response}")
+        # print(f"Réponse du serveur à la commande 'broadcast' : {response}")
 
 
     def fork(self):
-        response: str = send_message(self.socket, "fork")
+        response = send_message(self.socket, "fork")
+        if response is None:
+            self.close_connection()
         if response.startswith("ok"):
-            print(f"Réponse du serveur à la commande 'fork' : {response}")
+            pass
+            # print(f"Réponse du serveur à la commande 'fork' : {response}")
             return 0
         elif response.startswith("ko"):
-            print(f"Réponse du serveur à la commande 'fork' : {response}")
+            pass
+            # print(f"Réponse du serveur à la commande 'fork' : {response}")
             return 1
         self.close_connection(f"Reponse invalide 'fork': {response}")
             
     
     def incantation(self):
-        response: str = send_message(self.socket, "incantation")
+        # Ralonger le socket.timeout
+        self.socket.settimeout(self.timeout * 5)
+        response = send_message(self.socket, "incantation")
+        print(f"Réponse du serveur à la commande 'incantation' : {response}")
+        self.socket.settimeout(self.timeout)
+        if response is None:
+            self.close_connection()
         if response.startswith("ok"):
-            print(f"Réponse du serveur à la commande 'incantation' : {response}")
-            print("Level Up")
+            # print(f"Réponse du serveur à la commande 'incantation' : {response}")
+            # print("Level Up")
             self.level += 1
             return 0
         elif response.startswith("ko"):
-            print(f"Réponse du serveur à la commande 'incantation' : {response}")
+            # print(f"Réponse du serveur à la commande 'incantation' : {response}")
             return 1
         self.close_connection(f"Reponse invalide 'incantation': {response}")
 
     def prend(self, ressource):
         response = send_message(self.socket, f"prend {ressource}")
+        if response is None:
+            self.close_connection(f"Reponse invalide 'prend' : {response}")
+            
+        ressource = ressource.capitalize()
+            
         if response.startswith("ok"):
-            print(f"Réponse du serveur à la commande 'prend' : {response}")
+            # print(f"Réponse du serveur à la commande 'prend' : {response}")
             if ressource == "Food":
                 self.inventory[ressource] += 126
             else:
@@ -296,8 +337,13 @@ class Player:
 
     def pose(self, ressource):
         response = send_message(self.socket, f"pose {ressource}")
+        if response is None:
+            self.close_connection()
+        
         if response.startswith("ok"):
-            print(f"Réponse du serveur à la commande 'pose' : {response}")
+            self.inventory[ressource] -= 1
+            pass
+            # print(f"Réponse du serveur à la commande 'pose' : {response}")
         elif response.startswith("ko"):
             self.voir()
         else: 
@@ -320,8 +366,34 @@ class Player:
         if self.state:
             self.state.enter_state()
             
-    def has_enough_food(self):
-        """Vérifie si le joueur a assez de nourriture."""
-        return self.inventory.get("Food", 0) >= 200
+    def has_enough_food(self, distance):
+        return (distance + 2) * 1.4 < self.inventory["Food"]
 
-player = Player("localhost", 4228, "bobby")  
+
+def main():
+    """Parse et check les arguments
+
+    Returns:
+        Namespace: contient les arguments 
+    """
+    parser = argparse.ArgumentParser(description='Client program', add_help=False)
+    parser.add_argument('-n', '--team', type=str, help='Team name', required=True)
+    parser.add_argument('-p', '--port', type=int, help='Port number', required=True)
+    parser.add_argument('-h', '--hostname', type=str, help='Hostname', default='localhost')
+    parser.add_argument('-d', '--debug', action='store_true', help=argparse.SUPPRESS)
+
+    args = parser.parse_args()
+
+    global Debug
+    Debug = args.debug
+
+    # Vérification des valeurs des arguments
+    if not 1024 <= args.port <= 65535:
+        print("Erreur: Le numéro de port doit être compris entre 1024 et 65535.\n")
+        return 1
+    
+    player = Player("localhost", args.port, args.team)
+
+
+if __name__ == "__main__":
+    main()
