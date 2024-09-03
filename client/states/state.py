@@ -55,16 +55,24 @@ class Idle(State):
         print(f"Je suis sorti de l'état {color('IDLE', 'green')}")
 
     def update(self) -> State:
-        self.player.check_inventory()
+        self.player.inventaire()
         self.required_ressources = self.missing_ressources()
+        
+        self.broadcast_info()
+        
         print(f"Ressources manquantes : {color(self.required_ressources, 'red')}")
         
         if self.player.focus_coords is None:
             self.target_coords = self.choisir_meilleure_case()
             self.player.focus_coords = self.target_coords
         
+        self.player.fork_manager()
+        print(f"Communiquer : {self.player.communication}")
         if self.player.inventory.get("Food", 0) < 1000:
             return Nourrir(self.player)
+        
+        elif self.player.communication: # Si le joueur a reçu un message
+            self.player.communicate()
         elif self.required_ressources is None and self.player.focus_coords is None:
             return Incantation(self.player)
         elif self.player.focus_coords and self.player.focus_coords != self.player.coordinates:
@@ -72,6 +80,22 @@ class Idle(State):
         elif self.player.coordinates == self.player.focus_coords:
             return Recolte(self.player)
         return Exploration(self.player)
+    
+    def broadcast_info(self):
+        """Diffuse les informations du player"""
+        inv = self.player.inventory
+        a = self.player.id
+        b = self.player.level
+        c = self.player.coordinates[0]
+        d = self.player.coordinates[1]
+        e = inv.get('Linemate', 0)
+        f = inv.get('Deraumere', 0)
+        g = inv.get('Sibur', 0)
+        h = inv.get('Mendiane', 0)
+        i = inv.get('Phiras', 0)
+        j = inv.get('Thystame', 0)
+        self.player.broadcast(f"player_information {a} {b} {c} {d} {e} {f} {g} {h} {i} {j}")
+            
     
     def missing_ressources(self) -> str:
         """Détermine la prochaine ressource manquante pour le level up."""
@@ -99,9 +123,18 @@ class Idle(State):
             if score > best_score and self.player.has_enough_food(self.distance_toric(coords)):
                 best_score = score
                 best_tile = coords
-                self.player.focus_ressources = resources
+                self.player.focus_ressources = self.level_up_ressources(resources)
         # print(f"Meilleure case : {color(best_tile if best_score else 'None', 'red')} avec un score de {color(str(best_score), 'red')}")
         return best_tile
+    
+    def level_up_ressources(self, resources):
+        """Détermine les ressources à récolter pour le level up."""
+        required_ressources = {}
+        for ressource, quantity in self.required_ressources.items():
+            if ressource in resources:
+                available_quantity = resources[ressource]
+                required_ressources[ressource] = min(quantity, available_quantity)
+        return required_ressources
 
     def evaluate_tile(self, resources):
         """Évalue une case en fonction des ressources manquantes et retourne un score."""
@@ -371,6 +404,7 @@ class Incantation(State):
 
     def enter_state(self):
         print("Je suis en état INCANTATION")
+        self.required_players = self.levels[self.player.level + 1]["Player"] - 1
     
     def exit_state(self):
         print("Je suis sorti de l'état INCANTATION")
@@ -382,5 +416,11 @@ class Incantation(State):
             for _ in range(v):
                 self.player.pose(k)
         self.player.incantation()
+        self.player.fork()
         # Implémentez la logique de l'incantation ici
         return Idle(self.player)
+    
+    def player_in_same_tile(self):
+        """Vérifie si le joueur est dans la même case que d'autres joueurs."""
+        players = self.player.view.get("Player", 0)
+        return players >= self.required_players
