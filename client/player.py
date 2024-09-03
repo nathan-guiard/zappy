@@ -152,17 +152,14 @@ class Player:
                 return None
             
             final_response = None
-            print(f"response_list: {response_list}")
             for response in response_list:
                 if response.startswith("broadcast"):
                     self.communication.append(response.split(' ')[1:])
                 else:
                     final_response = response
             
-            print(f"communication: {self.communication}")
             if final_response is None:
                 return self.send_message("reception", False)
-            print(f"final_response: {final_response}")
             return final_response
 
         except socket.error as e:
@@ -418,7 +415,6 @@ class Player:
                 self.handle_player_information(message[2:])
             
         self.communication = []
-        print(f"Memory: {self.memory}")
 
     def handle_player_information(self, message):
         player_id = message[0]

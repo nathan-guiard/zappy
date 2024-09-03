@@ -67,7 +67,6 @@ class Idle(State):
             self.player.focus_coords = self.target_coords
         
         self.player.fork_manager()
-        print(f"Communiquer : {self.player.communication}")
         if self.player.inventory.get("Food", 0) < 1000:
             return Nourrir(self.player)
         
@@ -397,7 +396,7 @@ class Deplacement(State):
                 self.player.gauche()
 
         # print(f"Joueur orienté vers {direction}")
-
+    
 class Incantation(State):
     def __init__(self, player):
         self.player = player
@@ -405,11 +404,19 @@ class Incantation(State):
     def enter_state(self):
         print("Je suis en état INCANTATION")
         self.required_players = self.levels[self.player.level + 1]["Player"] - 1
-    
+
     def exit_state(self):
         print("Je suis sorti de l'état INCANTATION")
 
     def update(self) -> State:
+        
+        if self.required_players > 0 and not self.player_in_same_tile():
+            # Annonce d'une incantation
+            # 
+            # 
+            #
+            return Idle(self.player)
+        
         for k, v in self.levels[self.player.level + 1].items():
             if k == "Player":
                 continue
@@ -424,3 +431,103 @@ class Incantation(State):
         """Vérifie si le joueur est dans la même case que d'autres joueurs."""
         players = self.player.view.get("Player", 0)
         return players >= self.required_players
+
+class Anticipation(State):
+    def __init__(self, player) -> None:
+        self.player = player
+        
+    def enter_state(self):
+        print(f"Je suis rentré en état {color('IDLE', 'green')}")
+    
+    def exit_state(self):
+        print(f"Je suis sorti de l'état {color('IDLE', 'green')}")
+
+    def update(self) -> State:
+        self.player.inventaire()
+        self.required_ressources = self.missing_ressources()
+        
+        self.broadcast_info()
+        
+        print(f"Ressources manquantes : {color(self.required_ressources, 'red')}")
+        
+        if self.player.focus_coords is None:
+            self.target_coords = self.choisir_meilleure_case()
+            self.player.focus_coords = self.target_coords
+        
+        self.player.fork_manager()
+        if self.player.inventory.get("Food", 0) < 1000:
+            return Nourrir(self.player)
+        
+        elif self.player.communication: # Si le joueur a reçu un message
+            self.player.communicate()
+        elif self.required_ressources is None and self.player.focus_coords is None:
+            return Incantation(self.player)
+        elif self.player.focus_coords and self.player.focus_coords != self.player.coordinates:
+            return Deplacement(self.player, self.player.focus_coords)
+        elif self.player.coordinates == self.player.focus_coords:
+            return Recolte(self.player)
+        return Exploration(self.player)
+    
+    def broadcast_info(self):
+        """Diffuse les informations du player"""
+        inv = self.player.inventory
+        a = self.player.id
+        b = self.player.level
+        c = self.player.coordinates[0]
+        d = self.player.coordinates[1]
+        e = inv.get('Linemate', 0)
+        f = inv.get('Deraumere', 0)
+        g = inv.get('Sibur', 0)
+        h = inv.get('Mendiane', 0)
+        i = inv.get('Phiras', 0)
+        j = inv.get('Thystame', 0)
+        self.player.broadcast(f"player_information {a} {b} {c} {d} {e} {f} {g} {h} {i} {j}")
+            
+    
+    def missing_ressources(self) -> str:
+        """Détermine la prochaine ressource manquante pour le level up."""
+        next_level = self.player.level + 1
+        required_ressources = {}
+        
+        for ressource, quantity in self.levels.get(next_level, {}).items():
+            if ressource == "Player":
+                continue
+            required_ressources[ressource] = max(0, quantity - self.player.inventory.get(ressource, 0))
+            if required_ressources[ressource] == 0:
+                del required_ressources[ressource]
+        if required_ressources:
+            return required_ressources
+        return None
+    
+    def choisir_meilleure_case(self):
+        """Choisit la meilleure case en fonction des ressources manquantes"""
+        best_tile = None
+        best_score = 0
+        if self.required_ressources is None:
+            return None
+        for coords, resources in self.player.view.items():
+            score = self.evaluate_tile(resources)
+            if score > best_score and self.player.has_enough_food(self.distance_toric(coords)):
+                best_score = score
+                best_tile = coords
+                self.player.focus_ressources = self.level_up_ressources(resources)
+        # print(f"Meilleure case : {color(best_tile if best_score else 'None', 'red')} avec un score de {color(str(best_score), 'red')}")
+        return best_tile
+    
+    def level_up_ressources(self, resources):
+        """Détermine les ressources à récolter pour le level up."""
+        required_ressources = {}
+        for ressource, quantity in self.required_ressources.items():
+            if ressource in resources:
+                available_quantity = resources[ressource]
+                required_ressources[ressource] = min(quantity, available_quantity)
+        return required_ressources
+
+    def evaluate_tile(self, resources):
+        """Évalue une case en fonction des ressources manquantes et retourne un score."""
+        score = 0
+        for resource, needed_quantity in self.required_ressources.items():
+            if resource in resources:
+                available_quantity = resources[resource]
+                score += min(needed_quantity, available_quantity) * 10  # Pondération par ressource
+        return score
