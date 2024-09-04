@@ -3,10 +3,10 @@ import json
 import argparse
 import multiprocessing
 from states.state import Idle
+from states.state import Idle as IncantationIdle
 
 connexion_error = "Erreur : la connexion au serveur n'est pas établie."
 Direction = ['N', 'E', 'S', 'W']
-
 
 class Player:
     """Classe principale pour le joueur."""
@@ -43,12 +43,14 @@ class Player:
         # }
         self.memory = {}
         self.state = Idle(self)  # Débuter en état Idle
+        self.incantation_state = IncantationIdle(self)
         
         self.connect_to_server()
         self.inventaire()
         self.voir()
         self.display_info()
         
+        self.incantation_state.enter_state()
         self.state.enter_state()
         self.routine()
         
@@ -406,32 +408,107 @@ class Player:
     def has_enough_food(self, distance):
         return (distance + 2) * 1.4 < self.inventory["Food"]
     
+    def player_information(self):
+        message = f"player_information {self.id} {self.level} {self.team_name} {self.inventory_in_string()}"
+        self.broadcast(f"{message}")
+
+    def propose(self, destination_id, required_resources):
+        message = f"purpose {self.id} {destination_id} {required_resources}"
+        self.broadcast(f"{message}")
+
+    def accept_deal(self, transaction_id, resources):
+        message = f"accept_deal {transaction_id} {self.id} {resources}"
+        self.broadcast(f"{message}")
+
+    def refuse_deal(self, transaction_id):
+        message = f"refuse_deal {transaction_id} {self.id}"
+        self.broadcast(f"{message}")
+
+    def confirm_deal(self, destination_id, resources, coords):
+        message = f"confirm_deal {self.id} {destination_id} {resources} {coords}"
+        self.broadcast(f"{message}")
+
+    def ready_to_incant(self, transaction_id):
+        message = f"ready_to_incant {transaction_id} {self.id}"
+        self.broadcast(f"{message}")
+
+    def start_incant(self, transaction_id):
+        message = f"start_incant {transaction_id}"
+        self.broadcast(f"{message}")
+        
+    def inventory_in_string(self):
+        return f"{self.inventory.get('Linemate', 0)} {self.inventory.get('Deraumere', 0)} {self.inventory.get('Sibur', 0)} {self.inventory.get('Mendiane', 0)} {self.inventory.get('Phiras', 0)} {self.inventory.get('Thystame', 0)}"
+    
     def communicate(self):
-        for message in self.communication:
+        for messages in self.communication:
             # direction: player_information player_id lvl x y linemate deraumere sibur mendiane phiras thystame
             # Parsing des messages de types : f"Player_information {self.player.id} {self.player.level} {self.player.coordinates} {self.player.inventory}"
-            direction = message[0]
-            if message[1] == "player_information":
-                self.handle_player_information(message[2:])
-            
+            direction = int(messages[0][:-1])
+            message = messages[3:].split('\n')
+            for message in messages:
+                message_type = message[0]
+                if message_type == "player_information":
+                    self.handle_player_information(message[1:])
+                elif message_type == "purpose":
+                    self.handle_purpose(message[1:])
+                elif message_type == "accept_deal":
+                    self.handle_accept_deal(message[1:])
+                elif message_type == "refuse_deal":
+                    self.handle_refuse_deal(message[1:])
+                elif message_type == "confirm_deal":
+                    self.handle_confirm_deal(message[1:])
+                elif message_type == "ready_to_incant":
+                    self.handle_ready_to_incant(message[1:])
+                elif message_type == "start_incant":
+                    self.handle_start_incant(message[1:])
         self.communication = []
 
     def handle_player_information(self, message):
-        player_id = message[0]
+        player_id = int(message[0])
         player_level = int(message[1])
-        player_coordinates = tuple(map(int, message[2:4]))
-        player_inventory = {}
-        for i in range(4, len(message), 2):
-            player_inventory[message[i]] = int(message[i + 1])
+        player_team = message[2]
+        player_inventory = {
+            'Linemate' : int(message[3]),
+            'Deraumere' : int(message[4]),
+            'Sibur' : int(message[5]),
+            'Mendiane' : int(message[6]),
+            'Phiras' : int(message[7]),
+            'Thystame' : int(message[8])
+        }
         self.memory[player_id] = {
             "level": player_level,
-            "coordinates": player_coordinates,
+            "team": player_team,
             "inventory": player_inventory
         }
+        
+    def handle_purpose(self, message):
+        # Décompose le message reçu
+        proposer_id = int(message[0])
+        destination_id = int(message[1])
+        if self.player.id != destination_id:
+            return
+        required_resources = {
+            'Linemate' : int(message[2]),
+            'Deraumere' : int(message[3]),
+            'Sibur' : int(message[4]),
+            'Mendiane' : int(message[5]),
+            'Phiras' : int(message[6]),
+            'Thystame' : int(message[7])
+        }
 
+        # Stocke la proposition dans la mémoire
+        self.memory[proposer_id]["proposition"] = {
+            "destination_id": destination_id,
+            "required_resources": required_resources
+        }
 
+        # Log pour debug
+        print(f"Proposition reçue de {proposer_id} vers {destination_id} avec ressources requises {required_resources}")
 
+        
+        
 
+    
 
 
 def main():

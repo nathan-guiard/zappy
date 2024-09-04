@@ -58,7 +58,8 @@ class Idle(State):
         self.player.inventaire()
         self.required_ressources = self.missing_ressources()
         
-        self.broadcast_info()
+        # Envoie les informations du joueur aux autres joueurs
+        self.player.player_information()
         
         print(f"Ressources manquantes : {color(self.required_ressources, 'red')}")
         
@@ -70,31 +71,25 @@ class Idle(State):
         if self.player.inventory.get("Food", 0) < 1000:
             return Nourrir(self.player)
         
-        elif self.player.communication: # Si le joueur a reçu un message
-            self.player.communicate()
-        elif self.required_ressources is None and self.player.focus_coords is None:
-            return Incantation(self.player)
+        # Multiplayer
+        if self.handle_multiplayer(self.required_ressources):
+            return self.multiplayer()
         elif self.player.focus_coords and self.player.focus_coords != self.player.coordinates:
             return Deplacement(self.player, self.player.focus_coords)
         elif self.player.coordinates == self.player.focus_coords:
             return Recolte(self.player)
         return Exploration(self.player)
     
-    def broadcast_info(self):
-        """Diffuse les informations du player"""
-        inv = self.player.inventory
-        a = self.player.id
-        b = self.player.level
-        c = self.player.coordinates[0]
-        d = self.player.coordinates[1]
-        e = inv.get('Linemate', 0)
-        f = inv.get('Deraumere', 0)
-        g = inv.get('Sibur', 0)
-        h = inv.get('Mendiane', 0)
-        i = inv.get('Phiras', 0)
-        j = inv.get('Thystame', 0)
-        self.player.broadcast(f"player_information {a} {b} {c} {d} {e} {f} {g} {h} {i} {j}")
-            
+    def handle_multiplayer(self, required_ressources):
+        if required_ressources is None and self.player.focus_coords is None and self.player.level == 1:
+            return True
+        if self.player.communication:
+            self.player.communicate()
+        return False
+    
+    def multiplayer(self):
+        return Incantation(self.player)
+        
     
     def missing_ressources(self) -> str:
         """Détermine la prochaine ressource manquante pour le level up."""
