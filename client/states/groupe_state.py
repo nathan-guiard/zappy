@@ -1,11 +1,9 @@
-# from player import Player
-import math 
-import random
-from states.color import color
-from states.groupe_state import Idle as GroupStateIdle
 from group import Group
+from states.color import color
 
-class State:
+import random
+
+class GroupState:
     levels = {
         2: {"Player": 1, "Linemate": 1},
         3: {"Player": 2, "Linemate": 1, "Deraumere": 1, "Sibur": 1},
@@ -46,45 +44,80 @@ class State:
         return abs(dx) + abs(dy)
 
 
-class Idle(State):
+
+
+
+
+
+class Idle(GroupState):
+    def __init__(self, player):
+        self.player = player
+        pass
+    
+    def enter_state(self):
+        print("Idle enter_state")
+    
+    def exit_state(self):
+        print("Idle exit_state")
+    
+    def update(self):
+        # Si j'ai pas assez de nourriture, je vais chercher de la nourriture
+        if self.player.inventory.get("Food", 0) < 1000:
+            return Nourrir(self.player)
+
+        print("Idle update")
+        print("Is group: ", self.player.groups.is_grouped())
+        if not self.player.groups.is_grouped():
+            return Group_research(self.player)
+        # Si mon groupe n'est pas complet, je vais chercher des membres
+        print("Group members: ", self.player.groups.members)
+        if len(self.player.groups.members) < self.levels[self.player.level + 1].get("Player", 0):
+            return Group_members_search(self.player)
+        # Si j'ai un groupe complet, je vais chercher des ressources
+        
+        
+        return Group_research(self.player)
+
+"""
+class Idle(GroupState):
     def __init__(self, player) -> None:
         self.player = player
-
     def enter_state(self):
         print(f"Je suis rentré en état {color('IDLE', 'green')}")
-
     def exit_state(self):
         print(f"Je suis sorti de l'état {color('IDLE', 'green')}")
-
-    def update(self) -> State:
+    def update(self) -> GroupState:
         self.player.inventaire()
         self.player.broadcast()
-        
-        self.required_ressources = self.missing_ressources()
-        
+        self.player.groups_manager()
+        self.required_ressources = self.player.groups.missing_ressources()
         # Envoie les informations du joueur aux autres joueurs
-        
         print(f"Ressources manquantes : {color(self.required_ressources, 'red')}")
-        
         if self.player.focus_coords is None and self.required_ressources:
             self.target_coords = self.choisir_meilleure_case()
             self.player.focus_coords = self.target_coords
-        
+        # self.player.fork_manager()
         if self.player.inventory.get("Food", 0) < 1000:
             return Nourrir(self.player)
-        elif self.required_ressources is None:
+        # Multiplayer
+        if self.required_ressources is None:
             return Incantation(self.player)
         elif self.player.focus_coords and self.player.focus_coords != self.player.coordinates:
             return Deplacement(self.player, self.player.focus_coords)
         elif self.player.coordinates == self.player.focus_coords:
             return Recolte(self.player)
         return Exploration(self.player)
-    
+    def handle_multiplayer(self, required_ressources):
+        if required_ressources is None and self.player.focus_coords is None:
+            return True
+        if self.player.communication:
+            self.player.communicate()
+        return False
+    def multiplayer(self):
+        return Incantation(self.player)
     def missing_ressources(self) -> dict:
-        """Détermine la prochaine ressource manquante pour le level up."""
         next_level = self.player.level + 1
         required_ressources = {}
-        
         for ressource, quantity in self.levels.get(next_level, {}).items():
             if ressource == "Player":
                 continue
@@ -94,9 +127,7 @@ class Idle(State):
         if required_ressources:
             return required_ressources
         return None
-    
     def choisir_meilleure_case(self):
-        """Choisit la meilleure case en fonction des ressources manquantes"""
         best_tile = None
         best_score = 0
         if self.required_ressources is None:
@@ -109,27 +140,60 @@ class Idle(State):
                 self.player.focus_ressources = self.level_up_ressources(resources)
         # print(f"Meilleure case : {color(best_tile if best_score else 'None', 'red')} avec un score de {color(str(best_score), 'red')}")
         return best_tile
-    
     def level_up_ressources(self, resources):
-        """Détermine les ressources à récolter pour le level up."""
         required_ressources = {}
         for ressource, quantity in self.required_ressources.items():
             if ressource in resources:
                 available_quantity = resources[ressource]
                 required_ressources[ressource] = min(quantity, available_quantity)
         return required_ressources
-
     def evaluate_tile(self, resources):
-        """Évalue une case en fonction des ressources manquantes et retourne un score."""
         score = 0
         for resource, needed_quantity in self.required_ressources.items():
             if resource in resources:
                 available_quantity = resources[resource]
                 score += min(needed_quantity, available_quantity) * 10  # Pondération par ressource
         return score
+"""
+        
+class Group_members_search(GroupState):
+    def __init__(self, player):
+        self.player = player
+    
+    def enter_state(self):
+        print("Group_members_search enter_state")
+    
+    def exit_state(self):
+        print("Group_members_search exit_state")
+    
+    def update(self):
+        # Check si un groupe recrute
+        
+        # Si oui, accepte
+        # Si non, il cree un groupe
+        print(f"Update, player level: {self.player.level}")
+        return Idle(self.player)
+        
+class Group_research(GroupState):
+    def __init__(self, player):
+        self.player = player
+    
+    def enter_state(self):
+        print("Group_research enter_state")
+    
+    def exit_state(self):
+        print("Group_research exit_state")
+    
+    def update(self):
+        # Si j'ai un groupe
+        # Regarde si un joueur recrute, sinon je cree mon groupe et je recrute
+        print(f"Update, player level: {self.player.level}")
+        self.player.recrute()
+        return Idle(self.player)
+        
 
-class Exploration(State):
-    def __init__(self, player, grid_size=5):
+class Exploration(GroupState):
+    def __init__(self, player):
         self.player = player
         self.grid_size = 2 + player.level
         self.grids = self.generate_grids()
@@ -150,7 +214,7 @@ class Exploration(State):
     def exit_state(self):
         print(f"Sorti de l'état {color('Exploration', 'blue')}")
     
-    def update(self) -> State:
+    def update(self) -> GroupState:
         """Update pour le cycle d'exploration."""
         if self.player.coordinates not in self.player.view:
             self.explore_grid_center()
@@ -225,7 +289,7 @@ class Exploration(State):
             self.player.voir()  # Voir dans la nouvelle direction
 
 
-class Recolte(State):
+class Recolte(GroupState):
     def __init__(self, player):
         self.player = player
 
@@ -237,7 +301,7 @@ class Recolte(State):
         self.player.focus_coords = None
         print(f"Je suis sorti de l'état {color('RECOLTE', 'lightgreen')}")
 
-    def update(self) -> State:
+    def update(self) -> GroupState:
         """Essaye de récolter les ressources de la case actuelle"""
         for ressource, quantity in self.player.focus_ressources.items():
             for _ in range(quantity):
@@ -247,7 +311,7 @@ class Recolte(State):
         return Idle(self.player)
 
 
-class Nourrir(State):
+class Nourrir(GroupState):
     def __init__(self, player):
         self.player = player
 
@@ -259,7 +323,7 @@ class Nourrir(State):
     def exit_state(self):
         print("Je suis sorti de l'état Nourrir")
     
-    def update(self) -> State:
+    def update(self) -> GroupState:
         """Update pour le cycle de nourrissage."""
         
         # Si le joueur a assez de nourriture, retourne à l'état Idle
@@ -307,7 +371,7 @@ class Nourrir(State):
         return score
 
 
-class Deplacement(State):
+class Deplacement(GroupState):
     def __init__(self, player, target_coords):
         self.player = player
         self.player.focus_coords = target_coords
@@ -322,7 +386,7 @@ class Deplacement(State):
         print(f"J'ai atteint la cible {self.player.focus_coords}, sorti de l'état {color('DEPLACEMENT', 'pink')}")
         self.player.focus_coords = None
     
-    def update(self) -> State:
+    def update(self) -> GroupState:
         if self.player.focus_coords is None:
             return Idle(self.player)
         
@@ -385,7 +449,7 @@ class Deplacement(State):
 
         # print(f"Joueur orienté vers {direction}")
     
-class Incantation(State):
+class Incantation(GroupState):
     def __init__(self, player):
         self.player = player
 
@@ -395,7 +459,7 @@ class Incantation(State):
     def exit_state(self):
         print("Je suis sorti de l'état INCANTATION")
 
-    def update(self) -> State:
+    def update(self) -> GroupState:
         
         if self.player.level > 1:
             return Idle(self.player)
@@ -410,6 +474,6 @@ class Incantation(State):
             return Idle(self.player)
         
         self.player.fork()
-        self.player.groups = Group(self.player)
         # Implémentez la logique de l'incantation ici
-        return GroupStateIdle(self.player)
+        return Idle(self.player)
+

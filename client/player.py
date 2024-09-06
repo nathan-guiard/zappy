@@ -3,7 +3,7 @@ import json
 import argparse
 import multiprocessing
 from states.state import Idle
-from states.state import Idle as IncantationIdle
+from group import Group
 from states.color import color
 
 connexion_error = "Erreur : la connexion au serveur n'est pas établie."
@@ -44,7 +44,6 @@ class Player:
         # }
         self.memory = {}
         self.state = Idle(self)  # Débuter en état Idle
-        self.incantation_state = IncantationIdle(self)
         self.waiting_broadcast = []
         
         self.connect_to_server()
@@ -52,24 +51,9 @@ class Player:
         self.voir()
         self.display_info()
         
-        self.incantation_state.enter_state()
+        self.groups = None
         self.state.enter_state()
-        
-        self.information = {
-            "my_deal": {
-                "candidat": {},
-                "confirmed": {},
-                "start": {}
-            },
-            "other_deal": {
-                "accept": {},
-                "refuse": {},
-                "confirm": {},
-                "ready": {}
-            },
-            "main": {}
-        }
-        
+
         self.routine()
         
     def connect_to_server(self):
@@ -272,11 +256,10 @@ class Player:
         response = self.send_message("voir")
         if response is None:
             self.close_connection()
-        
         if response is None:
             self.close_connection(f"Réponse invalide 'voir' : {response}")
             return
-
+        
         try:
             # Tenter de charger la réponse en tant que JSON
             view_data = json.loads(response)
@@ -299,7 +282,6 @@ class Player:
             else:
                 self.view[tile_coords] = {}
 
-
     def connect(self):
         response = self.send_message("connect")
         if response is None:
@@ -307,7 +289,6 @@ class Player:
         if not response.isdigit():
             self.close_connection(f"Reponse invalide 'connect': {response}")
         return int(response)
-
 
     def broadcast(self, message=None):
         if message is None and not self.waiting_broadcast:
@@ -323,7 +304,6 @@ class Player:
             self.close_connection(f"Reponse invalide 'broadcast' : {response}")
         # print(f"Réponse du serveur à la commande 'broadcast' : {response}")
         self.waiting_broadcast = []
-
 
     def fork_manager(self):
         """Suite a la commande fork, si une connexion est possible, visible avec la command connect, alors on peut rajouter un nouveau player"""
@@ -348,7 +328,6 @@ class Player:
             # print(f"Réponse du serveur à la commande 'fork' : {response}")
             return 1
         self.close_connection(f"Reponse invalide 'fork': {response}")
-            
     
     def incantation(self):
         # Ralonger le socket.timeout
@@ -396,15 +375,12 @@ class Player:
         
         if response.startswith("ok"):
             self.inventory[ressource] -= 1
-            pass
             # print(f"Réponse du serveur à la commande 'pose' : {response}")
         elif response.startswith("ko"):
             self.voir()
         else: 
             self.close_connection(f"Reponse invalide 'pose' : {response}")
-        
     
-
     def update(self):
         """Appelée à chaque cycle de jeu pour mettre à jour l'état."""
         if self.state:
@@ -424,47 +400,17 @@ class Player:
         return (distance + 2) * 1.4 < self.inventory["Food"]
     
     def player_information(self):
-        if self.information["mode"] != 0:
-            return
         message = f"player_information {self.id} {self.level} {self.team_name} {self.inventory_in_string()}"
         self.waiting_broadcast.append(f"{message}")
 
+    def recrute(self):
+        response = self.send_message("connect_nbr")
+        if response is None:
+            self.close_connection()
+        if response.isdigit():
+            return int(response)
+        self.close_connection(f"Reponse invalide 'connect_nbr': {response}")
 
-    # my deal
-    def propose(self, destination_id, required_resources):
-        self.information["my_deal"]["candidat"][destination_id] = required_resources
-        message = f"purpose {self.id} {destination_id} {required_resources}"
-        self.waiting_broadcast.append(f"{message}")
-
-    def confirm_deal(self, destination_id, resources, coords):
-        if destination_id not in self.information["my_deal"]["candidat"]:
-            return
-        message = f"confirm_deal {self.id} {destination_id} {resources} {coords}"
-        self.waiting_broadcast.append(f"{message}")
-        self.information["my_deal"]["confirmed"][destination_id] = resources
-        del self.information["my_deal"]["candidat"][destination_id]
-
-    def start_incant(self, transaction_id):
-        message = f"start_incant {transaction_id}"
-        self.waiting_broadcast.append(f"{message}")
-
-
-    # others deal
-    def accept_deal(self, transaction_id, resources):
-        message = f"accept_deal {transaction_id} {self.id} {resources}"
-        self.waiting_broadcast.append(f"{message}")
-
-    def refuse_deal(self, transaction_id):
-        message = f"refuse_deal {transaction_id} {self.id}"
-        self.waiting_broadcast.append(f"{message}")
-
-    def ready_to_incant(self, transaction_id):
-        message = f"ready_to_incant {transaction_id} {self.id}"
-        self.waiting_broadcast.append(f"{message}")
-        
-    def inventory_in_string(self):
-        return f"{self.inventory.get('Linemate', 0)} {self.inventory.get('Deraumere', 0)} {self.inventory.get('Sibur', 0)} {self.inventory.get('Mendiane', 0)} {self.inventory.get('Phiras', 0)} {self.inventory.get('Thystame', 0)}"
-    
     def communicate(self):
         for messages in self.communication:
             # direction: player_information player_id lvl x y linemate deraumere sibur mendiane phiras thystame
@@ -478,155 +424,10 @@ class Player:
                 message_type = message[0]
                 if message_type == "player_information":
                     self.handle_player_information(message[1:])
-                elif message_type == "purpose":
-                    self.handle_purpose(message[1:])
-                elif message_type == "accept_deal":
-                    self.handle_accept_deal(message[1:])
-                elif message_type == "cancel_deal":
-                    self.handle_refuse_deal(message[1:])
-                elif message_type == "confirm_deal":
-                    self.handle_confirm_deal(message[1:])
-                elif message_type == "ready_to_incant":
-                    self.handle_ready_to_incant(message[1:])
-                elif message_type == "start_incant":
-                    self.handle_start_incant(message[1:])
         self.communication = []
-
-    def handle_player_information(self, message):
-        player_id = int(message[0])
-        player_level = int(message[1])
-        player_team = message[2]
-        player_inventory = {
-            'Linemate' : int(message[3]),
-            'Deraumere' : int(message[4]),
-            'Sibur' : int(message[5]),
-            'Mendiane' : int(message[6]),
-            'Phiras' : int(message[7]),
-            'Thystame' : int(message[8])
-        }
-        self.memory[player_id] = {
-            "level": player_level,
-            "team": player_team,
-            "inventory": player_inventory
-        }
         
-    def handle_purpose(self, message):
-        # Décompose le message reçu
-        try:
-            proposer_id = int(message[0])
-            destination_id = int(message[1])
-            if self.player.id != destination_id:
-                return
-            required_resources = {
-                'Linemate' : int(message[2]),
-                'Deraumere' : int(message[3]),
-                'Sibur' : int(message[4]),
-                'Mendiane' : int(message[5]),
-                'Phiras' : int(message[6]),
-                'Thystame' : int(message[7])
-            }
-        except Exception as e:
-            print(color(f"Erreur lors de la lecture du message purpose : {e}", 'red'))
-            return
         
-        # Stocke la proposition dans la mémoire
-        self.information["purpose"][proposer_id] = required_resources
-
-    def handle_accept_deal(self, message):
-        # Décompose le message reçu
-        try:
-            transaction_id = int(message[0])
-            proposer_id = int(message[1])
-            if self.player.id != proposer_id:
-                return
-            resources = {
-                'Linemate' : int(message[2]),
-                'Deraumere' : int(message[3]),
-                'Sibur' : int(message[4]),
-                'Mendiane' : int(message[5]),
-                'Phiras' : int(message[6]),
-                'Thystame' : int(message[7])
-            }
-        except Exception as e:
-            print(color(f"Erreur lors de la lecture du message accept_deal : {e}", 'red'))
-            return
-        
-        # Stocke la confirmation dans la mémoire
-        self.information["accept_deal"][transaction_id] = {
-            "resources": resources
-        }
     
-
-    def handle_refuse_deal(self, message):
-        # Décompose le message reçu
-        try:
-            transaction_id = int(message[0])
-            if self.player.id != transaction_id:
-                return
-            source_id = int(message[1])
-        except Exception as e:
-            print(color(f"Erreur lors de la lecture du message refuse_deal : {e}", 'red'))
-            return
-        
-        # Stocke la confirmation dans la mémoire
-        # self.information["refuse_deal"][transaction_id] = {}
-        # A ce moment je ne sais pas trop comment le gerer on vera plus tard
-        
-    def handle_confirm_deal(self, message):
-        # Décompose le message reçu
-        try:
-            proposer_id = int(message[0])
-            destination_id = int(message[1])
-            if self.player.id != destination_id:
-                return
-            resources = {
-                'Linemate' : int(message[2]),
-                'Deraumere' : int(message[3]),
-                'Sibur' : int(message[4]),
-                'Mendiane' : int(message[5]),
-                'Phiras' : int(message[6]),
-                'Thystame' : int(message[7])
-            }
-            coords = (int(message[8]), int(message[9]))
-        except Exception as e:
-            print(color(f"Erreur lors de la lecture du message confirm_deal : {e}", 'red'))
-            return
-        
-        # Stocke la confirmation dans la mémoire
-        self.information["confirm_deal"][proposer_id] = {
-            "resources": resources,
-            "coords": coords
-        }
-
-    def handle_ready_to_incant(self, message):
-        # Décompose le message reçu
-        try:
-            transaction_id = int(message[0])
-            if self.player.id != transaction_id:
-                return
-            proposer_id = int(message[1])
-        except Exception as e:
-            print(color(f"Erreur lors de la lecture du message ready_to_incant : {e}", 'red'))
-            return
-        
-        # Stocke la confirmation dans la mémoire
-        if transaction_id not in self.innformation["ready_to_incant"]:
-            self.information["ready_to_incant"][transaction_id] = [proposer_id]
-        else:
-            self.information["ready_to_incant"][transaction_id].append(proposer_id)
-            
-    def handle_start_incant(self, message):
-        # Décompose le message reçu
-        try:
-            transaction_id = int(message[0])
-            if self.player.id != transaction_id:
-                return
-        except Exception as e:
-            print(color(f"Erreur lors de la lecture du message start_incant : {e}", 'red'))
-            return
-        
-        # Stocke la confirmation dans la mémoire
-        self.information["start_incant"][transaction_id] = True
 
 def main():
     """Parse et check les arguments
