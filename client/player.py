@@ -3,9 +3,9 @@ import json
 import argparse
 import multiprocessing
 from states.state import Idle
-from group import Group
+from group import Group, Team
 from states.color import color
-
+    
 connexion_error = "Erreur : la connexion au serveur n'est pas établie."
 Direction = ['N', 'E', 'S', 'W']
 
@@ -39,10 +39,6 @@ class Player:
         self.communication = []
         self.have_fork = False
         self.list_processus = []
-        # self.memory = {
-            # player_id: {linemate: 0, deraumere: 0, sibur: 0, mendiane: 0, phiras: 0, thystame: 0, level:1, team: "team_name"}
-        # }
-        self.memory = {}
         self.state = Idle(self)  # Débuter en état Idle
         self.waiting_broadcast = []
         
@@ -51,6 +47,10 @@ class Player:
         self.voir()
         self.display_info()
         
+        # La memoire stocks les informations des broadcasts
+        self.memory = {
+        }
+        self.stop = False
         self.groups = None
         self.state.enter_state()
 
@@ -304,6 +304,7 @@ class Player:
             self.close_connection(f"Reponse invalide 'broadcast' : {response}")
         # print(f"Réponse du serveur à la commande 'broadcast' : {response}")
         self.waiting_broadcast = []
+        self.communicate()
 
     def fork_manager(self):
         """Suite a la commande fork, si une connexion est possible, visible avec la command connect, alors on peut rajouter un nouveau player"""
@@ -360,6 +361,8 @@ class Player:
                 self.inventory[ressource] += 126
             else:
                 self.inventory[ressource] += 1
+
+            print(f"Je vois {self.view[self.coordinates]} en coords {self.coordinates}")
             self.view[self.coordinates][ressource] -= 1
             return 0
         elif response.startswith("ko"):
@@ -403,14 +406,6 @@ class Player:
         message = f"player_information {self.id} {self.level} {self.team_name} {self.inventory_in_string()}"
         self.waiting_broadcast.append(f"{message}")
 
-    def recrute(self):
-        response = self.send_message("connect_nbr")
-        if response is None:
-            self.close_connection()
-        if response.isdigit():
-            return int(response)
-        self.close_connection(f"Reponse invalide 'connect_nbr': {response}")
-
     def communicate(self):
         for messages in self.communication:
             # direction: player_information player_id lvl x y linemate deraumere sibur mendiane phiras thystame
@@ -420,14 +415,192 @@ class Player:
             print(messages)
             for message in messages:
                 message = message.split(' ')
-                print(f"Gestion du message {message}")
+                # print(f"Gestion du message {message}")
                 message_type = message[0]
-                if message_type == "player_information":
-                    self.handle_player_information(message[1:])
+                # print(f"Message type: {message_type}")
+                
+                if message_type == "create":
+                    self.handle_create(message[1:])
+                elif message_type == "recrute":
+                    self.handle_recrute(message[1:])
+                elif message_type == "interested":
+                    self.handle_interested(message[1:])
+                elif message_type == "accept":
+                    self.handle_accept(message[1:])
+                elif message_type == "start":
+                    self.handle_start(message[1:])
+                elif message_type == "stop":
+                    self.handle_stop(message[1:])
+                elif message_type == "info":
+                    self.handle_info(message[1:])
+                
         self.communication = []
+        self.broadcast()
         
+    def handle_create(self, message):
+        # create {self.id} {self.level} {self.team_name}
+        try:
+            team_id = int(message[0])
+            team_level = int(message[1])
+            team_name = message[2]
+        except Exception as e:
+            print(f"Erreur lors de la reception du message de creation: {e}")
+        if team_level != self.level: # nous ajouterons un filtre sur le nom de 'team_name' plus tard
+            return
+        
+        self.memory[team_id] = Team("create", team_level, team_name)
+    
+    def handle_recrute(self, message):
+        # recrute {self.id} {self.level} {self.team_name}
+        try:
+            team_id = int(message[0])
+            team_level = int(message[1])
+            team_name = message[2]
+            
+        except Exception as e:
+            print(f"Erreur lors de la reception du message de recrute: {e}")
+        
+        if team_id not in self.memory:
+            self.memory[team_id] = Team("recrute", team_level, team_name)
+        else:
+            self.memory[team_id].change_state("recrute")
+    
+    def handle_interested(self, message):
+        # interested {self.id_team} {self.id_player} 
+        try:
+            team_id = int(message[0])
+            player_id = int(message[1])
+        except Exception as e:
+            print(f"Erreur lors de la reception du message d'interet: {e}")
+        
+        # Si je n'ai pas de groupe
+        if self.groups is None:
+            return
+        
+        # print(f"Interet de {player_id} pour le groupe {team_id}")
+        # print(f"Mon id de groupe: {self.groups.id}")
+                
+        # Si je ne suis pas le leader
+        if self.id != team_id:
+            return
+        
+        # print("Je suis le leader")
+        # print(f"J'ai assez de joueurs: {self.groups.enougth_players()}")
+        # Si on manque de membres
+        if not self.groups.enougth_players():
+            # On accepte
+            # print(f"J'accepte {player_id}")
+            self.groups.add_player(player_id)
+            self.accept(team_id, player_id)
+            if self.groups.enougth_players():
+               self.groups.start() 
+        
+        # else:
+        #     # Sinon on refuse
+        #     self.refuse(team_id, player_id)
+    
+    def handle_accept(self, message):
+        # accept {team_id} {player_id} {self.groups.coords[0]},{self.groups.coords[1]}
+        try:
+            team_id = int(message[0])
+            player_id = int(message[1])
+            coords = tuple(map(int, message[2].split(',')))
+        except Exception as e:
+            print(f"Erreur lors de la reception du message d'acceptation: {e}")
+        
+        print(f"Grouper : {self.groups}")
+        if self.groups:
+            return
+        
+        if self.id != player_id:
+            return
+        print(f"Je suis accepte dans le groupe {team_id}")
+        if team_id not in self.memory:
+            return
+        
+        self.groups = Group(self)
+        self.groups.join_group(team_id, coords)
+        
+        
+    def handle_start(self, message):
+        # start {team_id} {id} {id} {id}...
+        try:
+            team_id = int(message[0])
+            players = list(map(int, message[0:]))
+        except Exception as e:
+            print(f"Erreur lors de la reception du message de debut: {e}")
+        
+        if self.groups is None:
+            return
+        
+        if team_id in self.memory:
+            del self.memory[team_id]
+        
+        if self.id in players:
+            for player in players:
+                if player != self.id:
+                    self.groups.add_player(player)
+                    
+    def handle_stop(self, message):
+        # stop {team_id}
+        try:
+            team_id = int(message[0])
+        except Exception as e:
+            print(f"Erreur lors de la reception du message de fin: {e}")
+        
+        if team_id in self.memory:
+            del self.memory[team_id]
+        
+        if self.groups is not None:
+            if self.groups.id == team_id:
+                self.groups = None
+                
+    def handle_info(self, message):
+        # info {team_id} {id} {linemate} {deraumere} {sibur} {mendiane} {phiras} {thystame}
+        try:
+            team_id = int(message[0])
+            player_id = int(message[1])
+            linemate = int(message[2])
+            deraumere = int(message[3])
+            sibur = int(message[4])
+            mendiane = int(message[5])
+            phiras = int(message[6])
+            thystame = int(message[7])
+        except Exception as e:
+            print(f"Erreur lors de la reception du message d'information: {e}")
+        
+        if self.groups is None:
+            return
+        
+        if self.groups.id == team_id:
+            self.groups.player_info(player_id, linemate, deraumere, sibur, mendiane, phiras, thystame)
         
     
+    
+    def accept(self, team_id: int, player_id: int):
+        message = f"accept {team_id} {player_id} {self.groups.coords[0]},{self.groups.coords[1]}"
+        self.waiting_broadcast.append(message)
+        
+    def refuse(self, team_id: int, player_id: int):
+        message = f"refuse {team_id} {player_id}"
+        self.waiting_broadcast.append(message)
+    
+    def interested(self, team_id: int):
+        message = f"interested {team_id} {self.id}"
+        self.broadcast(message)
+    
+    def create_group(self):
+        self.groups = Group(self)
+        if self.groups.create_group():
+            print("Annulation de la creation de groupe")
+            self.groups = None
+            return
+        print("Groupe cree")
+            
+        
+    # def join_group(self, player):
+    #     self.groups = Group(self)
+    #     self.groups.join_group(player)
 
 def main():
     """Parse et check les arguments

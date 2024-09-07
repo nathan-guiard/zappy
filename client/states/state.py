@@ -3,7 +3,6 @@ import math
 import random
 from states.color import color
 from states.groupe_state import Idle as GroupStateIdle
-from group import Group
 
 class State:
     levels = {
@@ -410,6 +409,5 @@ class Incantation(State):
             return Idle(self.player)
         
         self.player.fork()
-        self.player.groups = Group(self.player)
         # Implémentez la logique de l'incantation ici
         return GroupStateIdle(self.player)

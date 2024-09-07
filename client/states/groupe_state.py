@@ -55,22 +55,43 @@ class Idle(GroupState):
         pass
     
     def enter_state(self):
-        print("Idle enter_state")
+        print("\n\n")
+        # print("\n\nIdle enter_state")
+        if self.player.groups is None:
+            return
+        self.missing_ressources = self.player.groups.missing_ressources()
+        
     
     def exit_state(self):
-        print("Idle exit_state")
+        print("\n\n")
+        # print("Idle exit_state\n\n")
     
     def update(self):
         # Si j'ai pas assez de nourriture, je vais chercher de la nourriture
+        self.player.inventaire()
+        self.player.voir()
+
         if self.player.inventory.get("Food", 0) < 1000:
             return Nourrir(self.player)
 
-        print("Idle update")
-        print("Is group: ", self.player.groups.is_grouped())
-        if not self.player.groups.is_grouped():
+        print("Group: ", self.player.groups)
+        if self.player.groups is None:
             return Group_research(self.player)
-        # Si mon groupe n'est pas complet, je vais chercher des membres
+        if not self.player.groups.enougth_players():
+            return Group_members_search(self.player)
+        print("My id is: ", self.player.id)
         print("Group members: ", self.player.groups.members)
+
+        print(f"groups ressources: ", self.player.groups.ressources)
+        # if not self.player.groups.ready:
+        #     return Idle(self.player)
+        print("Missing ressources: ", self.missing_ressources)
+        
+        
+        
+        
+        # Si mon groupe n'est pas complet, je vais chercher des membres
+        # print("Group members: ", self.player.groups.members)
         if len(self.player.groups.members) < self.levels[self.player.level + 1].get("Player", 0):
             return Group_members_search(self.player)
         # Si j'ai un groupe complet, je vais chercher des ressources
@@ -156,9 +177,32 @@ class Idle(GroupState):
         return score
 """
         
+class Group_research(GroupState):
+    def __init__(self, player):
+        self.player = player
+        self.group = self.player.groups
+
+    def enter_state(self):
+        print("Group_research enter_state")
+
+    def exit_state(self):
+        print("Group_research exit_state")
+
+    def update(self):
+        # Regarde si un joueur recrute, sinon je cree mon groupe et je recrute
+        if self.group is None:
+            print("memory idle", self.player.memory)
+            for team_id, team_info in self.player.memory.items():
+                if team_info.etat == "recrute" and team_info.level == self.player.level:
+                    self.player.interested(team_id)
+                    return Idle(self.player)
+            self.player.create_group()
+        return Idle(self.player)
+
 class Group_members_search(GroupState):
     def __init__(self, player):
         self.player = player
+        self.group = self.player.groups
     
     def enter_state(self):
         print("Group_members_search enter_state")
@@ -167,30 +211,13 @@ class Group_members_search(GroupState):
         print("Group_members_search exit_state")
     
     def update(self):
-        # Check si un groupe recrute
-        
-        # Si oui, accepte
-        # Si non, il cree un groupe
-        print(f"Update, player level: {self.player.level}")
+        # Si je suis la c'est que j'ai un groupe.
+        # Je suis ou leader de groupe ou simple membre
+        # Si je suis leader je recrute des membres
+        # Si je suis membre je retourn en idle
+        if self.group.id == self.player.id:
+            self.group.recrute()
         return Idle(self.player)
-        
-class Group_research(GroupState):
-    def __init__(self, player):
-        self.player = player
-    
-    def enter_state(self):
-        print("Group_research enter_state")
-    
-    def exit_state(self):
-        print("Group_research exit_state")
-    
-    def update(self):
-        # Si j'ai un groupe
-        # Regarde si un joueur recrute, sinon je cree mon groupe et je recrute
-        print(f"Update, player level: {self.player.level}")
-        self.player.recrute()
-        return Idle(self.player)
-        
 
 class Exploration(GroupState):
     def __init__(self, player):
@@ -316,12 +343,13 @@ class Nourrir(GroupState):
         self.player = player
 
     def enter_state(self):
-        print("Je suis en état Nourrir")
+        # print("Je suis en état Nourrir")
         self.target_coords = self.choisir_meilleure_case()
         self.player.focus_coords = self.target_coords
     
     def exit_state(self):
-        print("Je suis sorti de l'état Nourrir")
+        # print("Je suis sorti de l'état Nourrir")
+        pass
     
     def update(self) -> GroupState:
         """Update pour le cycle de nourrissage."""

@@ -1,3 +1,15 @@
+import random
+
+class Team:
+    def __init__(self, etat: str, level:int, name: str):
+        self.name: str = name
+        self.level: int = level
+        self.etat: str = etat
+    
+    def change_state(self, etat: str):
+        self.etat = etat
+
+
 class Group:
     
     levels = {
@@ -14,48 +26,88 @@ class Group:
         self.player = player
         
         self.state: bool = False
+        self.team_name: str = self.player.team_name
         self.members: list = []
         self.requests: list = []
         self.ressources: dict = {}
-        self.leader: int = 0
+        self.id: int = 0
         self.coords  = None
         self.level: int = self.player.level
-        self.inventory = self.player.inventory
-        
-    
-    def is_grouped(self) -> bool:
-        return self.state
+        self.needed_ressources = {k: v for k, v in self.levels[self.level].items() if k != "Player"}
         
     def create_group(self):
-        self.leader = self.player.id
+        self.id = self.player.id
         self.members.append(self.player.id)
-    
-    def join_group(self, player):
-        self.members.append(player.id)
         
-    def leave_group(self, player):
-        self.members.remove(player.id)
-    
-    def send_request(self, player):
-        pass
-    
-    def accept_request(self, player):
-        pass
-    
-    def refuse_request(self, player):
-        pass
+        # Genere une coordonnes au hasard dans la carte pour le groupe
+        self.coords = self.get_random_coords()
         
-    def missing_ressources(self) -> dict:
-        """Détermine la prochaine ressource manquante pour le level up."""
-        next_level = self.player.level + 1
-        required_ressources = {}
+        message = f"create {self.id} {self.level} {self.team_name}"
+        self.player.broadcast(message)
         
-        for ressource, quantity in self.levels.get(next_level, {}).items():
-            if ressource == "Player":
-                continue
-            required_ressources[ressource] = max(0, quantity - self.player.inventory.get(ressource, 0))
-            if required_ressources[ressource] == 0:
-                del required_ressources[ressource]
-        if required_ressources:
-            return required_ressources
-        return None
+        #protege la creation de groupe non necessaire
+        print("Memoire")
+        for team, team_info in self.player.memory.items():
+            team_info: Team
+            
+            if team_info.etat == "recrute" and team_info.level == self.level:
+                self.player.broadcast(f"stop {self.id}")
+                return 1
+        
+        self.recrute()
+        return 0
+        
+    def join_group(self, team_id:int, coords:tuple):
+        self.id = team_id
+        self.coords = coords
+        self.add_player(self.player.id)
+        self.add_player(self.id)
+        
+    def get_random_coords(self):
+        return (random.randint(0, self.player.map_size[0] - 1), random.randint(0, self.player.map_size[1] - 1))
+        
+    def enougth_players(self):
+        return len(self.members) == self.levels[self.level + 1]["Player"]
+
+    def recrute(self):
+        message = f"recrute {self.id} {self.level} {self.team_name}"
+        self.player.broadcast(message)
+        
+    def add_player(self, player_id):
+        if player_id in self.members:
+            return
+        self.members.append(player_id)
+    
+    def stop(self):
+        self.player.broadcast(f"stop {self.id}")
+        self.player.group = None
+        
+    def start(self):
+        members = " ".join(str(member) for member in self.members)
+        self.player.broadcast(f"start {members}")
+        
+    def player_info(self, player_id:int, linemate:int, deraumere:int, sibur:int, mendiane:int, phiras:int, thystame:int):
+        self.ressources[player_id] = {
+            "Linemate": linemate,
+            "Deraumere": deraumere,
+            "Sibur": sibur,
+            "Mendiane": mendiane,
+            "Phiras": phiras,
+            "Thystame": thystame,
+        }
+        
+    def enougth_ressources(self):
+        for ressource, quantity in self.needed_ressources.items():
+            if sum(player_info[ressource] for player_info in self.ressources.values()) < quantity:
+                return False
+        return True
+    
+    def missing_ressources(self):
+        """Détermine la prochaine ressource manquante pour le level up. Renvoie un dictionnaire avec la ressource et le nombre manquant"""
+        missing = {}
+        for ressource, quantity in self.needed_ressources.items():
+            if sum(player_info[ressource] for player_info in self.ressources.values()) < quantity:
+                missing[ressource] = quantity - sum(player_info[ressource] for player_info in self.ressources.values())
+        if not missing:
+            return None
+        return missing
