@@ -56,10 +56,8 @@ class Idle(GroupState):
     
     def enter_state(self):
         print("\n\n")
-        # print("\n\nIdle enter_state")
-        if self.player.groups is None:
-            return
-        self.missing_ressources = self.player.groups.missing_ressources()
+        
+        
         
     
     def exit_state(self):
@@ -70,6 +68,10 @@ class Idle(GroupState):
         # Si j'ai pas assez de nourriture, je vais chercher de la nourriture
         self.player.inventaire()
         self.player.voir()
+        
+        if self.player.groups:
+            self.required_ressources = self.player.groups.missing_ressources()
+            print("Ressources manquantes: ", self.required_ressources)
 
         if self.player.inventory.get("Food", 0) < 1000:
             return Nourrir(self.player)
@@ -81,23 +83,53 @@ class Idle(GroupState):
             return Group_members_search(self.player)
         print("My id is: ", self.player.id)
         print("Group members: ", self.player.groups.members)
-
         print(f"groups ressources: ", self.player.groups.ressources)
-        # if not self.player.groups.ready:
-        #     return Idle(self.player)
-        print("Missing ressources: ", self.missing_ressources)
+        print("Missing ressources: ", self.required_ressources)
+        print("Ressources needed: ", self.player.groups.needed_ressources)
         
+        if self.player.focus_coords is None and self.required_ressources:
+            self.player.focus_coords = self.choisir_meilleure_case()
         
-        
-        
-        # Si mon groupe n'est pas complet, je vais chercher des membres
-        # print("Group members: ", self.player.groups.members)
-        if len(self.player.groups.members) < self.levels[self.player.level + 1].get("Player", 0):
-            return Group_members_search(self.player)
-        # Si j'ai un groupe complet, je vais chercher des ressources
-        
-        
-        return Group_research(self.player)
+        if self.required_ressources is None:
+            return Incantation(self.player)
+        elif self.player.focus_coords and self.player.focus_coords != self.player.coordinates:
+            return Deplacement(self.player, self.player.focus_coords)
+        elif self.player.coordinates == self.player.focus_coords:
+            return Recolte(self.player)
+        return Exploration(self.player)
+    
+    def level_up_ressources(self, resources):
+        """Détermine les ressources à récolter pour le level up."""
+        required_ressources = {}
+        for ressource, quantity in self.required_ressources.items():
+            if ressource in resources:
+                available_quantity = resources[ressource]
+                required_ressources[ressource] = min(quantity, available_quantity)
+        return required_ressources
+    
+    def choisir_meilleure_case(self):
+        """Choisit la meilleure case en fonction des ressources manquantes"""
+        best_tile = None
+        best_score = 0
+        if self.required_ressources is None:
+            return None
+        for coords, resources in self.player.view.items():
+            score = self.evaluate_tile(resources)
+            if score > best_score and self.player.has_enough_food(self.distance_toric(coords)):
+                best_score = score
+                best_tile = coords
+                self.player.focus_ressources = self.level_up_ressources(resources)
+        # print(f"Meilleure case : {color(best_tile if best_score else 'None', 'red')} avec un score de {color(str(best_score), 'red')}")
+        return best_tile
+    
+    def evaluate_tile(self, resources):
+        """Évalue une case en fonction des ressources manquantes et retourne un score."""
+        score = 0
+        for resource, needed_quantity in self.required_ressources.items():
+            if resource in resources:
+                available_quantity = resources[resource]
+                score += min(needed_quantity, available_quantity) * 10  # Pondération par ressource
+        return score
 
 """
 class Idle(GroupState):
@@ -324,7 +356,7 @@ class Recolte(GroupState):
         print(f"Je suis en état {color('RECOLTE', 'lightgreen')}")
     
     def exit_state(self):
-        self.player.display_info()
+        # self.player.display_info()
         self.player.focus_coords = None
         print(f"Je suis sorti de l'état {color('RECOLTE', 'lightgreen')}")
 
@@ -335,6 +367,7 @@ class Recolte(GroupState):
                 if self.player.prend(ressource):
                     break
         self.player.focus_ressources = None
+        self.player.info()
         return Idle(self.player)
 
 
@@ -489,11 +522,13 @@ class Incantation(GroupState):
 
     def update(self) -> GroupState:
         
-        if self.player.level > 1:
-            return Idle(self.player)
+        # Si je ne suis pas aux coordonnes du groups alors je me deplace
+        if self.player.coordinates != self.player.groups.coords:
+            return Deplacement(self.player, self.player.groups.coords)
         
-        for k, v in self.levels[self.player.level + 1].items():
-            if k == "Player":
+        # Si je suis aux coordonnes du groupe alors je vide mon inventaire et j'incante
+        for k, v in self.player.inventory.items():
+            if k == "Food":
                 continue
             for _ in range(v):
                 self.player.pose(k)
@@ -502,6 +537,7 @@ class Incantation(GroupState):
             return Idle(self.player)
         
         self.player.fork()
+        self.player.groups.stop()
         # Implémentez la logique de l'incantation ici
         return Idle(self.player)
 

@@ -86,6 +86,8 @@ class Group:
         members = " ".join(str(member) for member in self.members)
         self.player.broadcast(f"start {members}")
         
+    
+        
     def player_info(self, player_id:int, linemate:int, deraumere:int, sibur:int, mendiane:int, phiras:int, thystame:int):
         self.ressources[player_id] = {
             "Linemate": linemate,
