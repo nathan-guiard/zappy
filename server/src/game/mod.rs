@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/08/28 17:09:55 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/09/09 19:09:00 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,6 +84,7 @@ impl Game {
 		let mut actions_to_do_after: Vec<(i32, PlayerActionKind)> = vec![];
 		let mut dead_players: Vec<i32> = vec![];
 		let mut updated_castings: Vec<(GamePosition, u8, String)> = vec![];
+		let mut	casted: Vec<i32> = vec![];
 
 		for player in self.players.iter_mut() {
 			if let Some(action) = player.execute_casting(&mut self.map,
@@ -123,7 +124,9 @@ impl Game {
 					Self::handle_broadcast(&self.players, &self.map, *fd, text);
 				}
 				PlayerActionKind::Incantation => {
-					Self::handle_incantation(&mut self.players, &mut self.map, *fd);
+					if casted.contains(fd) == false {
+						casted.append(&mut Self::handle_incantation(&mut self.players, &mut self.map, *fd));
+					}
 				}
 				_ => {}
 			}
@@ -166,7 +169,8 @@ impl Game {
 			self.map.max_position.y);
 	}
 
-	fn handle_incantation(players: &mut Vec<Player>, map: &mut GameMap, fd: i32) {
+	fn handle_incantation(players: &mut Vec<Player>, map: &mut GameMap, fd: i32)
+		-> Vec<i32> {
 		let player = get_player_from_fd(players, fd).unwrap();
 		let pos = player.position.clone();
 		let level = player.level;
@@ -181,9 +185,11 @@ impl Game {
 			}
 		}
 
+		println!("{:?}", to_level_up);
+
 		if has_enough_ressources(&cell.content, level, same_level) {
 			remove_ressources(cell, level);
-			for fd in to_level_up {
+			for fd in to_level_up.clone() {
 				let p = get_player_from_fd_mut(players, fd).unwrap();
 				p.level += 1;
 				p.state = PlayerState::Idle;
@@ -192,13 +198,16 @@ impl Game {
 				p.recieved_this_turn = true;
 			}
 		} else {
-			for fd in to_level_up {
+			for fd in to_level_up.clone() {
 				let p = get_player_from_fd_mut(players, fd).unwrap();
 				p.state = PlayerState::Idle;
 				send_to(p.fd, "ko\n");
 				p.recieved_this_turn = true;
 			}
 		}
+
+		to_level_up.retain(|x| *x == fd);
+		return to_level_up;
 	}
 
 	fn handle_broadcast(players: &Vec<Player>,
