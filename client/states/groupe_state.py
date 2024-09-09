@@ -528,6 +528,8 @@ class Incantation(GroupState):
         if self.player.coordinates != self.player.groups.coords:
             return Deplacement(self.player, self.player.groups.coords)
         
+        print(f"{color('Incantation', 'red')} : Je suis aux coordonnées du groupe")
+        
         # Si je suis aux coordonnes du groupe alors je vide mon inventaire et j'incante
         for k, v in self.player.inventory.items():
             if k == "Food":

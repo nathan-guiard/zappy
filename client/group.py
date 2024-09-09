@@ -79,6 +79,7 @@ class Group:
         self.members.append(player_id)
     
     def stop(self):
+        print("stop")
         self.player.broadcast(f"stop {self.id}")
         self.player.group = None
         

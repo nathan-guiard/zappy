@@ -163,7 +163,7 @@ class Player:
             
             if final_response is None:
                 return self.send_message("reception", False)
-            print(f"{message}: {final_response}")
+            # print(f"{message}: {final_response}")
             return final_response
 
         except socket.error as e:
@@ -553,7 +553,9 @@ class Player:
         
         if self.groups:
             if self.groups.id == team_id:
+                print(f"Reception d'un stop du groupe {self.groups.id}")
                 self.groups = None
+                print(f"Groupe detruit {self.groups}")
                 
     def handle_info(self, message):
         # info {team_id} {id} {linemate} {deraumere} {sibur} {mendiane} {phiras} {thystame}
@@ -596,8 +598,10 @@ class Player:
         
     def stop(self):
         message = f"stop {self.groups.id}"
-        self.broadcast(message)
+        print(f"Stop : Arret du groupe {self.groups.id}")
         self.groups = None
+        print(f"Stop : Groupe detruit {self.groups}")
+        self.broadcast(message)
     
     def create_group(self):
         self.groups = Group(self)
@@ -634,7 +638,7 @@ def main():
         print("Erreur: Le numéro de port doit être compris entre 1024 et 65535.\n")
         return 1
     
-    player = Player("172.16.147.130", args.port, args.team)
+    player = Player("localhost", args.port, args.team)
 
 
 if __name__ == "__main__":
