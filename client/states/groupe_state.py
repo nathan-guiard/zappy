@@ -69,6 +69,8 @@ class Idle(GroupState):
         self.player.inventaire()
         self.player.voir()
         
+        # self.player.fork_manager()
+        
         if self.player.groups:
             self.required_ressources = self.player.groups.missing_ressources()
             print("Ressources manquantes: ", self.required_ressources)
@@ -534,10 +536,11 @@ class Incantation(GroupState):
                 self.player.pose(k)
         if self.player.incantation():
             self.player.voir()
+            self.player.info()
             return Idle(self.player)
         
         self.player.fork()
-        self.player.groups.stop()
+        self.player.stop()
         # Implémentez la logique de l'incantation ici
         return Idle(self.player)
 

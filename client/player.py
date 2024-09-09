@@ -50,7 +50,6 @@ class Player:
         # La memoire stocks les informations des broadcasts
         self.memory = {
         }
-        self.stop = False
         self.groups = None
         self.state.enter_state()
 
@@ -164,6 +163,7 @@ class Player:
             
             if final_response is None:
                 return self.send_message("reception", False)
+            print(f"{message}: {final_response}")
             return final_response
 
         except socket.error as e:
@@ -551,7 +551,7 @@ class Player:
         if team_id in self.memory:
             del self.memory[team_id]
         
-        if self.groups is not None:
+        if self.groups:
             if self.groups.id == team_id:
                 self.groups = None
                 
@@ -593,6 +593,11 @@ class Player:
         message = f"info {self.groups.id} {self.id} {self.inventory['Linemate']} {self.inventory['Deraumere']} {self.inventory['Sibur']} {self.inventory['Mendiane']} {self.inventory['Phiras']} {self.inventory['Thystame']}"
         self.groups.player_info(self.id, self.inventory['Linemate'], self.inventory['Deraumere'], self.inventory['Sibur'], self.inventory['Mendiane'], self.inventory['Phiras'], self.inventory['Thystame'])
         self.broadcast(message)
+        
+    def stop(self):
+        message = f"stop {self.groups.id}"
+        self.broadcast(message)
+        self.groups = None
     
     def create_group(self):
         self.groups = Group(self)

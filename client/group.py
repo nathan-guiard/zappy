@@ -33,7 +33,7 @@ class Group:
         self.id: int = 0
         self.coords  = None
         self.level: int = self.player.level
-        self.needed_ressources = {k: v for k, v in self.levels[self.level].items() if k != "Player"}
+        self.needed_ressources = {k: v for k, v in self.levels[self.level + 1].items() if k != "Player"}
         
     def create_group(self):
         self.id = self.player.id
