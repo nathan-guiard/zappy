@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/19 17:20:38 by nguiard           #+#    #+#             */
-/*   Updated: 2024/04/09 11:39:43 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/09/09 17:10:31 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,6 +77,7 @@ fn enough_level1(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_linemate = false;
 
 	if nb_of_same_lvl < 1 {
+		println!("Not enough players");
 		return false;
 	}
 	for x in ressources {
@@ -90,8 +91,10 @@ fn enough_level1(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 fn enough_level2(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_linemate = false;
 	let mut enough_deraumere = false;
+	let mut enough_sibur = false;
 
 	if nb_of_same_lvl < 2 {
+		println!("Not enough players");
 		return false;
 	}
 	for x in ressources {
@@ -101,8 +104,11 @@ fn enough_level2(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 		if x == &Deraumere(0) {
 			enough_deraumere = x.amount() >= 1;
 		}
+		if x == &Sibur(0) {
+			enough_sibur = x.amount() >= 1;
+		}
 	}
-	enough_linemate && enough_deraumere
+	enough_linemate && enough_deraumere && enough_sibur
 }
 
 fn enough_level3(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
@@ -111,6 +117,7 @@ fn enough_level3(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_phiras = false;
 
 	if nb_of_same_lvl < 2 {
+		println!("Not enough players");
 		return false;
 	}
 	for x in ressources {
@@ -134,6 +141,7 @@ fn enough_level4(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_deraumere = false;
 
 	if nb_of_same_lvl < 4 {
+		println!("Not enough players");
 		return false;
 	}
 	for x in ressources {
@@ -160,6 +168,7 @@ fn enough_level5(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_deraumere = false;
 
 	if nb_of_same_lvl < 4 {
+		println!("Not enough players");
 		return false;
 	}
 	for x in ressources {
@@ -186,6 +195,7 @@ fn enough_level6(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_deraumere = false;
 
 	if nb_of_same_lvl < 6 {
+		println!("Not enough players");
 		return false;
 	}
 	for x in ressources {
@@ -214,6 +224,7 @@ fn enough_level7(ressources: &[GameCellContent], nb_of_same_lvl: u8) -> bool {
 	let mut enough_thystame = false;
 
 	if nb_of_same_lvl < 6 {
+		println!("Not enough players");
 		return false;
 	}
 	for x in ressources {
