@@ -181,9 +181,16 @@ class Exploration(State):
                 
         random.shuffle(explorable_grids)
         
+        non_explored_grids = [grid for grid in explorable_grids if not self.is_grid_explored(grid)]
+        
+        if non_explored_grids:
+            return non_explored_grids[0]
+        
         for grid_start in explorable_grids:
-            if not self.is_grid_explored(grid_start):
-                return grid_start
+            distance = self.distance_toric(grid_start)
+            if distance < best_distance:
+                best_distance = distance
+                best_grid = grid_start
         
         return best_grid
 
@@ -272,7 +279,7 @@ class Nourrir(State):
         
         # Si le joueur est sur la case cible, prend de la nourriture
         if self.player.coordinates == self.target_coords:
-            if not self.player.prend("Food"):
+            if self.player.prend("Food"):
                 return Nourrir(self.player)
             return None
         
@@ -314,6 +321,8 @@ class Deplacement(State):
 
     def enter_state(self):
         print(f"Je suis en état {color('DEPLACEMENT', 'pink')} vers {self.player.focus_coords}")
+        if self.player.focus_coords is None:
+            return
         if not self.player.has_enough_food(self.distance_toric(self.player.focus_coords)):
             self.player.focus_coords = None
 
@@ -336,12 +345,12 @@ class Deplacement(State):
         """Se déplace vers les coordonnées cibles en prenant en compte la carte torique."""
         current_x, current_y = self.player.coordinates
         target_x, target_y = self.player.focus_coords
-        print(f"Joueur en ({current_x}, {current_y}), cible en ({target_x}, {target_y})")
+        # print(f"Joueur en ({current_x}, {current_y}), cible en ({target_x}, {target_y})")
          
         # Calcul du déplacement optimal en tenant compte de la carte torique
         delta_x = self.calculate_toric_distance(current_x, target_x, self.map_width)
         delta_y = self.calculate_toric_distance(current_y, target_y, self.map_height)
-        print(f"Déplacement optimal : ({delta_x}, {delta_y})")
+        # print(f"Déplacement optimal : ({delta_x}, {delta_y})")
         
         # Déplacement horizontal
         if delta_x > 0:

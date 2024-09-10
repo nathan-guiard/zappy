@@ -307,9 +307,16 @@ class Exploration(GroupState):
                 
         random.shuffle(explorable_grids)
         
+        non_explored_grids = [grid for grid in explorable_grids if not self.is_grid_explored(grid)]
+        
+        if non_explored_grids:
+            return non_explored_grids[0]
+        
         for grid_start in explorable_grids:
-            if not self.is_grid_explored(grid_start):
-                return grid_start
+            distance = self.distance_toric(grid_start)
+            if distance < best_distance:
+                best_distance = distance
+                best_grid = grid_start
         
         return best_grid
 
@@ -340,6 +347,8 @@ class Exploration(GroupState):
                 if (x, y) not in self.player.view:
                     # print(f"Case non explorée trouvée : {x, y}")
                     return (x, y)
+        print("Aucune case non explorée trouvée.")
+        
         return None
 
     def explore_grid_center(self):
@@ -400,7 +409,7 @@ class Nourrir(GroupState):
         
         # Si le joueur est sur la case cible, prend de la nourriture
         if self.player.coordinates == self.target_coords:
-            if not self.player.prend("Food"):
+            if self.player.prend("Food"):
                 return Nourrir(self.player)
             return None
         
@@ -442,6 +451,8 @@ class Deplacement(GroupState):
 
     def enter_state(self):
         print(f"Je suis en état {color('DEPLACEMENT', 'pink')} vers {self.player.focus_coords}")
+        if self.player.focus_coords is None:
+            return
         if not self.player.has_enough_food(self.distance_toric(self.player.focus_coords)):
             self.player.focus_coords = None
 

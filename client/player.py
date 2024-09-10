@@ -638,7 +638,7 @@ def main():
         print("Erreur: Le numéro de port doit être compris entre 1024 et 65535.\n")
         return 1
     
-    player = Player("localhost", args.port, args.team)
+    player = Player("172.16.147.130", args.port, args.team)
 
 
 if __name__ == "__main__":
