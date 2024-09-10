@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/09/09 19:09:00 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/09/10 08:13:45 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -131,13 +131,13 @@ impl Game {
 				_ => {}
 			}
 		}
-		
+
 		if let Some(fd) = to_remove {
 			self.players.retain(|p| p.fd != fd);
 			self.gui = Some(GraphicClient::new(to_remove.unwrap()));
 			self.map.send_map(self.gui.as_ref().unwrap().fd);
 		}
-		
+
 		for player in &mut self.players {
 			if player.loose_food(&mut self.map) {
 				dead_players.push(player.fd);
@@ -206,7 +206,7 @@ impl Game {
 			}
 		}
 
-		to_level_up.retain(|x| *x == fd);
+		to_level_up.retain(|x| *x != fd);
 		return to_level_up;
 	}
 
