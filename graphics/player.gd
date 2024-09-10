@@ -9,7 +9,7 @@ class_name Player
 	# "state": string or object, // see below
 	# "level": number,
 
-		
+signal new_map_position_added(player: Player, map_position: Vector2i)
 
 @onready var outline_shader: ShaderMaterial = preload("res://player_shader.tres").duplicate()
 
@@ -32,14 +32,14 @@ var id: int = 0
 const INITIAL_LERP_SPEED: float = 3
 var lerp_speed: float = INITIAL_LERP_SPEED
 
-var position_history: PackedVector2Array = PackedVector2Array()
+#var position_history: PackedVector2Array = PackedVector2Array()
 
 var map_position_history: PackedVector2Array = PackedVector2Array()
 
 var destination: Vector2:
 	set(new_dest):
 		destination = new_dest
-		position_history.push_back(destination)
+		#position_history.push_back(destination)
 
 const Direction: Dictionary = {
 	"North": "North",
@@ -57,6 +57,7 @@ var map_pos: Vector2i:
 		map_pos = new_pos
 		if map_position_history.size() == 0 or Vector2i(map_position_history[map_position_history.size() - 1]) != map_pos:
 			map_position_history.push_back(map_pos)
+			new_map_position_added.emit(self, map_pos)
 @onready var direction: String
 				
 var team: String
