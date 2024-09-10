@@ -56,7 +56,15 @@ class Group:
         
         self.recrute()
         return 0
-        
+    
+    def display_info(self):
+        print(f"ID: {self.id}")
+        print(f"Team: {self.team_name}")
+        print(f"Level: {self.level}")
+        print(f"Members: {self.members}")
+        print(f"Ressources: {self.ressources}")
+        print(f"Needed ressources: {self.needed_ressources}")
+    
     def join_group(self, team_id:int, coords:tuple):
         self.id = team_id
         self.coords = coords
@@ -79,7 +87,6 @@ class Group:
         self.members.append(player_id)
     
     def stop(self):
-        print("stop")
         self.player.broadcast(f"stop {self.id}")
         self.player.group = None
         

@@ -192,7 +192,7 @@ class Player:
             tile_inventory = inventory_data[0]
             for key, value in tile_inventory.items():
                 self.inventory[key] = value
-            print(f"Inventaire mis à jour : {self.inventory}")
+            # print(f"Inventaire mis à jour : {self.inventory}")
         except json.JSONDecodeError:
             self.close_connection("Erreur : Impossible de décoder la réponse JSON du serveur.")
         except TypeError:
@@ -201,12 +201,13 @@ class Player:
     def display_info(self):
         """Affiche les informations du joueur."""
         print("\n--- Informations du Joueur ---")
+        print(f"ID du joueur : {self.id}")
         print(f"Nom de l'équipe : {self.team_name}")
-        print(f"Nombre de joueurs dans l'équipe : {self.num_players}")
+        print(f"Level du joueur : {self.level}")
         print(f"Coordonnées de la carte : {self.coordinates}")
         print(f"Direction: {self.direction}")
         print(f"Inventaire: {self.inventory}")
-        print(f"Memoire: {self.view}")
+        # print(f"Memoire: {self.view}")
         print("------------------------------\n")
         
     def routine(self):
@@ -362,7 +363,7 @@ class Player:
             else:
                 self.inventory[ressource] += 1
 
-            print(f"Je vois {self.view[self.coordinates]} en coords {self.coordinates}")
+            # print(f"Je vois {self.view[self.coordinates]} en coords {self.coordinates}")
             self.view[self.coordinates][ressource] -= 1
             return 0
         elif response.startswith("ko"):
@@ -630,15 +631,12 @@ def main():
 
     args = parser.parse_args()
 
-    global Debug
-    Debug = args.debug
-
     # Vérification des valeurs des arguments
     if not 1024 <= args.port <= 65535:
         print("Erreur: Le numéro de port doit être compris entre 1024 et 65535.\n")
         return 1
     
-    player = Player("172.16.147.130", args.port, args.team)
+    player = Player("localhost", args.port, args.team)
 
 
 if __name__ == "__main__":

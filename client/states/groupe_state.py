@@ -75,19 +75,28 @@ class Idle(GroupState):
             self.required_ressources = self.player.groups.missing_ressources()
             print("Ressources manquantes: ", self.required_ressources)
 
-        if self.player.inventory.get("Food", 0) < 1000:
+        if self.player.inventory.get("Food", 0) < 2000:
             return Nourrir(self.player)
 
         print("Group: ", self.player.groups)
         if self.player.groups is None:
             return Group_research(self.player)
-        if not self.player.groups.enougth_players():
-            return Group_members_search(self.player)
-        print("My id is: ", self.player.id)
+        
+        self.player.display_info()
+        
+        print("Group id: ", self.player.groups.id)
+        
         print("Group members: ", self.player.groups.members)
         print(f"groups ressources: ", self.player.groups.ressources)
         print("Missing ressources: ", self.required_ressources)
         print("Ressources needed: ", self.player.groups.needed_ressources)
+        
+        
+        if self.player.level >= 4:
+            exit(1)
+        
+        if not self.player.groups.enougth_players():
+            return Group_members_search(self.player)
         
         if self.player.focus_coords is None and self.required_ressources:
             self.player.focus_coords = self.choisir_meilleure_case()
@@ -132,85 +141,7 @@ class Idle(GroupState):
                 available_quantity = resources[resource]
                 score += min(needed_quantity, available_quantity) * 10  # Pondération par ressource
         return score
-
-"""
-class Idle(GroupState):
-    def __init__(self, player) -> None:
-        self.player = player
-    def enter_state(self):
-        print(f"Je suis rentré en état {color('IDLE', 'green')}")
-    def exit_state(self):
-        print(f"Je suis sorti de l'état {color('IDLE', 'green')}")
-    def update(self) -> GroupState:
-        self.player.inventaire()
-        self.player.broadcast()
-        self.player.groups_manager()
-        self.required_ressources = self.player.groups.missing_ressources()
-        # Envoie les informations du joueur aux autres joueurs
-        print(f"Ressources manquantes : {color(self.required_ressources, 'red')}")
-        if self.player.focus_coords is None and self.required_ressources:
-            self.target_coords = self.choisir_meilleure_case()
-            self.player.focus_coords = self.target_coords
-        # self.player.fork_manager()
-        if self.player.inventory.get("Food", 0) < 1000:
-            return Nourrir(self.player)
-        # Multiplayer
-        if self.required_ressources is None:
-            return Incantation(self.player)
-        elif self.player.focus_coords and self.player.focus_coords != self.player.coordinates:
-            return Deplacement(self.player, self.player.focus_coords)
-        elif self.player.coordinates == self.player.focus_coords:
-            return Recolte(self.player)
-        return Exploration(self.player)
-    def handle_multiplayer(self, required_ressources):
-        if required_ressources is None and self.player.focus_coords is None:
-            return True
-        if self.player.communication:
-            self.player.communicate()
-        return False
-    def multiplayer(self):
-        return Incantation(self.player)
-    def missing_ressources(self) -> dict:
-        next_level = self.player.level + 1
-        required_ressources = {}
-        for ressource, quantity in self.levels.get(next_level, {}).items():
-            if ressource == "Player":
-                continue
-            required_ressources[ressource] = max(0, quantity - self.player.inventory.get(ressource, 0))
-            if required_ressources[ressource] == 0:
-                del required_ressources[ressource]
-        if required_ressources:
-            return required_ressources
-        return None
-    def choisir_meilleure_case(self):
-        best_tile = None
-        best_score = 0
-        if self.required_ressources is None:
-            return None
-        for coords, resources in self.player.view.items():
-            score = self.evaluate_tile(resources)
-            if score > best_score and self.player.has_enough_food(self.distance_toric(coords)):
-                best_score = score
-                best_tile = coords
-                self.player.focus_ressources = self.level_up_ressources(resources)
-        # print(f"Meilleure case : {color(best_tile if best_score else 'None', 'red')} avec un score de {color(str(best_score), 'red')}")
-        return best_tile
-    def level_up_ressources(self, resources):
-        required_ressources = {}
-        for ressource, quantity in self.required_ressources.items():
-            if ressource in resources:
-                available_quantity = resources[ressource]
-                required_ressources[ressource] = min(quantity, available_quantity)
-        return required_ressources
-    def evaluate_tile(self, resources):
-        score = 0
-        for resource, needed_quantity in self.required_ressources.items():
-            if resource in resources:
-                available_quantity = resources[resource]
-                score += min(needed_quantity, available_quantity) * 10  # Pondération par ressource
-        return score
-"""
-        
+ 
 class Group_research(GroupState):
     def __init__(self, player):
         self.player = player
@@ -250,6 +181,7 @@ class Group_members_search(GroupState):
         # Si je suis leader je recrute des membres
         # Si je suis membre je retourn en idle
         if self.group.id == self.player.id:
+            print("Je suis le leader")
             self.group.recrute()
         return Idle(self.player)
 
@@ -399,7 +331,7 @@ class Nourrir(GroupState):
         """Update pour le cycle de nourrissage."""
         
         # Si le joueur a assez de nourriture, retourne à l'état Idle
-        if self.player.inventory.get("Food", 0) >= 3000:
+        if self.player.inventory.get("Food", 0) >= 4000:
             self.player.focus_coords = None
             return Idle(self.player)
         
@@ -475,12 +407,12 @@ class Deplacement(GroupState):
         """Se déplace vers les coordonnées cibles en prenant en compte la carte torique."""
         current_x, current_y = self.player.coordinates
         target_x, target_y = self.player.focus_coords
-        print(f"Joueur en ({current_x}, {current_y}), cible en ({target_x}, {target_y})")
+        # print(f"Joueur en ({current_x}, {current_y}), cible en ({target_x}, {target_y})")
          
         # Calcul du déplacement optimal en tenant compte de la carte torique
         delta_x = self.calculate_toric_distance(current_x, target_x, self.map_width)
         delta_y = self.calculate_toric_distance(current_y, target_y, self.map_height)
-        print(f"Déplacement optimal : ({delta_x}, {delta_y})")
+        # print(f"Déplacement optimal : ({delta_x}, {delta_y})")
         
         # Déplacement horizontal
         if delta_x > 0:
