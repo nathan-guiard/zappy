@@ -9,7 +9,15 @@ class_name Player
 	# "state": string or object, // see below
 	# "level": number,
 
-@onready var outline_shader: ShaderMaterial = preload("res://player_shader.tres")	
+		
+
+@onready var outline_shader: ShaderMaterial = preload("res://player_shader.tres").duplicate()
+
+@onready var team_color: Color = Color(0,0,0):
+	set(val):
+		team_color = val
+		outline_shader.set_shader_parameter("outline_color", team_color)
+
 
 @onready var animations: Array[AnimatedSprite2D] = [$level_1, $level_2, $level_3, $level_4, $level_5, $level_6, $level_7, $level_8]
 @onready var action_label: RichTextLabel = %ActionLabel
@@ -150,7 +158,8 @@ func _ready() -> void:
 		lerp_speed = INITIAL_LERP_SPEED	
 	)
 	tween_scale.tween_property(self, "scale", Vector2(1, 1), 2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
-
+	
+	toggle_outline(true)
 
 
 func toggle_outline(toggle: bool) -> void:

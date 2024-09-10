@@ -4,6 +4,7 @@ class_name  EnhancedTileMap
 @onready var panel_container: PanelContainer = %CanvasLayer/PanelContainer
 @onready var panel_players: PanelContainer = $"../CanvasLayer/PanelContainer2"
 @onready var panel_container_inventory: PanelContainer = $"../CanvasLayer/PanelContainerInventory"
+@onready var team_h_box_container: HBoxContainer = $"../CanvasLayer/TeamScrollContainer/TeamHBoxContainer"
 
 @onready var v_box_container_players: VBoxContainer = %VBoxContainerPlayers
 const player_info_btn_scene: PackedScene = preload("res://PlayerInfoBtn.tscn")
@@ -322,14 +323,23 @@ func update_players(players: Array) -> void:
 			update_contents_in_v_box_ctn(v_box_container_inventory, player.inventory)
 		if not teams_color.has(player.team):
 			teams_color[player.team] = TEAM_COLORS[teams_color.size()]
-		
+			var new_label: Label = Label.new()
+			new_label.text = player.team
+			new_label["theme_override_colors/font_color"] = teams_color[player.team]
+			new_label["theme_override_font_sizes/font_size"] = 45
+			team_h_box_container.add_child(new_label)
 		
 		var player_info_btn: PlayerInfoBtn = player_info_btn_scene.instantiate()
 		v_box_container_players.add_child(player_info_btn)
 		player_info_btn.info = "Level " + str(player.level)
 		player_info_btn.logo = player.anim.sprite_frames.get_frame_texture("down_walk", 0)
+		player_info_btn.logo_color = teams_color[player.team]
 		player_info_btn.player_id =  player.id
 		player_info_btn.button_down.connect(_on_player_info_btn_button_down.bind(player.id))
+		
+		if player.team_color == Color(0, 0, 0):
+			player.team_color = teams_color[player.team]
+		
 		#print("action: ", new_player.action)
 	#print("_players: ", _players)
 
@@ -495,12 +505,12 @@ func data_without_player(data: Array) -> Array:
 func _on_player_info_btn_button_down(player_id: int) -> void:
 	print("button pressed ! player_id: ", player_id)
 	for curr_player_id: int in _players:
-		(_players[curr_player_id] as Player).toggle_outline(false)
+		# (_players[curr_player_id] as Player).toggle_outline(false)
+		pass
 	if _players.has(player_id):
 		var player: Player = _players[player_id]
 		camera.focus_player(player)
-		player.toggle_outline(true)
-		#get_viewport().set_input_as_handled()
+		# player.toggle_outline(true)
 
 
 func clear_traces_square() -> void:

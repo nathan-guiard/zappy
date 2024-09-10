@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://c6j6oangcppih"]
+[gd_scene load_steps=12 format=3 uid="uid://c6j6oangcppih"]
 
 [ext_resource type="Script" path="res://main.gd" id="1_0wmlj"]
 [ext_resource type="Script" path="res://Camera2D.gd" id="1_knqyb"]
@@ -9,7 +9,6 @@
 [ext_resource type="PackedScene" uid="uid://bvg6orivi3vvd" path="res://player.tscn" id="6_2hnmn"]
 [ext_resource type="PackedScene" uid="uid://b35toih8wxky3" path="res://hover_square.tscn" id="7_flrrs"]
 [ext_resource type="StyleBox" uid="uid://csx6cf6g688pf" path="res://sep_style.tres" id="8_xm0ke"]
-[ext_resource type="PackedScene" uid="uid://delydwahpgwe1" path="res://PlayerInfoBtn.tscn" id="9_w5ku1"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mjxie"]
 bg_color = Color(0.145098, 0.156863, 0.239216, 1)
@@ -80,22 +79,13 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="PlayerInfoBtn" parent="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers" instance=ExtResource("9_w5ku1")]
-layout_mode = 2
-
 [node name="HSeparator" type="HSeparator" parent="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers"]
-layout_mode = 2
-
-[node name="PlayerInfoBtn2" parent="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers" instance=ExtResource("9_w5ku1")]
 layout_mode = 2
 
 [node name="TeamName" parent="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers" instance=ExtResource("4_5gvmr")]
 modulate = Color(1, 0.517647, 0.670588, 1)
 layout_mode = 2
 color = Color(1, 0.517647, 0.670588, 1)
-
-[node name="PlayerInfoBtn3" parent="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers" instance=ExtResource("9_w5ku1")]
-layout_mode = 2
 
 [node name="PanelContainerInventory" type="PanelContainer" parent="CanvasLayer"]
 modulate = Color(1, 1, 1, 0.776471)
@@ -122,6 +112,17 @@ layout_mode = 2
 visible = false
 layout_mode = 2
 theme_override_styles/separator = ExtResource("8_xm0ke")
+
+[node name="TeamScrollContainer" type="ScrollContainer" parent="CanvasLayer"]
+offset_left = 107.0
+offset_top = 1494.0
+offset_right = 1814.0
+offset_bottom = 1563.0
+
+[node name="TeamHBoxContainer" type="HBoxContainer" parent="CanvasLayer/TeamScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 6
+theme_override_constants/separation = 100
 
 [node name="Network" type="Node" parent="."]
 script = ExtResource("4_b2sue")
@@ -156,8 +157,5 @@ position = Vector2(66, 305)
 
 [node name="TracesSquare" type="Node2D" parent="TileMap"]
 
-[connection signal="button_down" from="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers/PlayerInfoBtn" to="TileMap" method="_on_player_info_btn_button_down"]
-[connection signal="button_down" from="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers/PlayerInfoBtn2" to="TileMap" method="_on_player_info_btn_button_down"]
-[connection signal="button_down" from="CanvasLayer/PanelContainer2/ScrollContainer/VBoxContainerPlayers/PlayerInfoBtn3" to="TileMap" method="_on_player_info_btn_button_down"]
 [connection signal="map_ready" from="Network" to="TileMap" method="_on_network_map_ready"]
 [connection signal="map_update" from="Network" to="TileMap" method="_on_network_map_update"]

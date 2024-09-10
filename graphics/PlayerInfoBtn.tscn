@@ -1,7 +1,35 @@
-[gd_scene load_steps=3 format=3 uid="uid://delydwahpgwe1"]
+[gd_scene load_steps=5 format=3 uid="uid://delydwahpgwe1"]
 
 [ext_resource type="Texture2D" path="res://linemate_texture.res" id="1_8n448"]
 [ext_resource type="Script" path="res://PlayerInfoBtn.gd" id="1_cadi3"]
+
+[sub_resource type="Shader" id="Shader_mcchf"]
+code = "shader_type canvas_item;
+
+uniform vec4 outline_color : source_color;
+
+void fragment(){
+	float size_x = 2.0/float(textureSize(TEXTURE, 0).x);
+	float size_y = 2.0/float(textureSize(TEXTURE, 0).y);
+	vec4 sprite_color = texture(TEXTURE, UV);
+	float alpha = -4.0 * sprite_color.a;
+	alpha += texture(TEXTURE, UV + vec2(size_x, 0)).a;
+	alpha += texture(TEXTURE, UV + vec2(-size_x, 0)).a;
+	alpha += texture(TEXTURE, UV + vec2(0, size_y)).a;
+	alpha += texture(TEXTURE, UV + vec2(0, -size_y)).a;
+	//For outlining corners
+	//Change the -4.0 to -8.0 in alpa if adding these lines
+	/*alpha += texture(TEXTURE, UV + vec2(size_x, size_y)).a;
+	alpha += texture(TEXTURE, UV + vec2(-size_x, size_y)).a;
+	alpha += texture(TEXTURE, UV + vec2(-size_x, -size_y)).a;
+	alpha += texture(TEXTURE, UV + vec2(size_x, -size_y)).a;*/
+	vec4 final_color = mix(sprite_color, outline_color, clamp(alpha, 0.0, 1.0));
+	COLOR = vec4(final_color.rgb, clamp(abs(alpha) + sprite_color.a, 0.0, 1.0));
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wxixx"]
+shader = SubResource("Shader_mcchf")
+shader_parameter/outline_color = Color(0.933333, 0, 0.54902, 1)
 
 [node name="PlayerInfoBtn" type="Button"]
 custom_minimum_size = Vector2(2.08165e-12, 150)
@@ -10,6 +38,9 @@ offset_bottom = 218.0
 scale = Vector2(0.5, 0.5)
 mouse_default_cursor_shape = 2
 script = ExtResource("1_cadi3")
+logo = ExtResource("1_8n448")
+info = "ijijijijijij"
+logo_color = Color(0.92549, 0.270588, 0.427451, 1)
 
 [node name="HBoxContainer" type="HBoxContainer" parent="."]
 layout_mode = 0
@@ -23,7 +54,9 @@ layout_mode = 2
 theme_override_constants/margin_right = 20
 
 [node name="TextureRect" type="TextureRect" parent="HBoxContainer/MarginContainer"]
+unique_name_in_owner = true
 texture_filter = 1
+material = SubResource("ShaderMaterial_wxixx")
 layout_mode = 2
 texture = ExtResource("1_8n448")
 expand_mode = 2
@@ -33,6 +66,6 @@ stretch_mode = 5
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 48
-text = "dwdwdw"
+text = "ijijijijijij"
 
 [connection signal="button_down" from="." to="." method="_on_button_down"]
