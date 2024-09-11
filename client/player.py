@@ -5,6 +5,7 @@ import multiprocessing
 from states.state import Idle
 from group import Group, Team
 from states.color import color
+import random
     
 connexion_error = "Erreur : la connexion au serveur n'est pas établie."
 Direction = ['N', 'E', 'S', 'W']
@@ -318,6 +319,9 @@ class Player:
         return 0
     
     def fork(self):
+        # random 10% de chance de fork
+        if random.randint(0, 5) != 0:
+            return 1
         response = self.send_message("fork")
         if response is None:
             self.close_connection()
@@ -446,8 +450,8 @@ class Player:
             team_name = message[2]
         except Exception as e:
             print(f"Erreur lors de la reception du message de creation: {e}")
-        if team_level != self.level: # nous ajouterons un filtre sur le nom de 'team_name' plus tard
-            return
+        # if team_level != self.level: # nous ajouterons un filtre sur le nom de 'team_name' plus tard
+            # return
         
         self.memory[team_id] = Team("create", team_level, team_name)
     
@@ -531,11 +535,11 @@ class Player:
         except Exception as e:
             print(f"Erreur lors de la reception du message de debut: {e}")
         
-        if self.groups is None:
-            return
-        
         if team_id in self.memory:
             del self.memory[team_id]
+            
+        if self.groups is None:
+            return
         
         if self.id in players:
             for player in players:
@@ -611,7 +615,6 @@ class Player:
             self.groups = None
             return
         print("Groupe cree")
-            
         
     # def join_group(self, player):
     #     self.groups = Group(self)

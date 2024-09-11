@@ -1,3 +1,5 @@
+
+import time 
 from group import Group
 from states.color import color
 
@@ -55,6 +57,9 @@ class Idle(GroupState):
         pass
     
     def enter_state(self):
+        
+        # if self.player.level >= 4:
+        #     time.sleep(5)
         print("\n\n")
         
         
@@ -68,8 +73,9 @@ class Idle(GroupState):
         # Si j'ai pas assez de nourriture, je vais chercher de la nourriture
         self.player.inventaire()
         self.player.voir()
+        self.player.communicate()
         
-        # self.player.fork_manager()
+        self.player.fork_manager()
         
         if self.player.groups:
             self.required_ressources = self.player.groups.missing_ressources()
@@ -91,9 +97,6 @@ class Idle(GroupState):
         print("Missing ressources: ", self.required_ressources)
         print("Ressources needed: ", self.player.groups.needed_ressources)
         
-        
-        if self.player.level >= 4:
-            exit(1)
         
         if not self.player.groups.enougth_players():
             return Group_members_search(self.player)
