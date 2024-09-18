@@ -1,6 +1,9 @@
 import random
 
 class Team:
+    def __str__(self) -> str:
+        return f"Team {self.name} level {self.level} etat {self.etat}"
+    
     def __init__(self, etat: str, level:int, name: str):
         self.name: str = name
         self.level: int = level
@@ -46,17 +49,25 @@ class Group:
         self.player.broadcast(message)
         
         #protege la creation de groupe non necessaire
-        print("Memoire")
+        # print("Memoire du joueur", self.player.memory)
         for team, team_info in self.player.memory.items():
             team_info: Team
-            
-            if team_info.etat == "recrute" and team_info.level == self.level:
-                self.player.broadcast(f"stop {self.id}")
+            # print(f"Team: {team}: {team_info}")
+            if team_info.etat in ("create", "recrute") and team_info.level == self.level:
+                self.player.stop()
                 return 1
         
         self.recrute()
         return 0
-        
+    
+    def display_info(self):
+        print(f"ID: {self.id}")
+        print(f"Team: {self.team_name}")
+        print(f"Level: {self.level}")
+        print(f"Members: {self.members}")
+        print(f"Ressources: {self.ressources}")
+        print(f"Needed ressources: {self.needed_ressources}")
+    
     def join_group(self, team_id:int, coords:tuple):
         self.id = team_id
         self.coords = coords
@@ -79,7 +90,6 @@ class Group:
         self.members.append(player_id)
     
     def stop(self):
-        print("stop")
         self.player.broadcast(f"stop {self.id}")
         self.player.group = None
         

@@ -114,10 +114,10 @@ layout_mode = 2
 theme_override_styles/separator = ExtResource("8_xm0ke")
 
 [node name="TeamScrollContainer" type="ScrollContainer" parent="CanvasLayer"]
-offset_left = 107.0
-offset_top = 1494.0
-offset_right = 1814.0
-offset_bottom = 1563.0
+offset_left = 44.0
+offset_top = 1095.0
+offset_right = 1751.0
+offset_bottom = 1164.0
 
 [node name="TeamHBoxContainer" type="HBoxContainer" parent="CanvasLayer/TeamScrollContainer"]
 layout_mode = 2

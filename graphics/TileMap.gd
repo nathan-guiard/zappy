@@ -20,7 +20,10 @@ var _players: Dictionary = {}
 #@onready var grid_container: GridContainer = $CanvasLayer/PanelContainer/MarginContainer/GridContainer
 @onready var main: Node2D = $".."
 const trace_square: PackedScene = preload("res://trace_square.tscn")
+
 @onready var traces_square: Node2D = $TracesSquare
+var traces_square_dic: Dictionary = {}
+
 
 const TEAM_COLORS: Array = [
 	Color(255, 0, 0),
@@ -30,7 +33,7 @@ const TEAM_COLORS: Array = [
 
 #teamone = Color(255,0,0)
 var teams_color: Dictionary = {
-	
+
 }
 
 const Content: Dictionary = {
@@ -69,7 +72,7 @@ var _tiles_data: Dictionary
 # }
 
 const FloorTile: Dictionary = {
-	
+
 }
 
 
@@ -82,7 +85,7 @@ const Tile: Dictionary = {
 	THYSTAME = Vector2i(4, 1),
 	PLAYER = Vector2i(4, 6),
 	#FOOD = [Vector2i(1, 11), Vector2i(2,11), Vector2i(3,11), Vector2i(4 ,11), Vector2i(5 ,11)],
-		FOOD = [Vector2i(4 ,11), Vector2i(5 ,11)],
+	FOOD = [Vector2i(4 ,11), Vector2i(5 ,11)],
 	FOOD_1 = Vector2i(1, 11),
 	EGG = Vector2i(4 ,10)
 }
@@ -320,6 +323,8 @@ func update_players(players: Array) -> void:
 		player.refresh_level_color()
 		
 		if camera.focused_player == player:
+			if camera.focused_player:
+				panel_container_inventory.visible = true
 			update_contents_in_v_box_ctn(v_box_container_inventory, player.inventory)
 		if not teams_color.has(player.team):
 			teams_color[player.team] = TEAM_COLORS[teams_color.size()]
@@ -373,7 +378,7 @@ static func construct_player_from_dictionnary(dic: Dictionary) -> Player:
 
 	#print( new_player.direction)
 	return new_player
-	
+
 
 static func update_player_from_dictionnary(player: Player, dic: Dictionary) -> void:
 	player.map_pos = Vector2i(dic.position.x as int, dic.position.y as int)
@@ -386,31 +391,11 @@ static func update_player_from_dictionnary(player: Player, dic: Dictionary) -> v
 	
 	#print("level: ", player.level)
 
-	
+
 func update_position_player_on_map(player: Player) -> void:
 	player.destination = to_global( map_to_local(player.map_pos))
 	# player.map_position_history.push_back(player.map_pos)
-	if camera.focused_player == player:
-		clear_traces_square()
-		for pos: Vector2i in player.map_position_history:
-			add_trace_square_to_overlaps_count(pos)
-		for pos: Vector2i in traces_square_overlaps_count:
-			var trace_square_instance: TraceSquare = trace_square.instantiate()
-			trace_square_instance.overlaps_count = traces_square_overlaps_count[pos]
-			trace_square_instance.position = map_to_local(pos)
-			traces_square.add_child(trace_square_instance)
-	elif camera.focused_player == null:
-		if see_traces_of_players:
-			clear_traces_square()
-			for curr_player_id: int in  _players:
-				for pos: Vector2i in _players[curr_player_id].map_position_history:
-					add_trace_square_to_overlaps_count(pos)
-			for pos: Vector2i in traces_square_overlaps_count:
-				var trace_square_instance: TraceSquare = trace_square.instantiate()
-				trace_square_instance.overlaps_count = traces_square_overlaps_count[pos]
-				trace_square_instance.position = map_to_local(pos)
-				traces_square.add_child(trace_square_instance)
-		
+
 
 
 func prune_players(remote_players: Array) -> void:
@@ -422,9 +407,8 @@ func prune_players(remote_players: Array) -> void:
 		if not player_exist:
 			(_players[player_id] as Player).queue_free()
 			_players.erase(player_id)
-			
-			
-		
+
+
 func merge_players(remote_players: Array) -> void:
 	for remote_player: Dictionary in remote_players:
 		#print(type_string(typeof(remote_player.id)))
@@ -432,6 +416,7 @@ func merge_players(remote_players: Array) -> void:
 		if not _players.has(remote_player_id):
 			var new_player: Player = construct_player_from_dictionnary(remote_player)
 			_players[remote_player_id] = new_player
+			new_player.new_map_position_added.connect(_on_player_new_map_position_added)
 			add_child(new_player)
 			#print("player added")
 		var player: Player = _players[remote_player_id]
@@ -453,21 +438,21 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		var ev: InputEventMouseMotion = event
 		hover_square.position = map_to_local(hovered_cell)
-	#if event is InputEventKey and event.is_pressed():
-		#var ev: InputEventKey = event
-		#print("butttont")
-		if true:#ev.keycode == KEY_I:
-			#print("data: ", data, "size: ", data.size())
-			var data_filtered: Array = data_without_player(data)
-			update_contents_in_v_box_ctn(v_box_container_contents, data_filtered)
+
+		var data_filtered: Array = data_without_player(data)
+		update_contents_in_v_box_ctn(v_box_container_contents, data_filtered)
 				
 		#print(ev.as_text_keycode())
 	#camera.manage_camera_input(event)
 	if event is InputEventKey:
 		var ev: InputEventKey = event
 		if ev.is_pressed() and ev.keycode == KEY_A:
+			camera.focused_player = null #L ORDRE DE SES DEUX LIGNES EST IMPORTANTE
 			see_traces_of_players = !see_traces_of_players
-			camera.focused_player = null
+			if see_traces_of_players:
+				for curr_player_id: int in  _players:
+					for pos: Vector2i in _players[curr_player_id].map_position_history:
+						add_trace_square(pos)
 
 
 #var hovered_cell_data: TileData
@@ -516,19 +501,21 @@ func _on_player_info_btn_button_down(player_id: int) -> void:
 func clear_traces_square() -> void:
 	for child: Node2D in traces_square.get_children():
 		child.queue_free()
-	traces_square_overlaps_count = {}
+	traces_square_dic = {}
 
-func add_trace_square_to_overlaps_count(map_position: Vector2i, count_add: int = 1) -> void:
-	if not traces_square_overlaps_count.has(map_position):
-		traces_square_overlaps_count[map_position] = 0
+func add_trace_square(map_position: Vector2i) -> void:
+	if not traces_square_dic.has(map_position):
+		var new_trace_square: TraceSquare = trace_square.instantiate()
+		new_trace_square.position = map_to_local(map_position)
+		traces_square.add_child(new_trace_square)
+		traces_square_dic[map_position] = new_trace_square
 	else:
-		traces_square_overlaps_count[map_position] += count_add
+		(traces_square_dic[map_position] as TraceSquare).overlaps_count += 1
 
 func update_contents_in_v_box_ctn(v_box_container: VBoxContainer, contents: Array) -> void:
 
 	clear_contents_in_v_box_ctn(v_box_container)
-	if camera.focused_player:
-		panel_container_inventory.visible = true
+
 	for content: Dictionary in contents:
 		for key: String in content:
 			if v_box_container.get_child_count() > 0:
@@ -551,3 +538,6 @@ func close_inventory() -> void:
 	panel_container_inventory.visible = false
 	
 
+func _on_player_new_map_position_added(player: Player, map_position: Vector2i) -> void:
+	if see_traces_of_players or camera.focused_player == player:
+		add_trace_square(map_position)

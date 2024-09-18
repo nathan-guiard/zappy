@@ -12,12 +12,16 @@ var focused_player: Player = null:
 	get:
 		return focused_player if is_instance_valid(focused_player) else null
 	set(new_val):
-		if new_val == null:
-			#if focused_player:
-				#focused_player.toggle_outline(false)
-			tile_map.clear_traces_square()
-			tile_map.close_inventory()
 		focused_player = new_val
+		#if focused_player:
+			#focused_player.toggle_outline(false)
+		tile_map.clear_traces_square()
+		tile_map.close_inventory()
+		tile_map.see_traces_of_players = false
+		if focused_player:
+			for pos: Vector2i in focused_player.map_position_history:
+				tile_map.add_trace_square(pos)
+		
 
 
 

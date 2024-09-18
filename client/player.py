@@ -1,10 +1,8 @@
-import socket
-import json
-import argparse
-import multiprocessing
+import socket, json, argparse, multiprocessing, signal, sys
 from states.state import Idle
 from group import Group, Team
 from states.color import color
+import random
     
 connexion_error = "Erreur : la connexion au serveur n'est pas établie."
 Direction = ['N', 'E', 'S', 'W']
@@ -16,6 +14,7 @@ class Player:
         self.hostname = hostname
         self.port = port
         self.view = {}
+        signal.signal(signal.SIGINT, self.handle_signal)
         self.id = multiprocessing.current_process().pid
         self.socket = None
         self.timeout = 5
@@ -45,7 +44,7 @@ class Player:
         self.connect_to_server()
         self.inventaire()
         self.voir()
-        self.display_info()
+        # self.display_info()
         
         # La memoire stocks les informations des broadcasts
         self.memory = {
@@ -57,7 +56,7 @@ class Player:
         
     def connect_to_server(self):
         try:
-            print(f"Tentative de connexion au serveur {self.hostname}:{self.port}...")
+            # print(f"Tentative de connexion au serveur {self.hostname}:{self.port}...")
             
             # Crée un socket TCP/IP
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -67,16 +66,16 @@ class Player:
             
             # Tente de se connecter au serveur
             self.socket.connect((self.hostname, self.port))
-            print(f"Connexion établie avec le serveur {self.hostname}:{self.port}")
+            # print(f"Connexion établie avec le serveur {self.hostname}:{self.port}")
             
             # Recevoir le message de bienvenue
             welcome_message = self.socket.recv(1024).decode('utf-8')
-            print(f"Message reçu du serveur : {welcome_message}")
+            # print(f"Message reçu du serveur : {welcome_message}")
             
             if "BIENVENUE" in welcome_message:
                 # Envoyer le nom de l'équipe
                 self.socket.sendall(f"{self.team_name}\n".encode('utf-8'))
-                print(f"Nom de l'équipe '{self.team_name}' envoyé au serveur.")
+                # print(f"Nom de l'équipe '{self.team_name}' envoyé au serveur.")
                 
                  # Recevoir la réponse du serveur après l'envoi du nom d'équipe
                 response = self.socket.recv(1024).decode('utf-8').strip()
@@ -92,7 +91,7 @@ class Player:
                 # Nombre de joueurs
                 try:
                     self.num_players = int(parts[0])
-                    print(f"Nombre de joueurs dans l'équipe : {self.num_players}")
+                    # print(f"Nombre de joueurs dans l'équipe : {self.num_players}")
                 except ValueError:
                     self.close_connection("Erreur : Le nombre de joueurs reçu n'est pas valide.")
                     return
@@ -100,7 +99,7 @@ class Player:
                 # Coordonnées de la carte
                 try:
                     self.map_size = tuple(map(int, parts[1].split()))
-                    print(f"Coordonnées de la carte reçues : {self.map_size}")
+                    # print(f"Coordonnées de la carte reçues : {self.map_size}")
                 except ValueError:
                     self.close_connection("Erreur : La taille de la carte reçues n'est pas valide.")
                     return
@@ -114,7 +113,7 @@ class Player:
         except socket.error as e:
             self.close_connection(f"Erreur lors de la connexion au serveur: {e}")
             
-        print("Connexion etablie")
+        # print("Connexion etablie")
         
     def send_message(self, message, send=True):
         """Envoie un message au serveur via le socket donné et retourne la réponse complète jusqu'à réception du caractère de fin \x04."""
@@ -148,11 +147,11 @@ class Player:
             full_response = full_response.replace('\x04', '')
             
             response_list = list(filter(None, full_response.split('\n')))
-            
-            if "You died" in response_list:
-                print(full_response)
-                print("Player is dead")
-                return None
+                        
+            for received in response_list:
+                if received.startswith("You died") or received.startswith("End of game"):
+                    print(received)
+                    return None
             
             final_response = None
             for response in response_list:
@@ -177,7 +176,24 @@ class Player:
             self.socket.close()
             self.socket = None
             print("Connexion fermée.")
+        self.close_all_processes()
         exit(0)
+    
+    # Gestionnaire de signaux
+    def handle_signal(self, signum, frame):
+        print("\nSignal de fermeture reçu. Fermeture des sous-processus...")
+        self.close_all_processes()
+        sys.exit(0)
+
+    # Méthode pour fermer les sous-processus proprement
+    def close_all_processes(self):
+        """Ferme tous les sous-processus proprement."""
+        for process in self.list_processus:
+            if process.is_alive():
+                process.join()
+                print(f"Child process {process.pid} terminated.")
+        self.list_processus = []
+        
         
     def inventaire(self):
         """Demande l'inventaire au serveur et le stocke sous forme de dictionnaire."""
@@ -192,7 +208,7 @@ class Player:
             tile_inventory = inventory_data[0]
             for key, value in tile_inventory.items():
                 self.inventory[key] = value
-            print(f"Inventaire mis à jour : {self.inventory}")
+            # print(f"Inventaire mis à jour : {self.inventory}")
         except json.JSONDecodeError:
             self.close_connection("Erreur : Impossible de décoder la réponse JSON du serveur.")
         except TypeError:
@@ -201,12 +217,13 @@ class Player:
     def display_info(self):
         """Affiche les informations du joueur."""
         print("\n--- Informations du Joueur ---")
+        print(f"ID du joueur : {self.id}")
         print(f"Nom de l'équipe : {self.team_name}")
-        print(f"Nombre de joueurs dans l'équipe : {self.num_players}")
+        print(f"Level du joueur : {self.level}")
         print(f"Coordonnées de la carte : {self.coordinates}")
         print(f"Direction: {self.direction}")
         print(f"Inventaire: {self.inventory}")
-        print(f"Memoire: {self.view}")
+        # print(f"Memoire: {self.view}")
         print("------------------------------\n")
         
     def routine(self):
@@ -296,7 +313,7 @@ class Player:
         if message is not None:
             self.waiting_broadcast.append(message)
         message = "\x03".join(self.waiting_broadcast)
-        print(f"Broadcasting message: {message}")
+        # print(f"Broadcasting message: {message}")
         response = self.send_message(f"broadcast {message}")
         if response is None:
             self.close_connection()
@@ -310,13 +327,19 @@ class Player:
         """Suite a la commande fork, si une connexion est possible, visible avec la command connect, alors on peut rajouter un nouveau player"""
         if not self.have_fork:
             return 0
+        
         # Creation d'un nouveau multiprocessus pour le nouveau joueur
-        self.list_processus.append(multiprocessing.Process(target=Player, args=(self.hostname, self.port, self.team_name)))
-        self.list_processus[-1].start()
+        process = multiprocessing.Process(target=Player, args=(self.hostname, self.port, self.team_name))
+        self.list_processus.append(process)
+        process.start()
+        
         self.have_fork = False
         return 0
     
     def fork(self):
+        # random 10% de chance de fork
+        # if random.randint(0, 2) != 0:
+        #     return 1
         response = self.send_message("fork")
         if response is None:
             self.close_connection()
@@ -332,9 +355,9 @@ class Player:
     
     def incantation(self):
         # Ralonger le socket.timeout
-        self.socket.settimeout(self.timeout * 5)
+        self.socket.settimeout(self.timeout * 10)
         response = self.send_message("incantation")
-        print(f"Réponse du serveur à la commande 'incantation' : {response}")
+        # print(f"Réponse du serveur à la commande 'incantation' : {response}")
         self.socket.settimeout(self.timeout)
         if response is None:
             self.close_connection()
@@ -362,7 +385,7 @@ class Player:
             else:
                 self.inventory[ressource] += 1
 
-            print(f"Je vois {self.view[self.coordinates]} en coords {self.coordinates}")
+            # print(f"Je vois {self.view[self.coordinates]} en coords {self.coordinates}")
             self.view[self.coordinates][ressource] -= 1
             return 0
         elif response.startswith("ko"):
@@ -412,7 +435,7 @@ class Player:
             # Parsing des messages de types : f"Player_information {self.player.id} {self.player.level} {self.player.coordinates} {self.player.inventory}"
             direction = int(messages[0][:-1])
             messages = " ".join(messages[1:]).split('\x03')
-            print(messages)
+            # print(messages)
             for message in messages:
                 message = message.split(' ')
                 # print(f"Gestion du message {message}")
@@ -445,8 +468,8 @@ class Player:
             team_name = message[2]
         except Exception as e:
             print(f"Erreur lors de la reception du message de creation: {e}")
-        if team_level != self.level: # nous ajouterons un filtre sur le nom de 'team_name' plus tard
-            return
+        # if team_level != self.level: # nous ajouterons un filtre sur le nom de 'team_name' plus tard
+            # return
         
         self.memory[team_id] = Team("create", team_level, team_name)
     
@@ -477,28 +500,18 @@ class Player:
         if self.groups is None:
             return
         
-        # print(f"Interet de {player_id} pour le groupe {team_id}")
-        # print(f"Mon id de groupe: {self.groups.id}")
-                
         # Si je ne suis pas le leader
         if self.id != team_id:
             return
         
-        # print("Je suis le leader")
-        # print(f"J'ai assez de joueurs: {self.groups.enougth_players()}")
         # Si on manque de membres
         if not self.groups.enougth_players():
             # On accepte
-            # print(f"J'accepte {player_id}")
             self.groups.add_player(player_id)
             self.accept(team_id, player_id)
             if self.groups.enougth_players():
                self.groups.start() 
         
-        # else:
-        #     # Sinon on refuse
-        #     self.refuse(team_id, player_id)
-    
     def handle_accept(self, message):
         # accept {team_id} {player_id} {self.groups.coords[0]},{self.groups.coords[1]}
         try:
@@ -508,13 +521,13 @@ class Player:
         except Exception as e:
             print(f"Erreur lors de la reception du message d'acceptation: {e}")
         
-        print(f"Grouper : {self.groups}")
+        # print(f"Grouper : {self.groups}")
         if self.groups:
             return
         
         if self.id != player_id:
             return
-        print(f"Je suis accepte dans le groupe {team_id}")
+        # print(f"Je suis accepte dans le groupe {team_id}")
         if team_id not in self.memory:
             return
         
@@ -530,11 +543,11 @@ class Player:
         except Exception as e:
             print(f"Erreur lors de la reception du message de debut: {e}")
         
-        if self.groups is None:
-            return
-        
         if team_id in self.memory:
             del self.memory[team_id]
+            
+        if self.groups is None:
+            return
         
         if self.id in players:
             for player in players:
@@ -553,9 +566,9 @@ class Player:
         
         if self.groups:
             if self.groups.id == team_id:
-                print(f"Reception d'un stop du groupe {self.groups.id}")
+                # print(f"Reception d'un stop du groupe {self.groups.id}")
                 self.groups = None
-                print(f"Groupe detruit {self.groups}")
+                # print(f"Groupe detruit {self.groups}")
                 
     def handle_info(self, message):
         # info {team_id} {id} {linemate} {deraumere} {sibur} {mendiane} {phiras} {thystame}
@@ -577,8 +590,6 @@ class Player:
         if self.groups.id == team_id:
             self.groups.player_info(player_id, linemate, deraumere, sibur, mendiane, phiras, thystame)
         
-    
-    
     def accept(self, team_id: int, player_id: int):
         message = f"accept {team_id} {player_id} {self.groups.coords[0]},{self.groups.coords[1]}"
         self.waiting_broadcast.append(message)
@@ -598,24 +609,19 @@ class Player:
         
     def stop(self):
         message = f"stop {self.groups.id}"
-        print(f"Stop : Arret du groupe {self.groups.id}")
+        # print(f"Stop : Arret du groupe {self.groups.id}")
         self.groups = None
-        print(f"Stop : Groupe detruit {self.groups}")
+        # print(f"Stop : Groupe detruit {self.groups}")
         self.broadcast(message)
     
     def create_group(self):
         self.groups = Group(self)
         if self.groups.create_group():
-            print("Annulation de la creation de groupe")
+            # print("Annulation de la creation de groupe")
             self.groups = None
             return
-        print("Groupe cree")
-            
+        # print("Groupe cree")
         
-    # def join_group(self, player):
-    #     self.groups = Group(self)
-    #     self.groups.join_group(player)
-
 def main():
     """Parse et check les arguments
 
@@ -630,16 +636,10 @@ def main():
 
     args = parser.parse_args()
 
-    global Debug
-    Debug = args.debug
-
     # Vérification des valeurs des arguments
     if not 1024 <= args.port <= 65535:
         print("Erreur: Le numéro de port doit être compris entre 1024 et 65535.\n")
         return 1
     
-    player = Player("172.16.147.130", args.port, args.team)
+    player = Player(args.hostname, args.port, args.team)
 
-
-if __name__ == "__main__":
-    main()
