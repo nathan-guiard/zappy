@@ -147,11 +147,11 @@ class Player:
             full_response = full_response.replace('\x04', '')
             
             response_list = list(filter(None, full_response.split('\n')))
-            
-            if "You died" in response_list:
-                print(full_response)
-                print("Player is dead")
-                return None
+                        
+            for received in response_list:
+                if received.startswith("You died") or received.startswith("End of game"):
+                    print(received)
+                    return None
             
             final_response = None
             for response in response_list:
