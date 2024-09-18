@@ -50,10 +50,12 @@ class Idle(State):
         self.player = player
 
     def enter_state(self):
-        print(f"Je suis rentré en état {color('IDLE', 'green')}")
+        # print(f"Je suis rentré en état {color('IDLE', 'green')}")
+        pass
 
     def exit_state(self):
-        print(f"Je suis sorti de l'état {color('IDLE', 'green')}")
+        # print(f"Je suis sorti de l'état {color('IDLE', 'green')}")
+        pass
 
     def update(self) -> State:
         self.player.inventaire()
@@ -63,7 +65,7 @@ class Idle(State):
         
         # Envoie les informations du joueur aux autres joueurs
         
-        print(f"Ressources manquantes : {color(self.required_ressources, 'red')}")
+        # print(f"Ressources manquantes : {color(self.required_ressources, 'red')}")
         
         if self.player.focus_coords is None and self.required_ressources:
             self.target_coords = self.choisir_meilleure_case()
@@ -136,18 +138,19 @@ class Exploration(State):
         self.middle_coords = None
 
     def enter_state(self):
-        print(f"Je suis en état {color('Exploration', 'blue')}")
+        # print(f"Je suis en état {color('Exploration', 'blue')}")
         if self.player.focus_coords:
             self.middle_coords = self.player.focus_coords
             return
         self.current_grid = self.find_next_grid()
         if self.current_grid:
             self.middle_coords = self.get_middle_of_grid(self.current_grid)
-        else:
-            print("Toutes les grilles sont explorées.")
+        # else:
+        #     print("Toutes les grilles sont explorées.")
 
     def exit_state(self):
-        print(f"Sorti de l'état {color('Exploration', 'blue')}")
+        # print(f"Sorti de l'état {color('Exploration', 'blue')}")
+        pass
     
     def update(self) -> State:
         """Update pour le cycle d'exploration."""
@@ -205,7 +208,7 @@ class Exploration(State):
 
 
     def get_middle_of_grid(self, grid_start):
-        print(f"Calcul du milieu de la grille {grid_start}")
+        # print(f"Calcul du milieu de la grille {grid_start}")
         """Calcule les coordonnées du milieu de la grille et vérifie si elles sont explorées."""
         x_start, y_start = grid_start
         middle_coords = ((x_start + self.grid_size // 2) % self.player.map_size[0]
@@ -236,12 +239,13 @@ class Recolte(State):
         self.player = player
 
     def enter_state(self):
-        print(f"Je suis en état {color('RECOLTE', 'lightgreen')}")
+        # print(f"Je suis en état {color('RECOLTE', 'lightgreen')}")
+        pass
     
     def exit_state(self):
-        self.player.display_info()
+        # self.player.display_info()
         self.player.focus_coords = None
-        print(f"Je suis sorti de l'état {color('RECOLTE', 'lightgreen')}")
+        # print(f"Je suis sorti de l'état {color('RECOLTE', 'lightgreen')}")
 
     def update(self) -> State:
         """Essaye de récolter les ressources de la case actuelle"""
@@ -258,12 +262,13 @@ class Nourrir(State):
         self.player = player
 
     def enter_state(self):
-        print("Je suis en état Nourrir")
+        # print("Je suis en état Nourrir")
         self.target_coords = self.choisir_meilleure_case()
         self.player.focus_coords = self.target_coords
     
     def exit_state(self):
-        print("Je suis sorti de l'état Nourrir")
+        # print("Je suis sorti de l'état Nourrir")
+        pass
     
     def update(self) -> State:
         """Update pour le cycle de nourrissage."""
@@ -320,14 +325,14 @@ class Deplacement(State):
         self.map_width, self.map_height = player.map_size
 
     def enter_state(self):
-        print(f"Je suis en état {color('DEPLACEMENT', 'pink')} vers {self.player.focus_coords}")
+        # print(f"Je suis en état {color('DEPLACEMENT', 'pink')} vers {self.player.focus_coords}")
         if self.player.focus_coords is None:
             return
         if not self.player.has_enough_food(self.distance_toric(self.player.focus_coords)):
             self.player.focus_coords = None
 
     def exit_state(self):
-        print(f"J'ai atteint la cible {self.player.focus_coords}, sorti de l'état {color('DEPLACEMENT', 'pink')}")
+        # print(f"J'ai atteint la cible {self.player.focus_coords}, sorti de l'état {color('DEPLACEMENT', 'pink')}")
         self.player.focus_coords = None
     
     def update(self) -> State:
@@ -398,10 +403,12 @@ class Incantation(State):
         self.player = player
 
     def enter_state(self):
-        print("Je suis en état INCANTATION")
+        # print("Je suis en état INCANTATION")
+        pass
 
     def exit_state(self):
-        print("Je suis sorti de l'état INCANTATION")
+        # print("Je suis sorti de l'état INCANTATION")
+        pass
 
     def update(self) -> State:
         

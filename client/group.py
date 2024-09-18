@@ -49,12 +49,12 @@ class Group:
         self.player.broadcast(message)
         
         #protege la creation de groupe non necessaire
-        print("Memoire du joueur", self.player.memory)
+        # print("Memoire du joueur", self.player.memory)
         for team, team_info in self.player.memory.items():
             team_info: Team
-            print(f"Team: {team}: {team_info}")
+            # print(f"Team: {team}: {team_info}")
             if team_info.etat in ("create", "recrute") and team_info.level == self.level:
-                self.player.broadcast(f"stop {self.id}")
+                self.player.stop()
                 return 1
         
         self.recrute()
