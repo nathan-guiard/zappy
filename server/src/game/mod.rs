@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/09/10 08:13:45 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/09/18 19:18:48 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -125,7 +125,9 @@ impl Game {
 				}
 				PlayerActionKind::Incantation => {
 					if casted.contains(fd) == false {
-						casted.append(&mut Self::handle_incantation(&mut self.players, &mut self.map, *fd));
+						casted.append(
+							&mut Self::handle_incantation(&mut self.players, &mut self.map, *fd, &mut self.teams)
+						);
 					}
 				}
 				_ => {}
@@ -169,7 +171,7 @@ impl Game {
 			self.map.max_position.y);
 	}
 
-	fn handle_incantation(players: &mut Vec<Player>, map: &mut GameMap, fd: i32)
+	fn handle_incantation(players: &mut Vec<Player>, map: &mut GameMap, fd: i32, teams: &mut HashMap<String, Team>)
 		-> Vec<i32> {
 		let player = get_player_from_fd(players, fd).unwrap();
 		let pos = player.position.clone();
@@ -192,6 +194,11 @@ impl Game {
 			for fd in to_level_up.clone() {
 				let p = get_player_from_fd_mut(players, fd).unwrap();
 				p.level += 1;
+				if p.level == 8 {
+					if let Some(team) = teams.get_mut(&p.team) {
+						team.max_level += 1;
+					}
+				}
 				p.state = PlayerState::Idle;
 				println!("Player leveled up!");
 				send_to(p.fd, "ok\n");
