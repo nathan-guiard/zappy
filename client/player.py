@@ -1,6 +1,6 @@
 import socket, json, argparse, multiprocessing, signal, sys
 from states.state import Idle
-from group import Group, Team
+from states.group import Group, Team
 from states.color import color
 import random
     
