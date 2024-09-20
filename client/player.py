@@ -10,6 +10,15 @@ Direction = ['N', 'E', 'S', 'W']
 class Player:
     """Classe principale pour le joueur."""
     
+    RESOURCE_SCORES = {
+        'Linemate': 10,
+        'Deraumere': 8,
+        'Sibur': 6,
+        'Mendiane': 5,
+        'Phiras': 7,
+        'Thystame': 9
+    }
+    
     def __init__(self, hostname, port, team_name):
         self.hostname = hostname
         self.port = port
@@ -47,8 +56,8 @@ class Player:
         # self.display_info()
         
         # La memoire stocks les informations des broadcasts
-        self.memory = {
-        }
+        self.memory = {}
+        self.map = {}
         self.groups = None
         self.state.enter_state()
 
@@ -273,31 +282,45 @@ class Player:
         response = self.send_message("voir")
         if response is None:
             self.close_connection()
-        if response is None:
-            self.close_connection(f"Réponse invalide 'voir' : {response}")
-            return
-        
+
         try:
-            # Tenter de charger la réponse en tant que JSON
+            # Convertir la réponse JSON en dictionnaire
             view_data = json.loads(response)
-            # print(f"Réponse du serveur à la commande 'voir' : {view_data}")
-        except json.JSONDecodeError:
-            # Si la réponse n'est pas un JSON valide, fermer la connexion
-            print(f"Erreur JSONDecodeError: La réponse du serveur n'est pas en format JSON : {response}")
+        except (json.JSONDecodeError, TypeError):
             self.close_connection("Réponse invalide 'voir'")
-        except TypeError:
-            print(f"Erreur TypeError: La réponse du serveur n'est pas en format JSON : {view_data}")
-            self.close_connection("Réponse invalide 'voir'")
-            
+            return
+
         # Update la position du joueur
         player_tile = view_data[0]
         self.coordinates = (player_tile['p']['x'], player_tile['p']['y'])
+
         for tile in view_data:
             tile_coords = (tile['p']['x'], tile['p']['y'])
-            if tile['c']:
-                self.view[tile_coords] = tile['c'][0]
-            else:
-                self.view[tile_coords] = {}
+            new_resources = tile['c'][0] if tile['c'] else {}
+            old_resources = self.view.get(tile_coords, {})
+            self.view[tile_coords] = new_resources
+
+            # Mettre à jour la mémoire avec les nouvelles ressources trouvées
+            self.update_memory(tile_coords, old_resources, new_resources)
+
+    def update_memory(self, tile_coords, old_resources, new_resources):
+        """
+        Met à jour le score dans la mémoire en fonction des ressources trouvées.
+        Ajoute uniquement le score pour les nouvelles ressources ou les quantités augmentées.
+        """
+        for resource, count in new_resources.items():
+            if resource not in self.RESOURCE_SCORES:
+                continue  # Ignore les ressources inconnues
+
+            old_count = old_resources.get(resource, 0)
+            if count > old_count:
+                increment = self.RESOURCE_SCORES[resource] * (count - old_count)
+                if tile_coords in self.map:
+                    self.map[tile_coords] += increment
+                else:
+                    self.map[tile_coords] = increment
+                print(f"Ajout de {increment} points à la zone {tile_coords} pour {resource}.")
+
 
     def connect(self):
         response = self.send_message("connect")
