@@ -4,3 +4,6 @@ server/*.test
 __pycache__
 client/broadcast*
 *.txt
+myenv
+datas
+output_graphs

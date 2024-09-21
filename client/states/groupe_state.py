@@ -307,7 +307,6 @@ class Exploration(GroupState):
                     # print(f"Case non explorée trouvée : {x, y}")
                     return (x, y)
         # print("Aucune case non explorée trouvée.")
-        
         return None
 
     def explore_grid_center(self):

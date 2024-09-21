@@ -19,6 +19,8 @@ class Player:
         'Thystame': 9
     }
     
+    map_memory = {}
+    
     def __init__(self, hostname, port, team_name):
         self.hostname = hostname
         self.port = port
@@ -57,7 +59,7 @@ class Player:
         
         # La memoire stocks les informations des broadcasts
         self.memory = {}
-        self.map = {}
+        self.map_memory = {}
         self.groups = None
         self.state.enter_state()
 
@@ -294,6 +296,9 @@ class Player:
         player_tile = view_data[0]
         self.coordinates = (player_tile['p']['x'], player_tile['p']['y'])
 
+        # Affichage de la vue
+        # print(f"Vue du joueur : {view_data}")
+
         for tile in view_data:
             tile_coords = (tile['p']['x'], tile['p']['y'])
             new_resources = tile['c'][0] if tile['c'] else {}
@@ -308,19 +313,24 @@ class Player:
         Met à jour le score dans la mémoire en fonction des ressources trouvées.
         Ajoute uniquement le score pour les nouvelles ressources ou les quantités augmentées.
         """
+        if tile_coords not in self.map_memory:
+            self.map_memory[tile_coords] = 0
         for resource, count in new_resources.items():
             if resource not in self.RESOURCE_SCORES:
                 continue  # Ignore les ressources inconnues
-
+            print(f"Ressource {resource} : {count}")
             old_count = old_resources.get(resource, 0)
             if count > old_count:
                 increment = self.RESOURCE_SCORES[resource] * (count - old_count)
-                if tile_coords in self.map:
-                    self.map[tile_coords] += increment
+                if tile_coords in self.map_memory:
+                    self.map_memory[tile_coords] += increment
                 else:
-                    self.map[tile_coords] = increment
+                    self.map_memory[tile_coords] = increment
                 print(f"Ajout de {increment} points à la zone {tile_coords} pour {resource}.")
-
+        name = f"py/datas/{self.id}.json"
+        map_memory_str_keys = {str(key): value for key, value in self.map_memory.items()}
+        with open(name, "w") as file:
+            json.dump(map_memory_str_keys, file)
 
     def connect(self):
         response = self.send_message("connect")
