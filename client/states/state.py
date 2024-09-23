@@ -151,7 +151,7 @@ class Exploration(State):
     
     def update(self):
         """Update pour le cycle d'exploration."""
-        print(self.player.map_memory)
+        # print(self.player.map_memory)
         if self.player.coordinates not in self.player.view:
             self.explore_grid_center()
             return Idle(self.player)
@@ -326,14 +326,14 @@ class Deplacement(State):
         self.map_width, self.map_height = player.map_size
 
     def enter_state(self):
-        print(f"Je suis en état {color('DEPLACEMENT', 'pink')} vers {self.player.focus_coords}")
+        # print(f"Je suis en état {color('DEPLACEMENT', 'pink')} vers {self.player.focus_coords}")
         if self.player.focus_coords is None:
             return
         if not self.player.has_enough_food(self.distance_toric(self.player.focus_coords)):
             self.player.focus_coords = None
 
     def exit_state(self):
-        print(f"J'ai atteint la cible {self.player.focus_coords}, sorti de l'état {color('DEPLACEMENT', 'pink')}")
+        # print(f"J'ai atteint la cible {self.player.focus_coords}, sorti de l'état {color('DEPLACEMENT', 'pink')}")
         self.player.focus_coords = None
     
     def update(self) -> State:

@@ -38,7 +38,7 @@ class Player:
             "Phiras": 0,
             "Thystame": 0
         }
-        self.num_players = 0
+        self.available_connexion = 0
         self.coordinates = (0, 0)
         self.direction = Direction[0]
         self.map_size = (0, 0)
@@ -99,12 +99,15 @@ class Player:
                     self.close_connection("Erreur : format de message du serveur invalide.")
                     return
                 
-                # Nombre de joueurs
+                # Connexion disponible
                 try:
-                    self.num_players = int(parts[0])
-                    # print(f"Nombre de joueurs dans l'équipe : {self.num_players}")
+                    self.available_connexion = int(parts[0])
                 except ValueError:
-                    self.close_connection("Erreur : Le nombre de joueurs reçu n'est pas valide.")
+                    self.close_connection("Erreur : Le nombre de connexion reçu n'est pas valide.")
+                    return
+                
+                if self.available_connexion == 0:
+                    self.close_connection("Erreur : Aucune connexion disponible.", code=1)
                     return
                 
                 # Coordonnées de la carte
@@ -180,7 +183,7 @@ class Player:
             print(f"Erreur lors de l'envoi du message : {e}")
             return None
 
-    def close_connection(self, error_message: str = None):
+    def close_connection(self, error_message: str = None, code: int = 0):
         if error_message:
             print(error_message)
         if self.socket:
@@ -188,11 +191,11 @@ class Player:
             self.socket = None
             print("Connexion fermée.")
         self.close_all_processes()
-        exit(0)
+        exit(code)
     
     # Gestionnaire de signaux
     def handle_signal(self, signum, frame):
-        print("\nSignal de fermeture reçu. Fermeture des sous-processus...")
+        print(f"Signal de fermeture reçu {self.id}. Fermeture des sous-processus...")
         self.close_all_processes()
         sys.exit(0)
 
@@ -202,7 +205,7 @@ class Player:
         for process in self.list_processus:
             if process.is_alive():
                 process.join()
-                print(f"Child process {process.pid} terminated.")
+                # print(f"Child process {process.pid} terminated.")
         self.list_processus = []
         
         
@@ -318,7 +321,7 @@ class Player:
         for resource, count in new_resources.items():
             if resource not in self.RESOURCE_SCORES:
                 continue  # Ignore les ressources inconnues
-            print(f"Ressource {resource} : {count}")
+            # print(f"Ressource {resource} : {count}")
             old_count = old_resources.get(resource, 0)
             if count > old_count:
                 increment = self.RESOURCE_SCORES[resource] * (count - old_count)
@@ -326,7 +329,7 @@ class Player:
                     self.map_memory[tile_coords] += increment
                 else:
                     self.map_memory[tile_coords] = increment
-                print(f"Ajout de {increment} points à la zone {tile_coords} pour {resource}.")
+                # print(f"Ajout de {increment} points à la zone {tile_coords} pour {resource}.")
         name = f"py/datas/{self.id}.json"
         map_memory_str_keys = {str(key): value for key, value in self.map_memory.items()}
         with open(name, "w") as file:
@@ -359,15 +362,18 @@ class Player:
     def fork_manager(self):
         """Suite a la commande fork, si une connexion est possible, visible avec la command connect, alors on peut rajouter un nouveau player"""
         if not self.have_fork:
-            return 0
+            return
         
         # Creation d'un nouveau multiprocessus pour le nouveau joueur
         process = multiprocessing.Process(target=Player, args=(self.hostname, self.port, self.team_name))
-        self.list_processus.append(process)
         process.start()
-        
+        process.join(timeout=1)
+        if not process.is_alive():
+            # print(color("Process est pas cree", "red_bg"))
+            return
+
+        self.list_processus.append(process)
         self.have_fork = False
-        return 0
     
     def fork(self):
         # random 10% de chance de fork

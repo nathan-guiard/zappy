@@ -2,6 +2,7 @@
 import time 
 from states.group import Group
 from states.color import color
+from py.file2 import cluster_analysis
 
 import random
 
@@ -227,8 +228,8 @@ class Exploration(GroupState):
         self.current_grid = self.find_next_grid()
         if self.current_grid:
             self.middle_coords = self.get_middle_of_grid(self.current_grid)
-        # else:
-        #     print("Toutes les grilles sont explorées.")
+        print(cluster_analysis(self.player.map_memory))
+        
 
     def exit_state(self):
         # print(f"Sorti de l'état {color('Exploration', 'blue')}")
