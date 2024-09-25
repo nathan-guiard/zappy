@@ -2,7 +2,7 @@
 import time 
 from states.group import Group
 from states.color import color
-from py.file2 import cluster_analysis
+from py.file2 import find_cluster_center
 
 import random
 
@@ -228,7 +228,9 @@ class Exploration(GroupState):
         self.current_grid = self.find_next_grid()
         if self.current_grid:
             self.middle_coords = self.get_middle_of_grid(self.current_grid)
-        print(cluster_analysis(self.player.map_memory))
+        middle = find_cluster_center(self.player.map_memory)
+        if middle:
+            print(f"{color(f'{self.player.id}: Middle:', 'red')} {middle}")
         
 
     def exit_state(self):

@@ -60,7 +60,7 @@ def perform_clustering(df, eps=5, min_samples=1):
     db = DBSCAN(eps=eps, min_samples=min_samples).fit(coords)
     df['cluster'] = db.labels_
 
-    # Filtrer les clusters en ne gardant que ceux avec au moins 10 points
+    # Filtrer les clusters en ne gardant que ceux avec au moins 6 points
     cluster_counts = df['cluster'].value_counts()
     valid_clusters = cluster_counts[cluster_counts >= 6].index
     

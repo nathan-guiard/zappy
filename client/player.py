@@ -96,14 +96,14 @@ class Player:
                 
                 parts = response.split('\n')
                 if len(parts) != 2:
-                    self.close_connection("Erreur : format de message du serveur invalide.")
+                    self.close_connection(f"Erreur : format de message du serveur invalide. {response}")
                     return
                 
                 # Connexion disponible
                 try:
                     self.available_connexion = int(parts[0])
                 except ValueError:
-                    self.close_connection("Erreur : Le nombre de connexion reçu n'est pas valide.")
+                    self.close_connection(f"Erreur : Le nombre de connexion reçu n'est pas valide. {response}")
                     return
                 
                 if self.available_connexion == 0:
@@ -115,7 +115,7 @@ class Player:
                     self.map_size = tuple(map(int, parts[1].split()))
                     # print(f"Coordonnées de la carte reçues : {self.map_size}")
                 except ValueError:
-                    self.close_connection("Erreur : La taille de la carte reçues n'est pas valide.")
+                    self.close_connection(f"Erreur : La taille de la carte reçues n'est pas valide. {response}")
                     return
 
             else:
