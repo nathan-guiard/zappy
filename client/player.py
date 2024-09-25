@@ -107,7 +107,7 @@ class Player:
                     return
                 
                 if self.available_connexion == 0:
-                    self.close_connection("Erreur : Aucune connexion disponible.", code=1)
+                    self.close_connection("Erreur : Aucune connexion disponible.", code=1, silent=True)
                     return
                 
                 # Coordonnées de la carte
@@ -120,7 +120,7 @@ class Player:
 
             else:
                 self.close_connection("Erreur de connexion")
-                    
+
         except socket.timeout:
             self.close_connection(f"Connexion échouée : délai d'attente dépassé ({self.timeout} secondes)")
         
@@ -183,13 +183,14 @@ class Player:
             print(f"Erreur lors de l'envoi du message : {e}")
             return None
 
-    def close_connection(self, error_message: str = None, code: int = 0):
-        if error_message:
+    def close_connection(self, error_message: str = None, code: int = 0, silent: bool = False):
+        if error_message and not silent:
             print(error_message)
         if self.socket:
             self.socket.close()
             self.socket = None
-            print("Connexion fermée.")
+            if not silent:
+                print("Connexion fermée.")
         self.close_all_processes()
         exit(code)
     

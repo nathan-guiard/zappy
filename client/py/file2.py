@@ -50,7 +50,7 @@ def perform_clustering(df, eps, min_samples):
     # df = df[df['value'] > 0].copy()  # Faire une copie explicite
 
     if df.empty:
-        print("Aucune donnée positive à clusteriser.")
+        # print("Aucune donnée positive à clusteriser.")
         return None
     
     # Extraire les coordonnées pour le clustering
@@ -71,13 +71,10 @@ def perform_clustering(df, eps, min_samples):
     densities = {}
     for cluster in valid_clusters:
         cluster_points = df[df['cluster'] == cluster]
-        # print(f"{cluster}: {cluster_points}")
         # Calcul de la densité en fonction de l'étendue des coordonnées
-        # area = (cluster_points['x'].max() - cluster_points['x'].min()) * (cluster_points['y'].max() - cluster_points['y'].min())
-        # print(f"Area coords : x({cluster_points['x'].min()}, {cluster_points['x'].max()}), y({cluster_points['y'].min()}, {cluster_points['y'].max()})")
         density = len(cluster_points) / (cluster_points['x'].max() - cluster_points['x'].min()) * (cluster_points['y'].max() - cluster_points['y'].min())
         densities[cluster] = density
-        print(f"Densité du cluster {cluster}: {density}")
+        # print(f"Densité du cluster {cluster}: {density}")
 
     # Sélectionner le cluster avec la plus grande densité
     if densities:
