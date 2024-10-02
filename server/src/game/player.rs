@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/08/28 17:13:45 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/10/02 14:13:31 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,7 +126,14 @@ impl Player {
 						Expulse => { send_to(self.fd, "ok\n"); self.recieved_this_turn = true}, // handled after this function ends
 						Broadcast(_) => self.exec_broadcast(),
 						Incantation => return Some(self.action.kind.clone()), // handled after this function ends
-						Fork => self.exec_fork(eggs, egg_id),
+						Fork => {
+							if let Some(team) = teams.get_mut(&self.team) {
+								self.exec_fork(eggs, egg_id, team);
+							} else {
+								send_to(self.fd, "ko\n");
+								self.recieved_this_turn = true;
+							}
+						}
 						Connect => self.exec_connect(teams),
 						Beacon => self.exec_beacon(castings),
 					}
@@ -269,7 +276,7 @@ impl Player {
 				send_to(self.fd, "ko\n");
 				self.recieved_this_turn = true;
 				return;
-			} // error was not taking something (?)
+			}
 		};
 		if self.remove_from_inventory(ressource_dropped) {
 			map.add_content_cell(self.position, ressource_dropped);
@@ -290,10 +297,14 @@ impl Player {
 		self.recieved_this_turn = true;
 	}
 
-	fn exec_fork(&mut self, eggs: &mut Vec<Egg>, current_egg_id: &mut u128) {
-		*current_egg_id += 1;
-		eggs.push(Egg::new(self.position, self.team.clone(), *current_egg_id));
-		send_to(self.fd, "ok\n");
+	fn exec_fork(&mut self, eggs: &mut Vec<Egg>, current_egg_id: &mut u128, team: &mut Team) {
+		if team.slot_available() {
+			*current_egg_id += 1;
+			eggs.push(Egg::new(self.position, self.team.clone(), *current_egg_id));
+			send_to(self.fd, "ok\n");
+		} else {
+			send_to(self.fd, "ko\n");
+		}
 		self.recieved_this_turn = true;
 	}
 
@@ -391,18 +402,20 @@ impl Player {
 			}
 			if let Some(internal_team) = teams.get_mut(&team[0..&team.len() - 1].to_string()) {
 				let connection_nbr = internal_team.available_connections();
-				if connection_nbr > 0 {
+				if connection_nbr > 0 && internal_team.slot_available() {
 					self.enable_playability(internal_team.name.clone(),
 						internal_team.get_next_position().unwrap_or(GamePosition {x: 0, y: 0}));
+					internal_team.current_player_count += 1;
 				}
 				send_to(self.fd, format!("{}\n{} {}\n",
 						connection_nbr,
 						map.max_position.x,
 						map.max_position.y
 					).as_str());
+				eprintln!("New player in team {}", &team[0..&team.len() - 1].to_string())
 			} else {
 				send_to(self.fd, format!(
-						"The team {} does not exist\n",
+						"The team {} does not exist or is full.\n",
 						&team[0..&team.len() - 1].to_string()
 					).as_str());
 			}
@@ -411,7 +424,8 @@ impl Player {
 	}
 
 	pub fn die(&mut self,
-		map: &mut GameMap,) {
+		map: &mut GameMap) {
+
 		self.state = Dead;
 		map.cells[self.position.x as usize][self.position.y as usize].remove_content(Player(1));
 		send_to(self.fd, "You died\n\x04");

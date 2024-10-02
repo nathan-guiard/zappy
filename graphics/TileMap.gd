@@ -29,6 +29,7 @@ const TEAM_COLORS: Array = [
 	Color(255, 0, 0),
 	Color(0, 255, 0),
 	Color(0, 0, 255),
+	Color(0, 255, 255),
 ]
 
 #teamone = Color(255,0,0)
