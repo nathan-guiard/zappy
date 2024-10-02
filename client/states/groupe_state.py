@@ -1,6 +1,6 @@
 
 import time 
-from group import Group
+from states.group import Group
 from states.color import color
 
 import random
