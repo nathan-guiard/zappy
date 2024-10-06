@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/09/18 19:18:48 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/10/02 15:21:09 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,6 +94,7 @@ impl Game {
 				&self.castings) {
 				actions_to_do_after.push((player.fd, action))
 			}
+
 			match player.execute_queue(&self.map, &mut self.teams, &mut self.eggs, self.gui.is_some()) {
 				Err(_) => to_remove = Some(player.fd),
 				Ok(action) => match action {
@@ -141,8 +142,11 @@ impl Game {
 		}
 
 		for player in &mut self.players {
-			if player.loose_food(&mut self.map) {
+			if player.loose_food(&mut self.map) || player.level == 8 {
 				dead_players.push(player.fd);
+				if let Some(team) = self.teams.get_mut(&player.team) {
+					team.current_player_count -= 1;
+				}
 			}
 			player.increment_casting();
 			if player.recieved_this_turn {
@@ -195,9 +199,12 @@ impl Game {
 				let p = get_player_from_fd_mut(players, fd).unwrap();
 				p.level += 1;
 				if p.level == 8 {
+					eprintln!("UN FRERO EST PASSE LEVEL 8 DANS LA TEAM {}", p.team);
 					if let Some(team) = teams.get_mut(&p.team) {
 						team.max_level += 1;
 					}
+				} else {
+					eprintln!("level up: {} in team {}", p.level, p.team);
 				}
 				p.state = PlayerState::Idle;
 				println!("Player leveled up!");
@@ -302,7 +309,7 @@ impl Game {
 			if team.max_level == MAX_LEVEL_TO_WIN {
 				return Some(format!(
 					"End of game: Win: Team {} won the game by elevating!\n",
-					not_lost_teams[1].name));
+					team.name));
 			}
 			if !team.lost {
 				not_lost_teams.push(team);

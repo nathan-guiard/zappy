@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/08/25 19:46:46 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/10/02 15:19:36 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -160,6 +160,30 @@ fn main() -> Result<ExitCode, Error> {
 		if unsafe { EXIT.load(std::sync::atomic::Ordering::Relaxed) } {
 			println!("Last turn finished.");
 			break;
+		}
+
+		// DEBUG
+		if turn_nb % 200 == 0 {
+			eprintln!("\x1b[32m");
+			eprintln!("{turn_nb}");
+			eprintln!("Connections totales: {}", game.players.len());
+
+
+			for team in &game.teams {
+				let mut con = 0;
+
+				for p in &game.players {
+					if &p.team == team.0 {
+						con += 1;
+					}
+				}
+				eprintln!("{}:", team.0);
+				eprintln!("\tLevel 8: {}", team.1.max_level);
+				eprintln!("\tPlayers: {con}");
+			}
+			// eprintln!("\t")
+
+			eprintln!("\x1b[0m");
 		}
 
 		turn_nb += 1;
