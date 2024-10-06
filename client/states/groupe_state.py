@@ -38,9 +38,11 @@ class GroupState:
             return direct_distance + dimension_size
         return direct_distance
 
-    def distance_toric(self, destination):
+    def distance_toric(self, destination, src=None):
         """Calcul la distance torique entre deux points."""
-        x1, y1 = self.player.coordinates
+        if src is None:
+            src = self.player.coordinates
+        x1, y1 = src
         x2, y2 = destination
         dx = self.calculate_toric_distance(x1, x2, self.player.map_size[0])
         dy = self.calculate_toric_distance(y1, y2, self.player.map_size[1])
@@ -223,31 +225,31 @@ class Exploration(GroupState):
         self.cluster_point = None
 
     def enter_state(self):
-        if self.player.focus_coords:
-            self.middle_coords = self.player.focus_coords
-            return
-        self.current_grid = self.find_next_grid()
-        if self.current_grid:
-            self.middle_coords = self.get_middle_of_grid(self.current_grid)
-        self.cluster_point = find_cluster_center()
+        # Je cherche si je peux trouver un cluster point
+        self.cluster_point = find_cluster_center(self.player.map_memory)
+        if self.cluster_point:
+            print(f"Cluster point trouvé en {self.cluster_point}")
 
     def exit_state(self):
         pass
     
     def update(self) -> GroupState:
         """Mise à jour pour le cycle d'exploration."""
+        # Si je n'ai jamais explore la case actuelle, je l'explore
         if self.player.coordinates not in self.player.view:
             self.view()
+            return Idle(self.player)
         
+        # Si j'ai un cluster_point, je me déplace vers ce point de manière biaisée
         if self.cluster_point:
             next_target = self.biased_random_walk()
-            if next_target:
+            if next_target: 
                 return Deplacement(self.player, next_target)
         
         # Scénario sans cluster point
         unexplored_tiles = self.get_unexplored_tiles()
         if unexplored_tiles:
-            return Deplacement(self.player, random.choice(unexplored_tiles))
+            return Deplacement(self.player, unexplored_tiles)
 
         # Si toute la carte est explorée, réinitialiser l'exploration
         self.reset_exploration()
@@ -282,14 +284,6 @@ class Exploration(GroupState):
 
         return selected_point
 
-    def distance_toric(self, point1, point2):
-        """Calcule la distance torique entre deux points."""
-        x1, y1 = point1
-        x2, y2 = point2
-        dx = abs(x1 - x2)
-        dy = abs(y1 - y2)
-        return min(dx, self.player.map_size[0] - dx) + min(dy, self.player.map_size[1] - dy)
-
     def generate_grids(self):
         """Génère une liste des centres des grilles sur la carte."""
         grids = []
@@ -299,12 +293,13 @@ class Exploration(GroupState):
             for y in range(0, map_height, self.grid_size):
                 grids.append((x, y))
         
+        random.shuffle(grids)
+        
         return grids
 
     def find_next_grid(self):
         """Trouve la prochaine grille non explorée en tenant compte de la distance."""
         best_grid = None
-        best_distance = float('inf')
 
         for grid_start in self.grids:
             distance = self.distance_toric(grid_start, self.player.coordinates)
@@ -330,24 +325,19 @@ class Exploration(GroupState):
                          (y_start + self.grid_size // 2) % self.player.map_size[1])
         return middle_coords
 
-    def find_cluster_center(self):
-        """Trouve le centre du cluster basé sur les ressources trouvées."""
-        # Implémentez votre logique pour trouver le centre du cluster ici
-        return None  # Remplacez par la logique réelle
-
     def get_unexplored_tiles(self):
         """Renvoie une liste de cases non explorées."""
-        unexplored = []
-        for x in range(self.player.map_size[0]):
-            for y in range(self.player.map_size[1]):
-                if (x, y) not in self.player.view and :
-                    unexplored.append((x, y))
-        return unexplored
+        unexplored_grid = self.find_next_grid()
+        if unexplored_grid:
+            return self.get_middle_of_grid(unexplored_grid)
+        return None
     
     def view(self):
-        for _ in range (4):
-            self.player.voir()
-            self.player.droite()
+        """Explore le centre de la grille en tournant sur soi-même."""
+        self.player.voir()  # Voir en direction initiale
+        for _ in range(3):
+            self.player.droite()  # Tourne à droite
+            self.player.voir()  # Voir dans la nouvelle direction
 
     def reset_exploration(self):
         """Réinitialise l'exploration de la carte."""

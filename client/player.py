@@ -28,7 +28,7 @@ class Player:
         signal.signal(signal.SIGINT, self.handle_signal)
         self.id = multiprocessing.current_process().pid
         self.socket = None
-        self.timeout = 5
+        self.timeout = 10
         self.inventory = {
             "Food": 0,
             "Linemate": 0,
@@ -342,6 +342,7 @@ class Player:
             self.close_connection()
         if not response.isdigit():
             self.close_connection(f"Reponse invalide 'connect': {response}")
+        # print(f"Réponse du serveur à la commande 'connect' : {response}")
         return int(response)
 
     def broadcast(self, message=None):
@@ -362,17 +363,18 @@ class Player:
 
     def fork_manager(self):
         """Suite a la commande fork, si une connexion est possible, visible avec la command connect, alors on peut rajouter un nouveau player"""
-        if not self.have_fork:
+        connect = self.connect()
+        if connect == 0:
             return
-        
         # Creation d'un nouveau multiprocessus pour le nouveau joueur
         process = multiprocessing.Process(target=Player, args=(self.hostname, self.port, self.team_name))
         process.start()
         process.join(timeout=1)
         if not process.is_alive():
+            print(f"Connect: {connect}, {color('Ko', 'red_bg')}")
             # print(color("Process est pas cree", "red_bg"))
             return
-
+        print(f"Connect: {connect}, {color('Ok', 'green_bg')}")
         self.list_processus.append(process)
         self.have_fork = False
     
