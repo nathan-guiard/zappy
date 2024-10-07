@@ -387,11 +387,13 @@ class Player:
             self.close_connection()
         if response.startswith("ok"):
             self.have_fork = True
+            print(f"Fork: {self.team_name}, {color('Ok', 'green_bg')}")
             # print(f"Réponse du serveur à la commande 'fork' : {response}")
             return 0
         elif response.startswith("ko"):
             pass
             # print(f"Réponse du serveur à la commande 'fork' : {response}")
+            print(f"Fork: {self.team_name}, {color('Ko', 'red_bg')}")
             return 1
         self.close_connection(f"Reponse invalide 'fork': {response}")
     
@@ -475,7 +477,7 @@ class Player:
         for messages in self.communication:
             # direction: player_information player_id lvl x y linemate deraumere sibur mendiane phiras thystame
             # Parsing des messages de types : f"Player_information {self.player.id} {self.player.level} {self.player.coordinates} {self.player.inventory}"
-            direction = int(messages[0][:-1])
+            # direction = int(messages[0][:-1])
             messages = " ".join(messages[1:]).split('\x03')
             # print(messages)
             for message in messages:
@@ -523,7 +525,7 @@ class Player:
             team_name = message[2]
             
         except Exception as e:
-            print(f"Erreur lors de la reception du message de recrute: {e}")
+            print(f"Erreur lors de la reception du message de recrute: {e} {message}")
         
         if team_id not in self.memory:
             self.memory[team_id] = Team("recrute", team_level, team_name)
@@ -536,7 +538,7 @@ class Player:
             team_id = int(message[0])
             player_id = int(message[1])
         except Exception as e:
-            print(f"Erreur lors de la reception du message d'interet: {e}")
+            print(f"Erreur lors de la reception du message d'interet: {e} {message}")
         
         # Si je n'ai pas de groupe
         if self.groups is None:

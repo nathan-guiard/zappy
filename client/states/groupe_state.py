@@ -227,8 +227,8 @@ class Exploration(GroupState):
     def enter_state(self):
         # Je cherche si je peux trouver un cluster point
         self.cluster_point = find_cluster_center(self.player.map_memory)
-        if self.cluster_point:
-            print(f"Cluster point trouvé en {self.cluster_point}")
+        # if self.cluster_point:
+        #     print(f"Cluster point trouvé en {self.cluster_point}")
 
     def exit_state(self):
         pass
