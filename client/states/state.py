@@ -59,11 +59,8 @@ class Idle(State):
 
     def update(self) -> State:
         self.player.inventaire()
-        self.player.broadcast()
         
         self.required_ressources = self.missing_ressources()
-        
-        # Envoie les informations du joueur aux autres joueurs
         
         # print(f"Ressources manquantes : {color(self.required_ressources, 'red')}")
         
@@ -130,7 +127,7 @@ class Idle(State):
         return score
 
 class Exploration(State):
-    def __init__(self, player, grid_size=5):
+    def __init__(self, player):
         self.player = player
         self.grid_size = 2 + player.level
         self.grids = self.generate_grids()
@@ -152,8 +149,9 @@ class Exploration(State):
         # print(f"Sorti de l'état {color('Exploration', 'blue')}")
         pass
     
-    def update(self) -> State:
+    def update(self):
         """Update pour le cycle d'exploration."""
+        # print(self.player.map_memory)
         if self.player.coordinates not in self.player.view:
             self.explore_grid_center()
             return Idle(self.player)
@@ -224,6 +222,8 @@ class Exploration(State):
                 if (x, y) not in self.player.view:
                     # print(f"Case non explorée trouvée : {x, y}")
                     return (x, y)
+        # print("Aucune case non explorée trouvée.")
+        
         return None
 
     def explore_grid_center(self):
@@ -232,6 +232,7 @@ class Exploration(State):
         for _ in range(3):
             self.player.droite()  # Tourne à droite
             self.player.voir()  # Voir dans la nouvelle direction
+
 
 
 class Recolte(State):

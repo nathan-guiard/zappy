@@ -18,7 +18,7 @@ var err_count: int = 0
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	print("quouquoubebe")
-	if peer.connect_to_host("localhost", 4224) != OK:
+	if peer.connect_to_host("localhost", 4228) != OK:
 		print("Pair host port, not valid")
 	print("quouquoube")
 

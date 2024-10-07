@@ -10,6 +10,17 @@ Direction = ['N', 'E', 'S', 'W']
 class Player:
     """Classe principale pour le joueur."""
     
+    RESOURCE_SCORES = {
+        'Linemate': 10,
+        'Deraumere': 8,
+        'Sibur': 6,
+        'Mendiane': 5,
+        'Phiras': 7,
+        'Thystame': 9
+    }
+    
+    map_memory = {}
+    
     def __init__(self, hostname, port, team_name):
         self.hostname = hostname
         self.port = port
@@ -17,7 +28,7 @@ class Player:
         signal.signal(signal.SIGINT, self.handle_signal)
         self.id = multiprocessing.current_process().pid
         self.socket = None
-        self.timeout = 5
+        self.timeout = 10
         self.inventory = {
             "Food": 0,
             "Linemate": 0,
@@ -27,7 +38,7 @@ class Player:
             "Phiras": 0,
             "Thystame": 0
         }
-        self.num_players = 0
+        self.available_connexion = 0
         self.coordinates = (0, 0)
         self.direction = Direction[0]
         self.map_size = (0, 0)
@@ -47,8 +58,8 @@ class Player:
         # self.display_info()
         
         # La memoire stocks les informations des broadcasts
-        self.memory = {
-        }
+        self.memory = {}
+        self.map_memory = {}
         self.groups = None
         self.state.enter_state()
 
@@ -85,15 +96,18 @@ class Player:
                 
                 parts = response.split('\n')
                 if len(parts) != 2:
-                    self.close_connection("Erreur : format de message du serveur invalide.")
+                    self.close_connection(f"Erreur : format de message du serveur invalide. {response}")
                     return
                 
-                # Nombre de joueurs
+                # Connexion disponible
                 try:
-                    self.num_players = int(parts[0])
-                    # print(f"Nombre de joueurs dans l'équipe : {self.num_players}")
+                    self.available_connexion = int(parts[0])
                 except ValueError:
-                    self.close_connection("Erreur : Le nombre de joueurs reçu n'est pas valide.")
+                    self.close_connection(f"Erreur : Le nombre de connexion reçu n'est pas valide. {response}")
+                    return
+                
+                if self.available_connexion == 0:
+                    self.close_connection("Erreur : Aucune connexion disponible.", code=1, silent=True)
                     return
                 
                 # Coordonnées de la carte
@@ -101,12 +115,12 @@ class Player:
                     self.map_size = tuple(map(int, parts[1].split()))
                     # print(f"Coordonnées de la carte reçues : {self.map_size}")
                 except ValueError:
-                    self.close_connection("Erreur : La taille de la carte reçues n'est pas valide.")
+                    self.close_connection(f"Erreur : La taille de la carte reçues n'est pas valide. {response}")
                     return
 
             else:
                 self.close_connection("Erreur de connexion")
-                    
+
         except socket.timeout:
             self.close_connection(f"Connexion échouée : délai d'attente dépassé ({self.timeout} secondes)")
         
@@ -169,19 +183,20 @@ class Player:
             print(f"Erreur lors de l'envoi du message : {e}")
             return None
 
-    def close_connection(self, error_message: str = None):
-        if error_message:
+    def close_connection(self, error_message: str = None, code: int = 0, silent: bool = False):
+        if error_message and not silent:
             print(error_message)
         if self.socket:
             self.socket.close()
             self.socket = None
-            print("Connexion fermée.")
+            if not silent:
+                print("Connexion fermée.")
         self.close_all_processes()
-        exit(0)
+        exit(code)
     
     # Gestionnaire de signaux
     def handle_signal(self, signum, frame):
-        print("\nSignal de fermeture reçu. Fermeture des sous-processus...")
+        print(f"Signal de fermeture reçu {self.id}. Fermeture des sous-processus...")
         self.close_all_processes()
         sys.exit(0)
 
@@ -191,7 +206,7 @@ class Player:
         for process in self.list_processus:
             if process.is_alive():
                 process.join()
-                print(f"Child process {process.pid} terminated.")
+                # print(f"Child process {process.pid} terminated.")
         self.list_processus = []
         
         
@@ -273,31 +288,53 @@ class Player:
         response = self.send_message("voir")
         if response is None:
             self.close_connection()
-        if response is None:
-            self.close_connection(f"Réponse invalide 'voir' : {response}")
-            return
-        
+
         try:
-            # Tenter de charger la réponse en tant que JSON
+            # Convertir la réponse JSON en dictionnaire
             view_data = json.loads(response)
-            # print(f"Réponse du serveur à la commande 'voir' : {view_data}")
-        except json.JSONDecodeError:
-            # Si la réponse n'est pas un JSON valide, fermer la connexion
-            print(f"Erreur JSONDecodeError: La réponse du serveur n'est pas en format JSON : {response}")
+        except (json.JSONDecodeError, TypeError):
             self.close_connection("Réponse invalide 'voir'")
-        except TypeError:
-            print(f"Erreur TypeError: La réponse du serveur n'est pas en format JSON : {view_data}")
-            self.close_connection("Réponse invalide 'voir'")
-            
+            return
+
         # Update la position du joueur
         player_tile = view_data[0]
         self.coordinates = (player_tile['p']['x'], player_tile['p']['y'])
+
+        # Affichage de la vue
+        # print(f"Vue du joueur : {view_data}")
+
         for tile in view_data:
             tile_coords = (tile['p']['x'], tile['p']['y'])
-            if tile['c']:
-                self.view[tile_coords] = tile['c'][0]
-            else:
-                self.view[tile_coords] = {}
+            new_resources = tile['c'][0] if tile['c'] else {}
+            old_resources = self.view.get(tile_coords, {})
+            self.view[tile_coords] = new_resources
+
+            # Mettre à jour la mémoire avec les nouvelles ressources trouvées
+            self.update_memory(tile_coords, old_resources, new_resources)
+
+    def update_memory(self, tile_coords, old_resources, new_resources):
+        """
+        Met à jour le score dans la mémoire en fonction des ressources trouvées.
+        Ajoute uniquement le score pour les nouvelles ressources ou les quantités augmentées.
+        """
+        if tile_coords not in self.map_memory:
+            self.map_memory[tile_coords] = 0
+        for resource, count in new_resources.items():
+            if resource not in self.RESOURCE_SCORES:
+                continue  # Ignore les ressources inconnues
+            # print(f"Ressource {resource} : {count}")
+            old_count = old_resources.get(resource, 0)
+            if count > old_count:
+                increment = self.RESOURCE_SCORES[resource] * (count - old_count)
+                if tile_coords in self.map_memory:
+                    self.map_memory[tile_coords] += increment
+                else:
+                    self.map_memory[tile_coords] = increment
+                # print(f"Ajout de {increment} points à la zone {tile_coords} pour {resource}.")
+        name = f"py/datas/{self.id}.json"
+        map_memory_str_keys = {str(key): value for key, value in self.map_memory.items()}
+        with open(name, "w") as file:
+            json.dump(map_memory_str_keys, file)
 
     def connect(self):
         response = self.send_message("connect")
@@ -305,6 +342,7 @@ class Player:
             self.close_connection()
         if not response.isdigit():
             self.close_connection(f"Reponse invalide 'connect': {response}")
+        # print(f"Réponse du serveur à la commande 'connect' : {response}")
         return int(response)
 
     def broadcast(self, message=None):
@@ -325,16 +363,20 @@ class Player:
 
     def fork_manager(self):
         """Suite a la commande fork, si une connexion est possible, visible avec la command connect, alors on peut rajouter un nouveau player"""
-        if not self.have_fork:
-            return 0
-        
+        connect = self.connect()
+        if connect == 0:
+            return
         # Creation d'un nouveau multiprocessus pour le nouveau joueur
         process = multiprocessing.Process(target=Player, args=(self.hostname, self.port, self.team_name))
-        self.list_processus.append(process)
         process.start()
-        
+        process.join(timeout=1)
+        if not process.is_alive():
+            print(f"Connect: {connect}, {color('Ko', 'red_bg')}")
+            # print(color("Process est pas cree", "red_bg"))
+            return
+        print(f"Connect: {connect}, {color('Ok', 'green_bg')}")
+        self.list_processus.append(process)
         self.have_fork = False
-        return 0
     
     def fork(self):
         # random 10% de chance de fork
