@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/10/07 14:36:58 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/10/07 16:29:14 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -413,10 +413,15 @@ impl Player {
 							map.max_position.y
 						).as_str());
 					eprintln!("New player in team {}", &team[0..&team.len() - 1].to_string())
+				} else {
+					send_to(self.fd, format!(
+						"The team {} is full.\n",
+						&team[0..&team.len() - 1].to_string()
+					).as_str());
 				}
 			} else {
 				send_to(self.fd, format!(
-						"The team {} does not exist or is full.\n",
+						"The team {} does not exist.\n",
 						&team[0..&team.len() - 1].to_string()
 					).as_str());
 			}
