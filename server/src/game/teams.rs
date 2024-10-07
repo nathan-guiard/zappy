@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/20 11:16:22 by nguiard           #+#    #+#             */
-/*   Updated: 2024/10/02 15:14:36 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/10/07 14:25:12 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,11 +47,11 @@ impl Team {
 		self.next_posititons.push_back(position)
 	}
 
-	pub fn slot_available(&self) -> bool {
+	pub fn slots_available(&self) -> u8 {
 		if self.current_player_count >= MAX_PLAYER_PER_TEAM {
-			false
+			0
 		} else {
-			true
+			MAX_PLAYER_PER_TEAM - self.current_player_count
 		}
 	}
 }

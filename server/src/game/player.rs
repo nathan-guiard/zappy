@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/10/02 14:13:31 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/10/07 14:36:58 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -291,14 +291,14 @@ impl Player {
 
 	fn exec_connect(&mut self, teams: &HashMap<String, Team>) {
 		match teams.get(&self.team) {
-			Some(t) => send_to(self.fd, &(t.available_connections().to_string() + "\n")),
+			Some(t) => send_to(self.fd, &(t.available_connections().min(t.slots_available() as usize).to_string() + "\n")),
 			None => send_to(self.fd, "0\n"),
 		}
 		self.recieved_this_turn = true;
 	}
 
 	fn exec_fork(&mut self, eggs: &mut Vec<Egg>, current_egg_id: &mut u128, team: &mut Team) {
-		if team.slot_available() {
+		if team.slots_available() > 0 {
 			*current_egg_id += 1;
 			eggs.push(Egg::new(self.position, self.team.clone(), *current_egg_id));
 			send_to(self.fd, "ok\n");
@@ -402,17 +402,18 @@ impl Player {
 			}
 			if let Some(internal_team) = teams.get_mut(&team[0..&team.len() - 1].to_string()) {
 				let connection_nbr = internal_team.available_connections();
-				if connection_nbr > 0 && internal_team.slot_available() {
+				let slots = internal_team.slots_available();
+				if connection_nbr > 0 && slots > 0 {
 					self.enable_playability(internal_team.name.clone(),
 						internal_team.get_next_position().unwrap_or(GamePosition {x: 0, y: 0}));
 					internal_team.current_player_count += 1;
+					send_to(self.fd, format!("{}\n{} {}\n",
+							connection_nbr.min(slots as usize),
+							map.max_position.x,
+							map.max_position.y
+						).as_str());
+					eprintln!("New player in team {}", &team[0..&team.len() - 1].to_string())
 				}
-				send_to(self.fd, format!("{}\n{} {}\n",
-						connection_nbr,
-						map.max_position.x,
-						map.max_position.y
-					).as_str());
-				eprintln!("New player in team {}", &team[0..&team.len() - 1].to_string())
 			} else {
 				send_to(self.fd, format!(
 						"The team {} does not exist or is full.\n",
