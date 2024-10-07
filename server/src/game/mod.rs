@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/10/02 15:21:09 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/10/07 14:56:46 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -245,6 +245,9 @@ impl Game {
 		}
 
 		for p in &mut other {
+			if p.team.is_empty() {
+				continue;
+			}
 			let comming_from: u8;
 			if p.position == position {
 				comming_from = 0;
