@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/07 15:53:10 by nguiard           #+#    #+#             */
-/*   Updated: 2024/10/07 16:29:14 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/10/09 13:26:31 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -112,7 +112,7 @@ impl Player {
 		match self.state {
 			Idle | Dead | LevelMax | WaitingIncantation => return None,
 			Casting(into, max) => {
-				println!("Is casting {:?}, {}/{}", self.action.kind, into, max);
+				println!("{} ({}): {:?}, {}/{}", self.id, self.team, self.action.kind, into, max);
 				if into >= max {
 					match self.action.kind {
 						NoAction => {},
@@ -440,6 +440,8 @@ impl Player {
 		unsafe { libc::close(self.fd); }
 	}
 	
+	/// Return true if the player died
+	/// Return false if the player is still alive
 	pub fn loose_food(&mut self,
 		map: &mut GameMap) -> bool {
 		if self.team.is_empty() ||

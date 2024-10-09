@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 09:08:14 by nguiard           #+#    #+#             */
-/*   Updated: 2024/10/02 15:19:36 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/10/09 14:26:36 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,6 +130,7 @@ fn main() -> Result<ExitCode, Error> {
 						if player.state != PlayerState::Dead {
 							team_of_player.add_position(player.position);
 						}
+						team_of_player.current_player_count -= 1;
 					}
 				}
 				game.players.retain(|p| p.fd != event.data as i32);
@@ -180,11 +181,14 @@ fn main() -> Result<ExitCode, Error> {
 				eprintln!("{}:", team.0);
 				eprintln!("\tLevel 8: {}", team.1.max_level);
 				eprintln!("\tPlayers: {con}");
+				eprintln!("\tAvailiable connections (egg): {}", team.1.available_connections());
+				eprintln!("\tAvailiable connections (before 16): {}", team.1.slots_available());
 			}
 			// eprintln!("\t")
 
 			eprintln!("\x1b[0m");
 		}
+		// END OF DEBUG
 
 		turn_nb += 1;
 		if turn_nb == usize::MAX {
@@ -243,9 +247,9 @@ fn args_check(args: &mut Args) -> Result<(), Error> {
 				"Team name has to be ascii lower case"));
 		}
 	}
-	if args.clients < 1 || args.clients > 6 as u8 {
+	if args.clients < 1 || args.clients > 8 as u8 {
 		return Err(Error::new(ErrorKind::InvalidInput,
-			"Clients per team at the beginning of the game must be between 1 and 6."));
+			"Clients per team at the beginning of the game must be between 1 and 8."));
 	}
 	if args.seed == 0 {
 		args.seed = rand::thread_rng().gen();
