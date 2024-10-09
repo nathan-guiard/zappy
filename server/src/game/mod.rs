@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 17:25:42 by nguiard           #+#    #+#             */
-/*   Updated: 2024/10/07 14:56:46 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/10/09 13:55:35 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -305,55 +305,37 @@ impl Game {
 	}
 	
 	pub fn win_check(&mut self) -> Option<String> {
-		let mut not_lost_teams: Vec<&Team> = vec![];
+		let mut not_winners: Vec<&Team> = vec![];
 
-		self.loose_check();
+		for (team_name, team) in &mut self.teams {
+			if !team.lost && team.available_connections() + team.current_player_count as usize == 0 {
+				println!("Team {} lost the game.", team_name);
+				eprintln!("Team {} lost the game.", team_name);
+				team.lost = true;
+			}
+		}
+
 		for team in self.teams.values() {
-			if team.max_level == MAX_LEVEL_TO_WIN {
+			if team.max_level >= MAX_LEVEL_TO_WIN {
 				return Some(format!(
 					"End of game: Win: Team {} won the game by elevating!\n",
 					team.name));
 			}
 			if !team.lost {
-				not_lost_teams.push(team);
+				not_winners.push(team);
 			}
 		}
 
-		if not_lost_teams.len() == 0 {
+		if not_winners.len() == 0 {
 			return Some("End of game: Draw: Every team lost.\n".to_string())
-		} else if not_lost_teams.len() == 1 {
+		} else if not_winners.len() == 1 {
 			return Some(format!(
 				"End of game: Win: Team {} won the game by being the last one alive!\n",
-				not_lost_teams[0].name));
+				not_winners[0].name));
 		}
 		None
 	}
-	
-	fn loose_check(&mut self) {
-		let mut players_alive: Vec<u8> = vec![];
-		let mut i = 0;
 
-		for team_name in self.teams.keys() {
-			let mut count = 0;
-			for player in &self.players {
-				if &player.team == team_name {
-					if count != u8::MAX {
-						count += 1;
-					}
-				}
-			}
-			players_alive.push(count)
-		}
-
-		for (team_name, team) in &mut self.teams {
-			if !team.lost && team.available_connections() + players_alive[i] as usize == 0 {
-				println!("Team {} lost the game.", team_name);
-				team.lost = true;
-			}
-			i += 1;
-		}
-	}
-	
 	fn casting_insert(
 		castings: &mut HashMap<String, (GamePosition, u8, Vec<i32>)>,
 		key: (GamePosition, u8),

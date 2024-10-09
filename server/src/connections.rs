@@ -6,7 +6,7 @@
 /*   By: nguiard <nguiard@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/04 14:12:44 by nguiard           #+#    #+#             */
-/*   Updated: 2024/06/06 12:26:08 by nguiard          ###   ########.fr       */
+/*   Updated: 2024/10/09 14:05:32 by nguiard          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,17 +48,17 @@ impl ServerConnection {
 				eprintln!("{}", "Hint: Try another port".yellow());
 				return Err(error);
 		}
-	
-		if unsafe { listen(result.socket_fd, 32) } != 0 {
+
+		if unsafe { listen(result.socket_fd, 65) } != 0 {
 			let error = Error::last_os_error();
 			unsafe { libc::close(result.socket_fd) };
 			eprintln!("{}", "listen() failed".red().bold());
 			return Err(error);
 		}
-	
+
 		Ok(result)
 	}
-	
+
 	pub fn get_new_connections(&mut self, watcher: &mut Watcher)
 		-> Result<Option<Player>, Error> {
 		let new_connection = unsafe {
