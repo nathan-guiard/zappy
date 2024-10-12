@@ -97,6 +97,19 @@ class Group:
         members = " ".join(str(member) for member in self.members)
         self.player.broadcast(f"start {members}")
         
+    def kick(self, player_id):
+        self.player.broadcast(f"kick {self.id} {player_id}")
+        self.remove_player(player_id)
+    
+    def remove_player(self, player_id):
+        if player_id not in self.members:
+            return
+        self.members.remove(player_id)
+        if player_id in self.ressources:
+            del self.ressources[player_id]
+        if self.id == player_id:
+            print(f"je suis {self.player.id}, {player_id} a ete kick, et etait le chef, il reste {self.members}")
+            self.id = min(self.members)
     
         
     def player_info(self, player_id:int, linemate:int, deraumere:int, sibur:int, mendiane:int, phiras:int, thystame:int):
