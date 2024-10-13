@@ -3,6 +3,7 @@ from states.state import Idle
 from states.group import Group, Team
 from states.color import color
 from time import time
+from datetime import datetime
     
 connexion_error = "Erreur : la connexion au serveur n'est pas établie."
 Direction = ['N', 'E', 'S', 'W']
@@ -47,6 +48,7 @@ class Player:
         self.focus_ressources = None
         self.focus_coords = None
         self.communication = []
+        self.buffer = ""
         self.have_fork = False
         self.list_processus = []
         self.state = Idle(self)  # Débuter en état Idle
@@ -132,63 +134,80 @@ class Player:
         except socket.error as e:
             self.close_connection(f"Erreur lors de la connexion au serveur: {e}")
             
-        # print("Connexion etablie")
-        
+
     def send_message(self, message, send=True):
-        """Envoie un message au serveur via le socket donné et retourne la réponse complète jusqu'à réception du caractère de fin \x04."""
+        """Envoie un message au serveur via le socket donné et retourne la réponse complète jusqu'à réception du caractère de fin \x04.
+        Gère également les messages fragmentés avec un buffer circulaire et journalise chaque communication dans un fichier de log pour chaque joueur."""
+        
         if self.socket is None:
             print(connexion_error)
             return None
         
+        # Initialisation du buffer s'il n'existe pas encore
+        if not hasattr(self, 'buffer'):
+            self.buffer = ""
+
+        # Nom du fichier de log pour le joueur
+        log_filename = f"datas/player_{self.id}_log.txt"
+        
         try:
-            # Envoie le message au serveur
+            # Envoie le message au serveur et le journalise
             if send:
                 self.socket.sendall(message.encode('utf-8'))
+                # Journaliser l'envoi du message
+                current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                with open(log_filename, 'a') as log_file:
+                    log_file.write(f"[{current_time}] - SENT: {message}\n")
             
-            # Réception des données en plusieurs parties jusqu'à rencontrer \x04
-            response = []
+            # Réception des données en plusieurs parties
             while True:
                 part: str = self.socket.recv(1024).decode('utf-8')
                 if not part:
                     # Connexion perdue ou fin de transmission inattendue
                     print("Connexion perdue ou transmission incomplète.")
                     return None
-                response.append(part)
                 
-                # Vérifie si le caractère de fin est dans la partie reçue
-                if '\x04' in part:
-                    break
-            
-            # Combine les parties reçues en une seule chaîne
-            full_response = ''.join(response).strip()
-            
-            # Retirer le caractère de fin \x04
-            full_response = full_response.replace('\x04', '')
-            
-            response_list = list(filter(None, full_response.split('\n')))
-                        
-            for received in response_list:
-                if received.startswith("You died") or received.startswith("End of game"):
-                    print(received)
-                    return None
-            
-            final_response = None
-            for response in response_list:
-                if response.startswith("broadcast"):
-                    self.communication.append(response.split(' ')[1:])
-                else:
-                    final_response = response
-            
-            if final_response is None:
-                return self.send_message("reception", False)
-            # print(f"{message}: {final_response}")
-            return final_response
+                # Ajouter la nouvelle partie au buffer
+                self.buffer += part
+
+                # Tant qu'on trouve un séparateur '\x04' dans le buffer, on extrait un message complet
+                while '\x04' in self.buffer:
+                    # Découpe le buffer en utilisant '\x04' comme séparateur
+                    message_complete, self.buffer = self.buffer.split('\x04', 1)
+                    # if self.buffer:
+                        # print(f"{self.id} : Message fragmenté reçu : {message_complete}, buffer : {self.buffer}")
+
+                    # Gérer le message complet (sans '\x04')
+                    response_list = list(filter(None, message_complete.strip().split('\n')))
+
+                    # Journaliser la réponse du serveur
+                    with open(log_filename, 'a') as log_file:
+                        log_file.write(f"[{current_time}] - RECEIVED: {message_complete}\n")
+                        log_file.write(f"[{current_time}] - Buffer: {self.buffer}\n")
+
+
+                    # Vérification des réponses critiques
+                    for received in response_list:
+                        if received.startswith("You died") or received.startswith("End of game"):
+                            print(received)
+                            return None
+                    
+                    # Sélection de la réponse finale à renvoyer
+                    final_response = None
+                    for response in response_list:
+                        if response.startswith("broadcast"):
+                            self.communication.append(response.split(' ')[1:])
+                        else:
+                            final_response = response
+
+                    return final_response
 
         except socket.error as e:
             if e.errno == 104:
                 return None
             print(f"Erreur lors de l'envoi du message : {e}")
             return None
+
 
     def close_connection(self, error_message: str = None, code: int = 0, silent: bool = False):
         if error_message and not silent:
@@ -197,7 +216,7 @@ class Player:
             self.socket.close()
             self.socket = None
             if not silent:
-                print("Connexion fermée.")
+                print(f"{self.id} : Connexion fermée.")
         self.close_all_processes()
         exit(code)
     
@@ -232,9 +251,9 @@ class Player:
                 self.inventory[key] = value
             # print(f"Inventaire mis à jour : {self.inventory}")
         except json.JSONDecodeError:
-            self.close_connection("Erreur : Impossible de décoder la réponse JSON du serveur.")
+            self.close_connection(f"{self.id} : Erreur : Impossible de décoder la réponse JSON du serveur.")
         except TypeError:
-            self.close_connection("Erreur : Type de données invalide pour l'inventaire.:", response)
+            self.close_connection(f"{self.id} : Erreur : Type de données invalide pour l'inventaire.:", response)
 
     def display_info(self):
         """Affiche les informations du joueur."""
@@ -295,7 +314,7 @@ class Player:
         if response is None:
             self.close_connection()
         if response != "ok":
-            self.close_connection(f"Reponse invalide 'droite': {response}")
+            self.close_connection(f"{self.id} : Reponse invalide 'droite': {response}")
         current_index = Direction.index(self.direction)
         self.direction = Direction[(current_index + 1) % len(Direction)]
         # print(f"Réponse du serveur à la commande 'droite' : {response}")
@@ -305,7 +324,7 @@ class Player:
         if response is None:
             self.close_connection()
         if response != "ok":
-            self.close_connection(f"Reponse invalide 'gauche': {response}")
+            self.close_connection(f"{self.id} : Reponse invalide 'gauche': {response}")
         current_index = Direction.index(self.direction)
         self.direction = Direction[(current_index - 1) % len(Direction)]
         # print(f"Réponse du serveur à la commande 'gauche' : {response}")
@@ -316,7 +335,7 @@ class Player:
         if response is None:
             self.close_connection()
         if response != "ok":
-            self.close_connection(f"Reponse invalide 'avance': {response}")
+            self.close_connection(f"{self.id} : Reponse invalide 'avance': {response}")
         if self.direction == 'N':
             self.coordinates = (self.coordinates[0], (self.coordinates[1] - 1) % self.map_size[1])
         elif self.direction == 'E':
@@ -337,7 +356,7 @@ class Player:
             # Convertir la réponse JSON en dictionnaire
             view_data = json.loads(response)
         except (json.JSONDecodeError, TypeError):
-            self.close_connection(f"Réponse invalide 'voir' : {response}")
+            self.close_connection(f"{self.id} : Réponse invalide 'voir' : {response}")
             return
 
         # Update la position du joueur
@@ -385,7 +404,7 @@ class Player:
         if response is None:
             self.close_connection()
         if not response.isdigit():
-            self.close_connection(f"Reponse invalide 'connect': {response}")
+            self.close_connection(f"{self.id} : Reponse invalide 'connect': {response}")
         # print(f"Réponse du serveur à la commande 'connect' : {response}")
         return int(response)
 
@@ -400,7 +419,7 @@ class Player:
         if response is None:
             self.close_connection()
         if response != "ok":
-            self.close_connection(f"Reponse invalide 'broadcast' : {response}")
+            self.close_connection(f"{self.id} : Reponse invalide 'broadcast' : {response}")
         # print(f"Réponse du serveur à la commande 'broadcast' : {response}")
         self.waiting_broadcast = []
         self.communicate()
@@ -439,7 +458,7 @@ class Player:
             # print(f"Réponse du serveur à la commande 'fork' : {response}")
             # print(f"Fork: {self.team_name}, {color('Ko', 'red_bg')}")
             return 1
-        self.close_connection(f"Reponse invalide 'fork': {response}")
+        self.close_connection(f"{self.id} : Reponse invalide 'fork': {response}")
     
     def incantation(self):
         # Ralonger le socket.timeout
@@ -457,12 +476,12 @@ class Player:
         elif response.startswith("ko"):
             # print(f"Réponse du serveur à la commande 'incantation' : {response}")
             return 1
-        self.close_connection(f"Reponse invalide 'incantation': {response}")
+        self.close_connection(f"{self.id} : Reponse invalide 'incantation': {response}")
 
     def prend(self, ressource):
         response = self.send_message(f"prend {ressource}")
         if response is None:
-            self.close_connection(f"Reponse invalide 'prend' : {response}")
+            self.close_connection()
             
         ressource = ressource.capitalize()
             
@@ -480,7 +499,7 @@ class Player:
             self.voir()
             return 1
         else: 
-            self.close_connection(f"Reponse invalide 'prend' : {response}")
+            self.close_connection(f"{self.id} : Reponse invalide 'prend' : {response}")
 
     def pose(self, ressource):
         response = self.send_message(f"pose {ressource}")
@@ -493,7 +512,7 @@ class Player:
         elif response.startswith("ko"):
             self.voir()
         else: 
-            self.close_connection(f"Reponse invalide 'pose' : {response}")
+            self.close_connection(f"{self.id} : Reponse invalide 'pose' : {response}")
     
     def update(self):
         """Appelée à chaque cycle de jeu pour mettre à jour l'état."""
@@ -512,10 +531,6 @@ class Player:
             
     def has_enough_food(self, distance):
         return (distance + 2) * 1.4 < self.inventory["Food"]
-    
-    def player_information(self):
-        message = f"player_information {self.id} {self.level} {self.team_name} {self.inventory_in_string()}"
-        self.waiting_broadcast.append(f"{message}")
 
     def communicate(self):
         for messages in self.communication:
@@ -558,7 +573,7 @@ class Player:
             team_id = int(message[0])
             player_id = int(message[1])
         except Exception as e:
-            print(f"Erreur lors de la reception du message de kick: {e} '{message}'")
+            print(f"{self.id} : Erreur lors de la reception du message de kick: {e} '{message}'")
             return
         
         if self.groups is None:
@@ -578,7 +593,7 @@ class Player:
         try:
             player_id = int(message[0])
         except Exception as e:
-            print(f"Erreur lors de la reception du message d'alive: {e} '{message}'")
+            print(f"{self.id} : Erreur lors de la reception du message d'alive: {e} '{message}'")
             return
         
         self.players[player_id] = time()
@@ -590,7 +605,7 @@ class Player:
             team_level = int(message[1])
             team_name = message[2]
         except Exception as e:
-            print(f"Erreur lors de la reception du message de creation: {e} '{message}'")
+            print(f"{self.id} : Erreur lors de la reception du message de creation: {e} '{message}'")
             return
         
         self.players[team_id] = time()
@@ -608,7 +623,7 @@ class Player:
             team_name = message[2]
             
         except Exception as e:
-            print(f"Erreur lors de la reception du message de recrute: {e} '{message}'")
+            print(f"{self.id} : Erreur lors de la reception du message de recrute: {e} '{message}'")
             return
         
         self.players[team_id] = time()
@@ -624,7 +639,7 @@ class Player:
             team_id = int(message[0])
             player_id = int(message[1])
         except Exception as e:
-            print(f"Erreur lors de la reception du message d'interet: {e} '{message}'")
+            print(f"{self.id} : Erreur lors de la reception du message d'interet: {e} '{message}'")
             return
         
         self.players[player_id] = time()
@@ -655,7 +670,7 @@ class Player:
             members = list(map(int, message[3:]))
             
         except Exception as e:
-            print(f"Erreur lors de la reception du message d'acceptation: {e} '{message}'")
+            print(f"{self.id} : Erreur lors de la reception du message d'acceptation: {e} '{message}'")
             return
         
         self.players[player_id] = time()
@@ -684,7 +699,7 @@ class Player:
             team_id = int(message[0])
             players = list(map(int, message[0:]))
         except Exception as e:
-            print(f"Erreur lors de la reception du message de debut: {e} '{message}'")
+            print(f"{self.id} : Erreur lors de la reception du message de debut: {e} '{message}'")
             return
         
         self.players[team_id] = time()
@@ -705,7 +720,7 @@ class Player:
         try:
             team_id = int(message[0])
         except Exception as e:
-            print(f"Erreur lors de la reception du message de fin: {e} '{message}'")
+            print(f"{self.id} : Erreur lors de la reception du message de fin: {e} '{message}'")
             return
         
         self.players[team_id] = time()
@@ -731,7 +746,7 @@ class Player:
             phiras = int(message[6])
             thystame = int(message[7])
         except Exception as e:
-            print(f"Erreur lors de la reception du message d'information: {e} '{message}'")
+            print(f"{self.id} : Erreur lors de la reception du message d'information: {e} '{message}'")
             return
         
         self.players[player_id] = time()

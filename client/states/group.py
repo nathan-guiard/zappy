@@ -108,7 +108,7 @@ class Group:
         if player_id in self.ressources:
             del self.ressources[player_id]
         if self.id == player_id:
-            print(f"je suis {self.player.id}, {player_id} a ete kick, et etait le chef, il reste {self.members}")
+            # print(f"je suis {self.player.id}, {player_id} a ete kick, et etait le chef, il reste {self.members}")
             self.id = min(self.members)
     
         

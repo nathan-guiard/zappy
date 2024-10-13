@@ -2,7 +2,7 @@
 import time 
 from states.group import Group
 from states.color import color
-from py.file2 import find_cluster_center
+from states.cluster_optimisation import find_cluster_center
 
 import random
 

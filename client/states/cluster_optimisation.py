@@ -72,7 +72,13 @@ def perform_clustering(df, eps, min_samples):
     for cluster in valid_clusters:
         cluster_points = df[df['cluster'] == cluster]
         # Calcul de la densité en fonction de l'étendue des coordonnées
-        density = len(cluster_points) / (cluster_points['x'].max() - cluster_points['x'].min()) * (cluster_points['y'].max() - cluster_points['y'].min())
+        x_range = cluster_points['x'].max() - cluster_points['x'].min()
+        y_range = cluster_points['y'].max() - cluster_points['y'].min()
+
+        if x_range == 0 or y_range == 0:
+            density = 0  # or handle the zero range case appropriately
+        else:
+            density = len(cluster_points) / (x_range * y_range)
         densities[cluster] = density
         # print(f"Densité du cluster {cluster}: {density}")
 
