@@ -492,8 +492,10 @@ class Player:
             else:
                 self.inventory[ressource] += 1
 
-            # print(f"Je vois {self.view[self.coordinates]} en coords {self.coordinates}")
-            self.view[self.coordinates][ressource] -= 1
+            if ressource in self.view[self.coordinates]:
+                self.view[self.coordinates][ressource] -= 1
+            else:
+                self.view[self.coordinates][ressource] = 0
             return 0
         elif response.startswith("ko"):
             self.voir()
