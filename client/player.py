@@ -159,16 +159,30 @@ class Player:
                 with open(log_filename, 'a') as log_file:
                     log_file.write(f"[{current_time}] - SENT: {message}\n")
             
+            response_list = []
+            
             # Réception des données en plusieurs parties
             while True:
                 part: str = self.socket.recv(1024).decode('utf-8')
                 if not part:
+                    # with open(log_filename, 'a') as log_file:
+                    #     log_file.write(f"[{current_time}] - Buffer: {self.buffer}\n")
+                
+                    response_list = list(filter(None, self.buffer.strip().replace('\x04', '').split('\n')))
+                    # print(response_list)
+                    for received in response_list:
+                        if received.startswith("You died") or received.startswith("End of game") or received.startswith("Disconnected"):
+                            print(f"{self.id}: {received}")
+                            return None
+                    
                     # Connexion perdue ou fin de transmission inattendue
-                    print("Connexion perdue ou transmission incomplète.")
+                    print(f"{self.id}: Connexion perdue ou transmission incomplète")
+                    # print(f"x04 in self buffer : {'\x04' in self.buffer}")
                     return None
                 
                 # Ajouter la nouvelle partie au buffer
                 self.buffer += part
+            
 
                 # Tant qu'on trouve un séparateur '\x04' dans le buffer, on extrait un message complet
                 while '\x04' in self.buffer:
@@ -189,7 +203,7 @@ class Player:
                     # Vérification des réponses critiques
                     for received in response_list:
                         if received.startswith("You died") or received.startswith("End of game"):
-                            print(received)
+                            print(f"{self.id}: {received}")
                             return None
                     
                     # Sélection de la réponse finale à renvoyer
@@ -203,20 +217,19 @@ class Player:
                     return final_response
 
         except socket.error as e:
-            if e.errno == 104:
-                return None
-            print(f"Erreur lors de l'envoi du message : {e}")
+            # if e.errno == 104:
+            #     return None
+            # print(f"Erreur lors de l'envoi du message : {e}")
             return None
 
 
     def close_connection(self, error_message: str = None, code: int = 0, silent: bool = False):
         if error_message and not silent:
-            print(error_message)
-        if self.socket:
+            # print(error_message)
             self.socket.close()
             self.socket = None
-            if not silent:
-                print(f"{self.id} : Connexion fermée.")
+            # if not silent:
+            #     print(f"{self.id} : Connexion fermée.")
         self.close_all_processes()
         exit(code)
     
@@ -472,6 +485,9 @@ class Player:
             # print(f"Réponse du serveur à la commande 'incantation' : {response}")
             # print("Level Up")
             self.level += 1
+            if self.level == 8:
+                print(f"{self.id}: {color('Niveau 8', 'green_bg')}")
+                self.close_connection()
             return 0
         elif response.startswith("ko"):
             # print(f"Réponse du serveur à la commande 'incantation' : {response}")
