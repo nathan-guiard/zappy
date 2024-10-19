@@ -148,16 +148,16 @@ class Player:
             self.buffer = ""
 
         # Nom du fichier de log pour le joueur
-        log_filename = f"datas/player_{self.id}_log.txt"
+        # log_filename = f"datas/player_{self.id}_log.txt"
         
         try:
             # Envoie le message au serveur et le journalise
             if send:
                 self.socket.sendall(message.encode('utf-8'))
                 # Journaliser l'envoi du message
-                current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                with open(log_filename, 'a') as log_file:
-                    log_file.write(f"[{current_time}] - SENT: {message}\n")
+                # current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                # with open(log_filename, 'a') as log_file:
+                    # log_file.write(f"[{current_time}] - SENT: {message}\n")
             
             response_list = []
             
@@ -195,9 +195,9 @@ class Player:
                     response_list = list(filter(None, message_complete.strip().split('\n')))
 
                     # Journaliser la réponse du serveur
-                    with open(log_filename, 'a') as log_file:
-                        log_file.write(f"[{current_time}] - RECEIVED: {message_complete}\n")
-                        log_file.write(f"[{current_time}] - Buffer: {self.buffer}\n")
+                    # with open(log_filename, 'a') as log_file:
+                    #     log_file.write(f"[{current_time}] - RECEIVED: {message_complete}\n")
+                    #     log_file.write(f"[{current_time}] - Buffer: {self.buffer}\n")
 
 
                     # Vérification des réponses critiques
