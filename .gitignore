@@ -7,3 +7,6 @@ client/broadcast*
 myenv
 datas
 output_graphs
+graphics/gfx
+graphics/gfx.pck
+server.bin
