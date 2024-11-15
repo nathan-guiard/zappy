@@ -13,7 +13,7 @@ signal new_map_position_added(player: Player, map_position: Vector2i)
 
 @onready var outline_shader: ShaderMaterial = preload("res://player_shader.tres").duplicate()
 
-@onready var team_color: Color = Color(0,0,0):
+@onready var team_color: Color = Color(0, 0, 0):
 	set(val):
 		team_color = val
 		outline_shader.set_shader_parameter("outline_color", team_color)
@@ -64,7 +64,7 @@ var team: String
 var inventory: Array:
 	set(new_arr):
 		inventory = new_arr
-		print("inventory: ", inventory)
+		# print("inventory: ", inventory)
 var level: int = 1:
 	set(val):
 		(get_node("level_" + str(level)) as AnimatedSprite2D).visible = false
@@ -75,14 +75,14 @@ var action: String
 #func move(direction: Vector2i) -> void:
 	#position += direction
 
-var WalkAnim: Dictionary  = {
+var WalkAnim: Dictionary = {
 	UP = "up_walk",
 	DOWN = "down_walk",
 	RIGHT = "right_walk",
 	LEFT = "left_walk"
 }
 
-var WalkAnimArray: Array = [ WalkAnim.UP, WalkAnim.DOWN, WalkAnim.RIGHT, WalkAnim.LEFT]
+var WalkAnimArray: Array = [WalkAnim.UP, WalkAnim.DOWN, WalkAnim.RIGHT, WalkAnim.LEFT]
 
 func animate_walk() -> void:
 	match direction:
@@ -156,7 +156,7 @@ func _ready() -> void:
 	)
 	tween_scale.tween_property(self, "scale", Vector2(5, 5), 0.2).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_LINEAR).set_delay(0.2)
 	tween_scale.tween_callback(func() -> void:
-		lerp_speed = INITIAL_LERP_SPEED	
+		lerp_speed = INITIAL_LERP_SPEED
 	)
 	tween_scale.tween_property(self, "scale", Vector2(1, 1), 2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 	
@@ -168,5 +168,3 @@ func toggle_outline(toggle: bool) -> void:
 		material = outline_shader
 	else:
 		material = null
-
-

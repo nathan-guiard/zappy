@@ -6,9 +6,9 @@
 [ext_resource type="PackedScene" uid="uid://bs2ptwstok7ly" path="res://team_name.tscn" id="4_5gvmr"]
 [ext_resource type="TileSet" uid="uid://1yc0pq1j0wb" path="res://tileset.tres" id="4_asfbm"]
 [ext_resource type="Script" path="res://Network.gd" id="4_b2sue"]
-[ext_resource type="PackedScene" uid="uid://bvg6orivi3vvd" path="res://player.tscn" id="6_2hnmn"]
 [ext_resource type="PackedScene" uid="uid://b35toih8wxky3" path="res://hover_square.tscn" id="7_flrrs"]
 [ext_resource type="StyleBox" uid="uid://csx6cf6g688pf" path="res://sep_style.tres" id="8_xm0ke"]
+[ext_resource type="AudioStream" uid="uid://cw24c6ktasuf0" path="res://assets/sounds/music.mp3" id="10_t5a1q"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mjxie"]
 bg_color = Color(0.145098, 0.156863, 0.239216, 1)
@@ -29,9 +29,31 @@ corner_detail = 12
 [node name="Main" type="Node2D"]
 script = ExtResource("1_0wmlj")
 
+[node name="AudioMusic" type="AudioStreamPlayer" parent="."]
+unique_name_in_owner = true
+stream = ExtResource("10_t5a1q")
+
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 unique_name_in_owner = true
 layer = 6
+
+[node name="EndLabel" type="Label" parent="CanvasLayer"]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -487.0
+offset_top = -102.5
+offset_right = 487.0
+offset_bottom = 102.5
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.59651, 0.59651)
+theme_override_font_sizes/font_size = 200
+text = "GAME ENDED"
 
 [node name="PanelContainer" type="PanelContainer" parent="CanvasLayer"]
 modulate = Color(1, 1, 1, 0.776471)
@@ -114,10 +136,12 @@ layout_mode = 2
 theme_override_styles/separator = ExtResource("8_xm0ke")
 
 [node name="TeamScrollContainer" type="ScrollContainer" parent="CanvasLayer"]
-offset_left = 44.0
-offset_top = 1095.0
-offset_right = 1751.0
-offset_bottom = 1164.0
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -69.0
+offset_right = 1707.0
+grow_vertical = 0
 
 [node name="TeamHBoxContainer" type="HBoxContainer" parent="CanvasLayer/TeamScrollContainer"]
 layout_mode = 2
@@ -148,9 +172,6 @@ layer_2/name = "minerals"
 layer_2/z_index = 2
 layer_2/tile_data = PackedInt32Array()
 script = ExtResource("2_cqj61")
-
-[node name="Player" parent="TileMap" instance=ExtResource("6_2hnmn")]
-position = Vector2(500, 500)
 
 [node name="HoverSquare" parent="TileMap" instance=ExtResource("7_flrrs")]
 position = Vector2(66, 305)

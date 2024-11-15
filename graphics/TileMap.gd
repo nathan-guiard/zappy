@@ -1,5 +1,5 @@
 extends TileMap
-class_name  EnhancedTileMap
+class_name EnhancedTileMap
 @onready var v_box_container_contents: VBoxContainer = %CanvasLayer/PanelContainer/MarginContainer/VBoxContainerContents
 @onready var panel_container: PanelContainer = %CanvasLayer/PanelContainer
 @onready var panel_players: PanelContainer = $"../CanvasLayer/PanelContainer2"
@@ -78,17 +78,17 @@ const FloorTile: Dictionary = {
 
 
 const Tile: Dictionary = {
-	LINEMATE = Vector2i(1,1),
+	LINEMATE = Vector2i(1, 1),
 	DERAUMERE = Vector2i(3, 1),
-	SIBUR = Vector2i(0,1),
-	MENDIANE = Vector2i(2,1),
-	PHIRAS = Vector2i(6,1),
+	SIBUR = Vector2i(0, 1),
+	MENDIANE = Vector2i(2, 1),
+	PHIRAS = Vector2i(6, 1),
 	THYSTAME = Vector2i(4, 1),
 	PLAYER = Vector2i(4, 6),
 	#FOOD = [Vector2i(1, 11), Vector2i(2,11), Vector2i(3,11), Vector2i(4 ,11), Vector2i(5 ,11)],
-	FOOD = [Vector2i(4 ,11), Vector2i(5 ,11)],
+	FOOD = [Vector2i(4, 11), Vector2i(5, 11)],
 	FOOD_1 = Vector2i(1, 11),
-	EGG = Vector2i(4 ,10)
+	EGG = Vector2i(4, 10)
 }
 
 var _tiles_texture: Dictionary = {
@@ -96,9 +96,9 @@ var _tiles_texture: Dictionary = {
 }
 
 const items_source_id: int = 1
-const floors_source_id: int = 0 
+const floors_source_id: int = 0
 
-const MAP_JSON: JSON = preload ("res://cuicui.json")
+const MAP_JSON: JSON = preload("res://cuicui.json")
 
 var __NOmap: Array = MAP_JSON.data
 
@@ -126,10 +126,10 @@ func _ready() -> void:
 		if k == "PLAYER":
 			continue
 		var tile_image: Image = atlas_image.get_region(atlas.get_tile_texture_region(Tile[k if k != "FOOD" else "FOOD_1"] as Vector2i))
-		var tile_texture: ImageTexture = ImageTexture.create_from_image(tile_image) 
+		var tile_texture: ImageTexture = ImageTexture.create_from_image(tile_image)
 		_tiles_texture[Content[k]] = tile_texture
 	
-	print(_tiles_texture)
+	# print(_tiles_texture)
 	#sprite_2d.texture = _tiles_texture["Sibur"]
 	#texture_rect.texture = _tiles_texture["Sibur"]
 	var texture_rect2: TextureRect = TextureRect.new()
@@ -144,7 +144,6 @@ func _ready() -> void:
 	var label_amount: Label = Label.new()
 	label_amount.text = "3"
 	#grid_container.add_child(label_amount)
-
 
 
 enum Terrain {
@@ -163,14 +162,14 @@ func _use_tile_data_runtime_update(layer: int, coords: Vector2i) -> bool:
 	
 func _tile_data_runtime_update(layer: int, coords: Vector2i, tile_data: TileData) -> void:
 	#print("_tile_data_runtime_update")
-	return 
+	return
 
 func init_map_tiling() -> void:
 	for col: Array in map:
 		nb_col += 1
 		for row: Dictionary in col:
 			if nb_col == 1:
-				nb_row +=1
+				nb_row += 1
 			#print(row)
 			var x: int = row.p.x
 			var y: int = row.p.y
@@ -182,14 +181,10 @@ func init_map_tiling() -> void:
 			else:
 				light_grass_cells.push_back(pos)
 			manage_cell_content(pos, content)
-	set_cells_terrain_connect(0, sand_cells, 0, Terrain.SAND, false )
-	set_cells_terrain_connect(0, light_grass_cells, 0, Terrain.LIGHT_GRASS, false )
+	set_cells_terrain_connect(0, sand_cells, 0, Terrain.SAND, false)
+	set_cells_terrain_connect(0, light_grass_cells, 0, Terrain.LIGHT_GRASS, false)
 	init_outside_map()
 
-
-
-		
-	
 
 var sand_cells: Array[Vector2i]
 var light_grass_cells: Array[Vector2i]
@@ -200,23 +195,21 @@ var dark_grass_cells: Array[Vector2i]
 var outside_dark_grass_cells: Array[Vector2i]
 
 
-
 func init_outside_map() -> void:
 	var i: int = -nb_col
 	var j: int = -nb_row
-	print("i: ", i)
-	print("j: ", j)
+	# print("i: ", i)
+	# print("j: ", j)
 	while i < nb_col * 2:
 		j = -nb_row
 		while j < nb_row * 2:
 			if not (i >= 0 and i < nb_col and j >= 0 and j < nb_row):
 				outside_dark_grass_cells.push_back(Vector2i(i, j))
-			j+= 1
-		i+=1
+			j += 1
+		i += 1
 	#print("olala: ",outside_dark_grass_cells)
-	set_cells_terrain_connect(0, outside_dark_grass_cells, 0, Terrain.DARK_GRASS, false )
+	set_cells_terrain_connect(0, outside_dark_grass_cells, 0, Terrain.DARK_GRASS, false)
 		
-
 
 func is_there_food(content: Array) -> bool:
 	for el: Dictionary in content:
@@ -242,9 +235,9 @@ func manage_cell_content(pos: Vector2i, content: Array) -> void:
 	update_tiles_data(pos, content)
 	
 	if not is_there_food(content):
-		set_cell(food_layer, pos, - 1)
+		set_cell(food_layer, pos, -1)
 	if not is_there_minerals(content):
-		set_cell(minerals_layer, pos, - 1)
+		set_cell(minerals_layer, pos, -1)
 		
 
 	#print("content: ", content)
@@ -283,7 +276,6 @@ func manage_cell_content(pos: Vector2i, content: Array) -> void:
 			# output += Content.PLAYER + ": " + str(el[Content.PLAYER]) + ", "
 
 
-
 func _on_network_map_ready(map_p: Array) -> void:
 	map = map_p
 	init_map_tiling()
@@ -300,11 +292,11 @@ func update_cells(cells: Array) -> void:
 		
 		if content.size() == 0:
 			dark_grass_cells.push_back(pos)
-	set_cells_terrain_connect(0, dark_grass_cells, 0, Terrain.DARK_GRASS, false )
+	set_cells_terrain_connect(0, dark_grass_cells, 0, Terrain.DARK_GRASS, false)
 
 var count: int = 0
 func update_players(players: Array) -> void:
-	count +=1
+	count += 1
 	if count % 10 == 0:
 		#print()
 		#print(players)
@@ -340,7 +332,7 @@ func update_players(players: Array) -> void:
 		player_info_btn.info = "Level " + str(player.level)
 		player_info_btn.logo = player.anim.sprite_frames.get_frame_texture("down_walk", 0)
 		player_info_btn.logo_color = teams_color[player.team]
-		player_info_btn.player_id =  player.id
+		player_info_btn.player_id = player.id
 		player_info_btn.button_down.connect(_on_player_info_btn_button_down.bind(player.id))
 		
 		if player.team_color == Color(0, 0, 0):
@@ -366,7 +358,7 @@ func _on_network_map_update(data: Dictionary) -> void:
 	#print("updaye: ", data)
 	#print()
 	#print()
-const player_scene: PackedScene = preload ("res://player.tscn")
+const player_scene: PackedScene = preload("res://player.tscn")
 static func construct_player_from_dictionnary(dic: Dictionary) -> Player:
 	var new_player: Player = player_scene.instantiate()
 	new_player.map_pos = Vector2i(dic.position.x as int, dic.position.y as int)
@@ -394,9 +386,8 @@ static func update_player_from_dictionnary(player: Player, dic: Dictionary) -> v
 
 
 func update_position_player_on_map(player: Player) -> void:
-	player.destination = to_global( map_to_local(player.map_pos))
+	player.destination = to_global(map_to_local(player.map_pos))
 	# player.map_position_history.push_back(player.map_pos)
-
 
 
 func prune_players(remote_players: Array) -> void:
@@ -448,10 +439,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey:
 		var ev: InputEventKey = event
 		if ev.is_pressed() and ev.keycode == KEY_A:
-			camera.focused_player = null #L ORDRE DE SES DEUX LIGNES EST IMPORTANTE
+			camera.focused_player = null # L ORDRE DE SES DEUX LIGNES EST IMPORTANTE
 			see_traces_of_players = !see_traces_of_players
 			if see_traces_of_players:
-				for curr_player_id: int in  _players:
+				for curr_player_id: int in _players:
 					for pos: Vector2i in _players[curr_player_id].map_position_history:
 						add_trace_square(pos)
 
@@ -525,7 +516,7 @@ func update_contents_in_v_box_ctn(v_box_container: VBoxContainer, contents: Arra
 				v_box_container.add_child(h_separator)
 			
 			var content_info_row: ContentInfoRow = content_info_row_scene.instantiate()
-			v_box_container.add_child(content_info_row)					
+			v_box_container.add_child(content_info_row)
 			content_info_row.icon = _tiles_texture[key]
 			content_info_row.key = key
 			content_info_row.value = str(content[key])

@@ -28,6 +28,8 @@ gdscript/warnings/unsafe_call_argument=2
 
 window/size/viewport_width=1280
 window/size/viewport_height=800
+window/stretch/mode="viewport"
+window/stretch/aspect="expand"
 window/stretch/scale=0.65
 
 [physics]

@@ -8,7 +8,8 @@ var peer: StreamPeerTCP = StreamPeerTCP.new()
 enum GameState {
 	BIENVENUE,
 	INIT_MAP,
-	PLAY
+	PLAY,
+	END_GAME,
 }
 
 var game_state: GameState = GameState.BIENVENUE
@@ -18,7 +19,12 @@ var err_count: int = 0
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	print("quouquoubebe")
-	if peer.connect_to_host("localhost", 4228) != OK:
+	var args: PackedStringArray = OS.get_cmdline_args()
+	var port: int = 4224
+	print("ARGSSSSSSSSSSSS ",args)
+	if args.size() > 0 and args[0].is_valid_int():
+		port = int(args[0])
+	if peer.connect_to_host("localhost", port) != OK:
 		print("Pair host port, not valid")
 	print("quouquoube")
 
@@ -32,6 +38,12 @@ func _process(delta: float) -> void:
 	#if peer.get_status() == StreamPeerTCP.STATUS_CONNECTED: #and not adam_born:
 		#print("CONNCTED")
 		#pass
+	if game_state == GameState.PLAY and peer.get_status() == peer.STATUS_NONE:
+		#print("status: ", peer.get_status())
+		print("GAME ENDED")
+		game_state = GameState.END_GAME
+		var end_label: Label = %EndLabel
+		end_label.visible = true
 	peer.poll()
 	var packet: String
 	if peer.get_available_bytes() > 0:
@@ -50,6 +62,9 @@ func _process(delta: float) -> void:
 					game_state = GameState.PLAY
 					map_ready.emit(map_parsed)
 					peer.put_data("ready\n".to_ascii_buffer())
+					var audio_music: AudioStreamPlayer = %AudioMusic
+					audio_music.play()
+
 			GameState.PLAY:
 				buf += packet
 				var buf_ascii: PackedByteArray = buf.to_ascii_buffer()
